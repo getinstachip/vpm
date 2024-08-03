@@ -37,4 +37,8 @@ impl CommandHandler for Installer {
         self.package_name = package_name;
         self.package_author = package_author;
     }
+
+    fn execute(&self) {
+        println!("Installing {}", self.package_name);
+    }
 }
