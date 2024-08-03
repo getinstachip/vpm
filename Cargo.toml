@@ -4,9 +4,3 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-async-trait = "0.1.81"
-bytes = "1.7.1"
-flate2 = "1.0.31"
-reqwest = "0.12.5"
-tar = "0.4.41"
-tokio = { version = "1.39.2", features = ["rt-multi-thread", "macros", "fs"] }
