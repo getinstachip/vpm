@@ -1,8 +1,10 @@
 use std::env::Args;
 
+use crate::command_parser::CommandHandler;
+
 #[derive(Debug, Default)]
 pub struct Installer {
-    author: String,
+    package_author: String,
     package_name: String,
 }
 
@@ -21,5 +23,18 @@ impl Installer {
             .to_string();
 
         (author, name)
+    }
+}
+
+impl CommandHandler for Installer {
+    fn parse(&mut self, args: &mut Args) {
+        let package_details = match args.next() {
+            Some(package_details) => package_details,
+            None => return,
+        };
+
+        let (package_author, package_name) = Self::parse_package_details(package_details)?;
+        self.package_name = package_name;
+        self.package_author = package_author;
     }
 }
