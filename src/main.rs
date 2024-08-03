@@ -1,4 +1,5 @@
 mod command_parser;
+mod installer;
 
 use std::env;
 
