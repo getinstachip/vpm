@@ -1,5 +1,7 @@
 use std::env::Args;
 
+use crate::installer::Installer;
+
 pub trait CommandHandler {
     fn parse(&mut self, args: &mut Args);
     fn execute(&self);
@@ -21,4 +23,7 @@ pub fn handle_args(mut args: Args) {
         "install" => Box::new(Installer::default()),
         _ => return
     };
+
+    command_handler.parse(&mut args);
+    command_handler.execute();
 }

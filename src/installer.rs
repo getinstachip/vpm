@@ -10,7 +10,7 @@ pub struct Installer {
 
 impl Installer {
     fn parse_package_details(package_details: String) -> (String, String) {
-        let mut split = package_details.split("/");
+        let mut split = package_details.split('/');
 
         let author = split
             .next()
@@ -33,7 +33,7 @@ impl CommandHandler for Installer {
             None => return,
         };
 
-        let (package_author, package_name) = Self::parse_package_details(package_details)?;
+        let (package_author, package_name) = Self::parse_package_details(package_details);
         self.package_name = package_name;
         self.package_author = package_author;
     }
