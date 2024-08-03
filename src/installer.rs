@@ -1,6 +1,12 @@
 use std::env::Args;
 
-use crate::command_parser::CommandHandler;
+use crate::{
+    command_parser::CommandHandler,
+    errors::{
+        CommandError,
+        ParseError::{self, MissingArgument},
+    }
+};
 
 #[derive(Debug, Default)]
 pub struct Installer {
@@ -9,7 +15,7 @@ pub struct Installer {
 }
 
 impl Installer {
-    fn parse_package_details(package_details: String) -> (String, String) {
+    fn parse_package_details(package_details: String) -> Result<(String, String), ParseError> {
         let mut split = package_details.split('/');
 
         let author = split
@@ -22,23 +28,26 @@ impl Installer {
             .expect("Provided package name is empty")
             .to_string();
 
-        (author, name)
+        Ok((author, name))
     }
 }
 
 impl CommandHandler for Installer {
-    fn parse(&mut self, args: &mut Args) {
+    fn parse(&mut self, args: &mut Args) -> Result<(), ParseError> {
         let package_details = match args.next() {
             Some(package_details) => package_details,
-            None => return,
+            None => return Err(MissingArgument("package name".to_string())),
         };
 
-        let (package_author, package_name) = Self::parse_package_details(package_details);
+        let (package_author, package_name) = Self::parse_package_details(package_details)?;
         self.package_name = package_name;
         self.package_author = package_author;
+
+        Ok(())
     }
 
-    fn execute(&self) {
+    fn execute(&self) -> Result<(), CommandError> {
         println!("Installing {}", self.package_name);
+        Ok(())
     }
 }

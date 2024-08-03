@@ -1,13 +1,19 @@
 use std::env::Args;
 
-use crate::installer::Installer;
+use crate:: {
+    errors::{
+        CommandError,
+        ParseError::{self, CommandNotFound},
+    },
+    installer::Installer,
+};
 
 pub trait CommandHandler {
-    fn parse(&mut self, args: &mut Args);
-    fn execute(&self);
+    fn parse(&mut self, args: &mut Args) -> Result<(), ParseError>;
+    fn execute(&self) -> Result<(), CommandError>;
 }
 
-pub fn handle_args(mut args: Args) {
+pub fn handle_args(mut args: Args) -> Result<(), ParseError> {
     args.next();
 
     let command = match args.next() {
@@ -15,15 +21,21 @@ pub fn handle_args(mut args: Args) {
         None => {
             // TODO: Implement help menu
             println!("No help menu implemented yet.");
-            return;
+            return Ok(());
         }
     };
 
     let mut command_handler: Box<dyn CommandHandler> = match command.to_lowercase().as_str() {
         "install" => Box::new(Installer::default()),
-        _ => return
+        _ => return Err(CommandNotFound(command.to_string())),
     };
 
-    command_handler.parse(&mut args);
-    command_handler.execute();
+    command_handler.parse(&mut args)?;
+    let command_result = command_handler.execute();
+
+    if let Err(error) = command_result {
+        println!("Command error: {error}");
+    }
+
+    Ok(())
 }
