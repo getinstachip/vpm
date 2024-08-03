@@ -3,6 +3,8 @@ use std::fs::{self};
 use std::path::Path;
 use std::sync::mpsc::Sender;
 
+use crate::util::TaskAllocator;
+
 pub type PackageBytes = (String, Bytes); // Package destination, package bytes
 
 #[derive(Clone)]
