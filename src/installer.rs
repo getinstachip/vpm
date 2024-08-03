@@ -1,4 +1,7 @@
 use bytes::Bytes;
+use std::fs::{self};
+use std::path::Path;
+use std::sync::mpsc::Sender;
 
 pub type PackageBytes = (String, Bytes); // Package destination, package bytes
 
@@ -11,10 +14,10 @@ pub struct InstallContext {
 #[derive(Debug)]
 pub struct Installer;
 impl Installer {
-    pub fn install_package(context: InstallContext) -> () {
+    pub fn install_package(context: InstallContext) {
         TaskAllocater::add_task(async move {
             let package_bytes = HttpRequest::get_bytes(context.client.clone())
-                .await()
+                .await
                 .unwrap();
 
             let package_destination = format!("{}", *CACHE_DIRECTORY);
@@ -26,7 +29,7 @@ impl Installer {
         });
     }
 
-    pub fn create_modules_dir() -> () {
+    pub fn create_modules_dir() {
         if Path::new("./vpm_modules").exists() {
             return;
         }

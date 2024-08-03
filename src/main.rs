@@ -1,4 +1,5 @@
 mod commands;
+mod installer;
 
 use std::env;
 
