@@ -1,12 +1,12 @@
 use async_trait::async_trait;
 use indicatif::{ProgressBar, ProgressStyle};
-use std::{env::Args, fs, path::Path, time::Instant};
+use std::{fs, path::Path, time::Instant};
 use uuid::Uuid;
 
 use crate::http::GitHubFile;
 use crate::{
-    command_handler::CommandHandler,
-    errors::{CommandError, ParseError},
+    CommandHandler,
+    errors::CommandError,
     http::HTTPRequest,
     embedding::{create_client, create_index, embed_library, insert_documents},
 };
@@ -20,21 +20,24 @@ pub struct Installer {
 }
 
 impl Installer {
-    fn parse_package_details(package_details: String) -> Result<(String, String), ParseError> {
-        let mut split = package_details.split('/');
-        // split.next();
+    pub fn new(repo: String, flex_install: bool) -> Self {
+        let mut split = repo.split('/');
 
-        let author = split
+        let package_author = split
             .next()
             .expect("Provided package author is empty")
             .to_string();
 
-        let name = split
+        let package_name = split
             .next()
             .expect("Provided package name is empty")
             .to_string();
 
-        Ok((author, name))
+        Self { 
+            package_author,
+            package_name,
+            flex_install 
+        }
     }
 
     async fn install_package(
@@ -106,24 +109,6 @@ impl Installer {
 
 #[async_trait]
 impl CommandHandler for Installer {
-    fn parse(&mut self, args: &mut Vec<String>) -> Result<(), ParseError> {
-        let parts: Vec<&str> = args[0].split("/").collect();
-        let (package_author, package_name) = (parts[0], parts[1]);
-        self.package_name = package_name.to_string();
-        self.package_author = package_author.to_string();
-
-        Ok(())
-    }
-
-    fn parse_flags(&mut self, flags: &mut Vec<String>) -> Result<(), ParseError> {
-        for flag in flags {
-            if flag == "--flex" {
-                self.flex_install = true;
-            }
-        }
-        Ok(())
-    }
-
     async fn execute(&self) -> Result<(), CommandError> {
         let client = reqwest::Client::new();
         let now = Instant::now();
