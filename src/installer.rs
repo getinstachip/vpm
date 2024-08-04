@@ -19,6 +19,7 @@ pub struct Installer {
 impl Installer {
     fn parse_package_details(package_details: String) -> Result<(String, String), ParseError> {
         let mut split = package_details.split('/');
+        // split.next();
 
         let author = split
             .next()
@@ -40,6 +41,14 @@ impl Installer {
     ) -> Result<(), CommandError> {
         let verilog_files = HTTPRequest::get_verilog_files(client.clone(), package_author, package_name).await?;
 
+        use std::fs;
+        use std::path::Path;
+
+        let vpm_modules_dir = Path::new("./vpm_modules");
+        if !vpm_modules_dir.exists() {
+            fs::create_dir_all(vpm_modules_dir).map_err(CommandError::IOError)?;
+        }
+
         for file in verilog_files {
             if let Some(download_url) = file.download_url {
                 let content = client
@@ -51,10 +60,10 @@ impl Installer {
                     .await
                     .map_err(CommandError::FailedResponseText)?;
 
-                // TODO: Implement file writing logic
+                let file_path = vpm_modules_dir.join(&file.name);
+                fs::write(&file_path, content).map_err(|e| CommandError::IOError(e))?;
+
                 println!("Downloaded file: {}", file.name);
-                // For now, we'll just print the content
-                println!("Content:\n{}", content);
             }
         }
 

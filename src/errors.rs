@@ -16,4 +16,6 @@ pub enum CommandError {
     FailedResponseText(reqwest::Error),
     #[error("failed to parse JSON ({0})")]
     JSONParseError(serde_json::Error),
+    #[error("failed to write file ({0})")]
+    IOError(std::io::Error),
 }

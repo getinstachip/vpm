@@ -8,7 +8,6 @@ use tokio;
 
 #[tokio::main]
 async fn main() {
-    dbg!(env::args());
     let parse_result = command_handler::handle_args(env::args()).await;
     match parse_result {
         Err(error) => println!("Failed to parse command: {}", error),
