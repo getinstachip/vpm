@@ -2,6 +2,7 @@ use crate::errors::CommandError::{self, *};
 use indicatif::{ProgressBar, ProgressStyle};
 use reqwest::Client;
 use serde::Deserialize;
+use std::env;
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::time::sleep;
@@ -13,8 +14,6 @@ pub struct GitHubFile {
     pub name: String,
     pub path: String,
     pub download_url: Option<String>,
-    #[serde(skip)]
-    pub full_path: String,
 }
 
 pub struct HTTPRequest;
@@ -25,7 +24,7 @@ impl HTTPRequest {
             .header("Accept", "application/vnd.github.v3+json")
             .header(
                 "Authorization",
-                format!("token {}", "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"),
+                format!("token {}", env::var("GITHUB_TOKEN").expect("GITHUB_TOKEN must be set")),
             )
             .header("User-Agent", "vpm")
             .send()
@@ -79,26 +78,19 @@ impl HTTPRequest {
         )
         .await?;
 
-        let mut items: Vec<GitHubFile> =
+        let items: Vec<GitHubFile> =
             serde_json::from_str(&response_raw).map_err(JSONParseError)?;
         let mut verilog_files = Vec::new();
 
-        for item in &mut items {
-            item.full_path = if path.is_empty() {
-                item.path.clone()
-            } else {
-                format!("{}/{}", path, item.name)
-            };
-
+        for item in &items {
             if item.name.ends_with(".v") {
                 verilog_files.push(item.clone());
             } else if item.download_url.is_none() {
-                // This is a directory, recursively search it
                 let sub_files = Box::pin(Self::get_verilog_files_recursive(
                     client.clone(),
                     owner,
                     repo,
-                    &item.full_path,
+                    &item.path,
                     pb.clone(),
                 ))
                 .await?;
@@ -109,4 +101,3 @@ impl HTTPRequest {
         Ok(verilog_files)
     }
 }
-

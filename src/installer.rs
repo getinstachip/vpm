@@ -33,20 +33,16 @@ impl Installer {
         Ok((author, name))
     }
 
-    fn check_modules() -> Result<(), CommandError> {
+    async fn install_package(
+        client: reqwest::Client,
+        package_name: String,
+        verilog_files: Vec<GitHubFile>,
+    ) -> Result<(), CommandError> {
         let vpm_modules_dir = Path::new("./vpm_modules");
         if !vpm_modules_dir.exists() {
             fs::create_dir_all(vpm_modules_dir).map_err(CommandError::IOError)?;
         }
-
-        Ok(())
-    }
-
-    async fn install_package(
-        client: reqwest::Client,
-        verilog_files: Vec<GitHubFile>,
-    ) -> Result<(), CommandError> {
-        Self::check_modules();
+        fs::create_dir_all(vpm_modules_dir.join(&package_name)).map_err(CommandError::IOError)?;
 
         let pb = ProgressBar::new(verilog_files.len() as u64);
         pb.set_style(ProgressStyle::default_bar()
@@ -65,7 +61,7 @@ impl Installer {
                     .await
                     .map_err(CommandError::FailedResponseText)?;
 
-                let file_path = Path::new("./vpm_modules").join(&file.name);
+                let file_path = vpm_modules_dir.join(format!("{}/{}", package_name, &file.name));
                 fs::write(&file_path, content).map_err(CommandError::IOError)?;
 
                 pb.set_message(format!("Downloading: {}", file.name));
@@ -102,7 +98,7 @@ impl CommandHandler for Installer {
             self.package_name.to_string(),
         )
         .await?;
-        Self::install_package(client.clone(), verilog_files).await?;
+        Self::install_package(client.clone(), self.package_name.to_string(), verilog_files).await?;
 
         let elapsed = now.elapsed();
         println!("Elapsed: {}ms", elapsed.as_millis());
