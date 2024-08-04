@@ -20,5 +20,8 @@ Cargo.lock
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
 #.idea/
 
-node_modules
+
+
+vpm_modules
+Vpm.toml
 .env
