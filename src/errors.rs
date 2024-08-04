@@ -18,4 +18,6 @@ pub enum CommandError {
     JSONParseError(serde_json::Error),
     #[error("failed to write file ({0})")]
     IOError(std::io::Error),
+    #[error("failed to connect to Elasticsearch ({0})")]
+    ElasticsearchConnectionError(String),
 }

@@ -2,6 +2,7 @@ mod command_handler;
 mod errors;
 mod http;
 mod installer;
+mod embedding;
 
 use std::env;
 use dotenv::dotenv;
