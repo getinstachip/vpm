@@ -3,7 +3,7 @@
 set -e
 
 # Set the version
-VPM_VERSION="0.0.10"
+VPM_VERSION="0.0.11"
 
 # Download the tarball
 echo "Downloading VPM v${VPM_VERSION}..."
