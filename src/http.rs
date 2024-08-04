@@ -2,7 +2,6 @@ use crate::errors::CommandError::{self, *};
 use indicatif::{ProgressBar, ProgressStyle};
 use reqwest::Client;
 use serde::Deserialize;
-use std::env;
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::time::sleep;
@@ -22,10 +21,6 @@ impl HTTPRequest {
         client
             .get(format!("{}/{}", GITHUB_API_URL, route))
             .header("Accept", "application/vnd.github.v3+json")
-            .header(
-                "Authorization",
-                format!("token {}", env::var("GITHUB_TOKEN").expect("GITHUB_TOKEN must be set")),
-            )
             .header("User-Agent", "vpm")
             .send()
             .await
