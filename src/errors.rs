@@ -20,4 +20,6 @@ pub enum CommandError {
     IOError(std::io::Error),
     #[error("failed to connect to Elasticsearch ({0})")]
     ElasticsearchConnectionError(String),
+    #[error("failed to get latest commit id ({0})")]
+    FailedGetLatestCommitId(String),
 }

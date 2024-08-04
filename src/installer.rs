@@ -147,6 +147,16 @@ impl CommandHandler for Installer {
     async fn execute(&self) -> Result<(), CommandError> {
         let client = reqwest::Client::new();
         let now = Instant::now();
+        let version = if self.version == "latest" {
+            HTTPRequest::get_latest_commit_id(
+                client.clone(),
+                self.package_author.to_string(),
+                self.package_name.to_string(),
+            )
+            .await?
+        } else {
+            self.version.clone()
+        };
 
         let verilog_files = HTTPRequest::get_verilog_files(
             client.clone(),
@@ -173,7 +183,7 @@ impl CommandHandler for Installer {
             self.flex_install,
         )
         .await?;
-        vpm_toml_content.push_str(&format!("{}/{} = \"{}\"\n", self.package_author, self.package_name, self.version));
+        vpm_toml_content.push_str(&format!("{}/{} = \"{}\"\n", self.package_author, self.package_name, version));
         std::fs::write(vpm_toml_path, vpm_toml_content).unwrap();
         println!("Package '{}' added to vpm.toml", self.package_name);
         let elapsed = now.elapsed();

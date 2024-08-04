@@ -1,10 +1,12 @@
 use crate::errors::CommandError::{self, *};
 use indicatif::{ProgressBar, ProgressStyle};
+use reqwest::header::AUTHORIZATION;
 use reqwest::Client;
 use serde::Deserialize;
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::time::sleep;
+use std::env;
 
 pub const GITHUB_API_URL: &str = "https://api.github.com";
 
@@ -22,6 +24,10 @@ impl HTTPRequest {
             .get(format!("{}/{}", GITHUB_API_URL, route))
             .header("Accept", "application/vnd.github.v3+json")
             .header("User-Agent", "vpm")
+            .header(
+                "Authorization",
+                format!("token {}", ""),
+            )
             .send()
             .await
             .map_err(HTTPFailed)?
@@ -62,16 +68,32 @@ impl HTTPRequest {
         owner: String,
         repo: String,
     ) -> Result<String, CommandError> {
-        let route = format!("repos/{}/{}/commits/main", owner, repo);
+        let route = format!("repos/{}/{}/commits", owner, repo);
         let response_raw = Self::api_request(client, route).await?;
-        
-        #[derive(Deserialize)]
-        struct CommitResponse {
-            sha: String,
+        // First, try to parse as a single commit object
+        if let Ok(commit) = serde_json::from_str::<serde_json::Value>(&response_raw) {
+            if let Some(commit_sha) = commit.get("sha").and_then(|sha| sha.as_str()) {
+                return Ok(commit_sha.to_string());
+            }
         }
-
-        let commit_info: CommitResponse = serde_json::from_str(&response_raw).map_err(JSONParseError)?;
-        Ok(commit_info.sha)
+        // If that fails, try to parse as an array of commits
+        if let Ok(commits) = serde_json::from_str::<Vec<serde_json::Value>>(&response_raw) {
+            if let Some(first_commit) = commits.first() {
+                if let Some(commit_sha) = first_commit.get("sha").and_then(|sha| sha.as_str()) {
+                    return Ok(commit_sha.to_string());
+                }
+            }
+        }
+        // If both parsing attempts fail, check for rate limit error
+        if response_raw.contains("API rate limit exceeded") {
+            return Err(CommandError::FailedGetLatestCommitId(
+                "GitHub API rate limit exceeded. Please try again later or use authentication.".to_string()
+            ));
+        }
+        // If we reach here, we couldn't parse the response or find a commit SHA
+        Err(CommandError::FailedGetLatestCommitId(
+            format!("Failed to parse response or find commit SHA. Raw response: {}", response_raw)
+        ))
     }
 
     async fn get_verilog_files_recursive(
