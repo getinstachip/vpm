@@ -14,7 +14,6 @@ use std::env;
 pub const ES_URL: &str = "https://69bc680d7967407080cd9090e3c12a25.us-central1.gcp.cloud.es.io:443";
 pub const ES_API_KEY: &str = "UWdUV0M1RUJjd1F5SmpPNHRJVlU6Ui1tenFqaUFReFc5d0k2ODJSVnBldw==";
 
-
 pub(crate) fn create_client() -> Result<Elasticsearch, Box<dyn std::error::Error>> {
     let conn_pool = SingleNodeConnectionPool::new(ES_URL.parse()?);
     let mut headers = HeaderMap::new();
