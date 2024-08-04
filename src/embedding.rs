@@ -52,7 +52,7 @@ pub(crate) async fn embed_library(fpath: &Path, index: &str) -> Result<Vec<Value
     let mut idx = 0;
     for entry in walkdir::WalkDir::new(fpath).into_iter().filter_map(|e| e.ok()) {
         let path = entry.path();
-        if path.is_file() && path.extension().and_then(|s| s.to_str()) == Some("v") {
+        if path.is_file() && path.extension().and_then(|s| s.to_str()).map(|ext| ext == "v" || ext == "vhdl" || ext == "vhd").unwrap_or(false) {
             let doc = create_document(path).await?;
             documents.push(json!({
                 "index": {
