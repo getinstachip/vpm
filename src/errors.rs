@@ -14,4 +14,6 @@ pub enum CommandError {
     HTTPFailed(reqwest::Error),
     #[error("failed to get http response text ({0})")]
     FailedResponseText(reqwest::Error),
+    #[error("failed to parse JSON ({0})")]
+    JSONParseError(serde_json::Error),
 }

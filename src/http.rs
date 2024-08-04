@@ -1,27 +1,38 @@
-use octocrab::Octocrab;
-
 use crate::errors::CommandError::{self, *};
+use reqwest::Client;
+use serde::Deserialize;
 
-pub const REGISTRY_URL: &str = "https://github.com/";
+pub const GITHUB_API_URL: &str = "https://api.github.com";
+
+#[derive(Deserialize, Debug)]
+pub struct GitHubFile {
+    name: String,
+    path: String,
+    download_url: Option<String>,
+}
 
 pub struct HTTPRequest;
 impl HTTPRequest {
-    async fn registry(client: reqwest::Client, route: String) -> Result<String, CommandError> {
-        let octocrab = Octocrab::builder().build()?;
-        // client
-        //     .get(format!("{}/{}", REGISTRY_URL, route))
-        //     .send()
-        //     .await
-        //     .map_err(HTTPFailed)?
-        //     .text()
-        //     .await
-        //     .or_else(|err| Err(FailedResponseText(err)))
+    async fn api_request(client: Client, route: String) -> Result<String, CommandError> {
+        client
+            .get(format!("{}/{}", GITHUB_API_URL, route))
+            .header("Accept", "application/vnd.github.v3+json")
+            .send()
+            .await
+            .map_err(HTTPFailed)?
+            .text()
+            .await
+            .map_err(FailedResponseText)
     }
 
-    pub async fn package_data(client: reqwest::Client, package_author: &String, package_name: &String) -> Result<PackageData, CommandError> {
-        let response_raw = Self::registry(client, format!("/{}/{}", package_author, package_name));
-        let body = response.text()?;
-        let document = Html::parse_document(&body);
+    pub async fn get_verilog_files(
+        client: Client,
+        owner: &str,
+        repo: &str,
+    ) -> Result<Vec<GitHubFile>, CommandError> {
+        let response_raw = Self::api_request(client, format!("repos/{}/{}/contents", owner, repo)).await?;
+        let files: Vec<GitHubFile> = serde_json::from_str(&response_raw).map_err(JSONParseError)?;
+        let verilog_files: Vec<GitHubFile> = files.into_iter().filter(|file| file.name.ends_with(".v")).collect();
+        Ok(verilog_files)
     }
 }
-

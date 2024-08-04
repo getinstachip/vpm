@@ -1,3 +1,4 @@
+use async_trait::async_trait;
 use std::env::Args;
 
 use crate:: {
@@ -8,12 +9,13 @@ use crate:: {
     installer::Installer,
 };
 
+#[async_trait]
 pub trait CommandHandler {
     fn parse(&mut self, args: &mut Args) -> Result<(), ParseError>;
-    fn execute(&self) -> Result<(), CommandError>;
+    async fn execute(&self) -> Result<(), CommandError>;
 }
 
-pub fn handle_args(mut args: Args) -> Result<(), ParseError> {
+pub async fn handle_args(mut args: Args) -> Result<(), ParseError> {
     args.next();
 
     let command = match args.next() {
@@ -31,7 +33,7 @@ pub fn handle_args(mut args: Args) -> Result<(), ParseError> {
     };
 
     command_handler.parse(&mut args)?;
-    let command_result = command_handler.execute();
+    let command_result = command_handler.execute().await;
 
     if let Err(error) = command_result {
         println!("Command error: {error}");
