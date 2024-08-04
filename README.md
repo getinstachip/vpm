@@ -21,7 +21,7 @@ After installation, you can use the `vpm` command in any terminal.
 ### Basic Commands
 
 - Install a package: `vpm install <author/repo_name>`
-- Install a package tuned to your use case: `vpm install --flex <author/repo_name>
+- Install a package tuned to your use case (COMING SOON): `vpm install --flex <author/repo_name>`
 - List installed packages: `vpm list installed`
 - List outdated packages: `vpm list outdated`
 - List available packages: `vpm list available`
