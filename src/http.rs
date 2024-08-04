@@ -57,6 +57,23 @@ impl HTTPRequest {
         Ok(verilog_files)
     }
 
+    pub async fn get_latest_commit_id(
+        client: Client,
+        owner: String,
+        repo: String,
+    ) -> Result<String, CommandError> {
+        let route = format!("repos/{}/{}/commits/main", owner, repo);
+        let response_raw = Self::api_request(client, route).await?;
+        
+        #[derive(Deserialize)]
+        struct CommitResponse {
+            sha: String,
+        }
+
+        let commit_info: CommitResponse = serde_json::from_str(&response_raw).map_err(JSONParseError)?;
+        Ok(commit_info.sha)
+    }
+
     async fn get_verilog_files_recursive(
         client: Client,
         owner: &str,

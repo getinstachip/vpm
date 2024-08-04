@@ -17,6 +17,7 @@ pub struct Installer {
     package_author: String,
     package_name: String,
     flex_install: bool,
+    version: String,
 }
 
 impl Installer {
@@ -28,15 +29,28 @@ impl Installer {
             .expect("Provided package author is empty")
             .to_string();
 
+        let name = split
+            .next()
+            .expect("Provided package name is empty")
+            .to_string();
+
+        
+        let mut split = name.split('@');
         let package_name = split
             .next()
             .expect("Provided package name is empty")
             .to_string();
 
+        let version = split
+            .next()
+            .map(|v| v.to_string())
+            .unwrap_or_else(|| "latest".to_string());
+
         Self {
             package_author,
             package_name,
             flex_install,
+            version,
         }
     }
 
@@ -159,7 +173,7 @@ impl CommandHandler for Installer {
             self.flex_install,
         )
         .await?;
-        vpm_toml_content.push_str(&format!("{}/{}\n", self.package_author, self.package_name));
+        vpm_toml_content.push_str(&format!("{}/{} = \"{}\"\n", self.package_author, self.package_name, self.version));
         std::fs::write(vpm_toml_path, vpm_toml_content).unwrap();
         println!("Package '{}' added to vpm.toml", self.package_name);
         let elapsed = now.elapsed();
