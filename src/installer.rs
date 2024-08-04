@@ -5,12 +5,11 @@ use uuid::Uuid;
 
 use crate::http::GitHubFile;
 use crate::{
-    CommandHandler,
+    embedding::{create_client, create_index, embed_library, insert_documents},
     errors::CommandError,
     http::HTTPRequest,
-    embedding::{create_client, create_index, embed_library, insert_documents},
+    CommandHandler,
 };
-
 
 #[derive(Debug, Default)]
 pub struct Installer {
@@ -33,10 +32,10 @@ impl Installer {
             .expect("Provided package name is empty")
             .to_string();
 
-        Self { 
+        Self {
             package_author,
             package_name,
-            flex_install 
+            flex_install,
         }
     }
 
@@ -92,16 +91,23 @@ impl Installer {
         let random_key = Uuid::new_v4().to_string();
         let stripped_key = random_key.replace(&['-', '_'][..], "");
         let index_name = format!("codebase{}", stripped_key).to_lowercase();
-        println!("Creating index: {}", index_name);            
+        println!("Creating index: {}", index_name);
         match create_index(&es_client, &index_name).await {
             Ok(_) => println!("Index '{}' created successfully", index_name),
-            Err(e) => return Err(CommandError::ElasticsearchConnectionError(format!("Failed to create index: {}", e))),
+            Err(e) => {
+                return Err(CommandError::ElasticsearchConnectionError(format!(
+                    "Failed to create index: {}",
+                    e
+                )))
+            }
         }
         let current_dir = std::env::current_dir().unwrap();
         println!("Current directory: {:?}", current_dir);
         let documents = embed_library(&current_dir, &index_name).await.unwrap();
         println!("Number of embedded documents: {}", documents.len());
-        insert_documents(&es_client, &index_name, &documents).await.unwrap();
+        insert_documents(&es_client, &index_name, &documents)
+            .await
+            .unwrap();
         println!("Codebase embedded and stored successfully!");
         Ok(())
     }
@@ -131,7 +137,13 @@ impl CommandHandler for Installer {
         if self.flex_install {
             Self::embed_codebase().await?;
         }
-        Self::install_package(client.clone(), self.package_name.to_string(), verilog_files, self.flex_install).await?;
+        Self::install_package(
+            client.clone(),
+            self.package_name.to_string(),
+            verilog_files,
+            self.flex_install,
+        )
+        .await?;
         vpm_toml_content.push_str(&format!("{}/{}\n", self.package_author, self.package_name));
         std::fs::write(vpm_toml_path, vpm_toml_content).unwrap();
         println!("Package '{}' added to Vpm.toml", self.package_name);
