@@ -66,9 +66,7 @@ impl Installer {
         }
         let package_dir = vpm_modules_dir.join(&package_name);
         let files_dir = package_dir.join("files");
-        let headers_dir = package_dir.join("headers");
         fs::create_dir_all(&files_dir).map_err(CommandError::IOError)?;
-        fs::create_dir_all(&headers_dir).map_err(CommandError::IOError)?;
 
         let pb = ProgressBar::new(verilog_files.len() as u64);
         pb.set_style(
@@ -90,19 +88,38 @@ impl Installer {
                     .await
                     .map_err(CommandError::FailedResponseText)?;
 
-                let file_path = files_dir.join(&file.name);
+                // Preserve directory structure
+                let relative_path = Path::new(&file.path);
+                let file_path = files_dir.join(relative_path);
+                if let Some(parent) = file_path.parent() {
+                    fs::create_dir_all(parent).map_err(CommandError::IOError)?;
+                }
+
                 if context {
                     // Tune context to codebase
                 }
                 
-                fs::write(&file_path, &content).map_err(CommandError::IOError)?;
-                // Generate and write header file
-                let header_content = generate_header(&content, &file.name);
-                let header_name = file.name.replace(".v", ".vh");
-                let header_path = headers_dir.join(&header_name);
-                fs::write(&header_path, header_content).map_err(CommandError::IOError)?;
+                // Create a new folder for the file pair
+                if file.name.ends_with(".v") {
+                    let file_name = file_path.file_stem().unwrap().to_str().unwrap();
+                    let pair_folder = file_path.parent().unwrap().join(file_name);
+                    fs::create_dir_all(&pair_folder).map_err(CommandError::IOError)?;
 
-                pb.set_message(format!("Downloading: {}", file.name));
+                    // Write the .v file
+                    let v_file_path = pair_folder.join(&file.name);
+                    fs::write(&v_file_path, &content).map_err(CommandError::IOError)?;
+                    
+                    // Generate and write header file
+                    let header_content = generate_header(&content, &file.name);
+                    let header_name = file.name.replace(".v", ".vh");
+                    let header_path = pair_folder.join(header_name);
+                    fs::write(&header_path, header_content).map_err(CommandError::IOError)?;
+                } else {
+                    // For non-.v files, just write the file directly
+                    fs::write(&file_path, &content).map_err(CommandError::IOError)?;
+                }
+
+                pb.set_message(format!("Downloading: {}", file.path));
                 pb.inc(1);
             }
         }
@@ -164,7 +181,7 @@ impl CommandHandler for Installer {
             self.package_name.to_string(),
         )
         .await?;
-        let vpm_toml_path = std::path::Path::new("./vpm.toml");
+        let vpm_toml_path = std::path::Path::new("./Vpm.toml");
         if !vpm_toml_path.exists() {
             std::fs::File::create(vpm_toml_path).unwrap();
             println!("Created vpm.toml file");

@@ -113,12 +113,11 @@ impl HTTPRequest {
         .await?;
 
         let items: Vec<GitHubFile> = serde_json::from_str(&response_raw).map_err(JSONParseError)?;
-        let mut verilog_files = Vec::new();
+        let mut all_files = Vec::new();
 
         for item in &items {
-            if item.name.ends_with(".v") {
-                verilog_files.push(item.clone());
-            } else if item.download_url.is_none() {
+            all_files.push(item.clone());
+            if item.download_url.is_none() {
                 let sub_files = Box::pin(Self::get_verilog_files_recursive(
                     client.clone(),
                     owner,
@@ -127,10 +126,10 @@ impl HTTPRequest {
                     pb.clone(),
                 ))
                 .await?;
-                verilog_files.extend(sub_files);
+                all_files.extend(sub_files);
             }
         }
 
-        Ok(verilog_files)
+        Ok(all_files)
     }
 }
