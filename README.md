@@ -40,7 +40,6 @@ ZipCPU/zipcpu = "0.0.1"
 LibSV/libsv = "1.0.0"
 OpenCores/opencores = "2.1.3"
 VerilogPCIe/verilog-pcie = "0.0.5"
-LibSV/libsv = "1.0.0"
 getinstachip/openchips = "0.1.4"
 ```
 
