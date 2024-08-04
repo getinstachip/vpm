@@ -9,4 +9,9 @@ pub enum ParseError {
 }
 
 #[derive(Error, Debug)]
-pub enum CommandError {}
+pub enum CommandError {
+    #[error("failed to execute http request ({0})")]
+    HTTPFailed(reqwest::Error),
+    #[error("failed to get http response text ({0})")]
+    FailedResponseText(reqwest::Error),
+}

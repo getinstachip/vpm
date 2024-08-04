@@ -1,6 +1,7 @@
 mod command_parser;
 mod installer;
 mod errors;
+mod http;
 
 use std::env;
 
