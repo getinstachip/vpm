@@ -9,6 +9,7 @@ use async_openai::{Client, types::CreateEmbeddingRequestArgs};
 use reqwest::Client as ReqwestClient;
 use reqwest::header::{AUTHORIZATION, CONTENT_TYPE};
 use walkdir::WalkDir;
+use std::env;
 
 pub const ES_URL: &str = "https://69bc680d7967407080cd9090e3c12a25.us-central1.gcp.cloud.es.io:443";
 // pub const ES_API_KEY: &str = "TEFSYkFwRUJjd1F5SmpPNG5JUXc6el83R2NQU3NUTEc5OVRlMnltb2g1QQ==";
@@ -27,7 +28,7 @@ pub(crate) fn create_client() -> Result<Elasticsearch, Box<dyn std::error::Error
 }
 
 pub(crate) async fn generate_embedding(code_snippet: &str) -> Result<Vec<f32>, Box<dyn std::error::Error>> {
-    let config = async_openai::config::OpenAIConfig::new().with_api_key(API_KEY);
+    let config = async_openai::config::OpenAIConfig::new().with_api_key(env::var("OPENAI_API_KEY").expect("OPENAI_API_KEY must be set").as_str());
     let oai = Client::with_config(config);
     let response = oai.embeddings().create(
         CreateEmbeddingRequestArgs::default()
