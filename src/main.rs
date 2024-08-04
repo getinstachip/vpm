@@ -1,10 +1,9 @@
 mod command_handler;
-mod installer;
 mod errors;
 mod http;
+mod installer;
 
 use std::env;
-use tokio;
 
 #[tokio::main]
 async fn main() {

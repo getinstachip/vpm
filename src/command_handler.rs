@@ -41,4 +41,3 @@ pub async fn handle_args(mut args: Args) -> Result<(), ParseError> {
 
     Ok(())
 }
-
