@@ -39,8 +39,6 @@ Example `vpm.toml` file:
 ZipCPU/zipcpu = "0.0.1"
 LibSV/libsv = "1.0.0"
 OpenCores/opencores = "2.1.3"
-VerilogI2C/verilog-i2c = "0.0.2"
-VerilogUART/verilog-uart = "0.1.0"
 VerilogPCIe/verilog-pcie = "0.0.5"
 LibSV/libsv = "1.0.0"
 getinstachip/openchips = "0.1.4"
