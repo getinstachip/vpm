@@ -3,14 +3,18 @@ mod errors;
 mod http;
 mod installer;
 mod headers;
+mod remover;
 
 use async_trait::async_trait;
 use clap::{Parser, Subcommand};
 use errors::ParseError;
+use std::fs;
+use std::path::Path;
 
 use crate::errors::{CommandError, ParseError::CommandNotFound};
 
 use crate::installer::Installer;
+use crate::remover::Remover;
 
 #[derive(Parser, Debug)]
 pub struct Args {
@@ -26,6 +30,9 @@ pub enum Commands {
         flex: bool,
         #[arg(long)]
         list: bool,
+    },
+    Remove {
+        package_name: String,
     },
 }
 
@@ -60,12 +67,16 @@ pub async fn handle_args(args: Args) -> Result<(), ParseError> {
                 Err(ParseError::MissingArgument("Repository name is required for installation".to_string()))
             }
         }
+        Some(Commands::Remove { package_name }) => {
+            let remover = Remover::new(package_name);
+            match remover.execute().await {
+                Ok(_) => Ok(()),
+                Err(e) => Err(ParseError::MissingArgument(e.to_string())),
+            }
+        }
         None => Err(CommandNotFound(String::from(""))),
     }
 }
-
-use std::fs;
-use std::path::Path;
 
 fn list_installed_packages() -> Result<(), ParseError> {
     let vpm_toml_path = Path::new("./vpm.toml");
