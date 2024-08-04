@@ -3,6 +3,7 @@ mod errors;
 mod http;
 mod installer;
 mod embedding;
+mod headers;
 
 use std::env;
 use dotenv::dotenv;

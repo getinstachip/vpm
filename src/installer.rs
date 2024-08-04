@@ -10,6 +10,7 @@ use crate::{
     http::HTTPRequest,
     embedding::{create_client, create_index, embed_library, insert_documents},
 };
+use crate::headers::generate_header;
 
 
 #[derive(Debug, Default)]
@@ -47,7 +48,11 @@ impl Installer {
         if !vpm_modules_dir.exists() {
             fs::create_dir_all(vpm_modules_dir).map_err(CommandError::IOError)?;
         }
-        fs::create_dir_all(vpm_modules_dir.join(&package_name)).map_err(CommandError::IOError)?;
+        let package_dir = vpm_modules_dir.join(&package_name);
+        let files_dir = package_dir.join("files");
+        let headers_dir = package_dir.join("headers");
+        fs::create_dir_all(&files_dir).map_err(CommandError::IOError)?;
+        fs::create_dir_all(&headers_dir).map_err(CommandError::IOError)?;
 
         let pb = ProgressBar::new(verilog_files.len() as u64);
         pb.set_style(ProgressStyle::default_bar()
@@ -66,11 +71,18 @@ impl Installer {
                     .await
                     .map_err(CommandError::FailedResponseText)?;
 
-                let file_path = vpm_modules_dir.join(format!("{}/{}", package_name, &file.name));
+                let file_path = files_dir.join(&file.name);
                 if context {
                     // Tune context to codebase
                 }
-                fs::write(&file_path, content).map_err(CommandError::IOError)?;
+                
+                fs::write(&file_path, &content).map_err(CommandError::IOError)?;
+                // Generate and write header file
+                let header_content = generate_header(&content, &file.name);
+                let header_name = file.name.replace(".v", ".vh");
+                let header_path = headers_dir.join(&header_name);
+                fs::write(&header_path, header_content).map_err(CommandError::IOError)?;
+
                 pb.set_message(format!("Downloading: {}", file.name));
                 pb.inc(1);
             }
