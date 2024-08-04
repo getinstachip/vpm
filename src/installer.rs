@@ -33,6 +33,11 @@ impl Installer {
 
         Ok((author, name))
     }
+    async fn install_package(
+        client: reqwest::Client,
+    ) -> Result<(), CommandError> {
+        todo!()
+    }
 }
 
 #[async_trait]
