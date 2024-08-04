@@ -17,7 +17,6 @@ pub trait CommandHandler {
 
 pub async fn handle_args(mut args: Args) -> Result<(), ParseError> {
     args.next();
-    args.next();
 
     let command = match args.next() {
         Some(command) => command,

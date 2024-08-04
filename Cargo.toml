@@ -5,6 +5,7 @@ edition = "2021"
 
 [dependencies]
 async-trait = "0.1.81"
+indicatif = "0.17.8"
 octocrab = "0.39.0"
 reqwest = "0.12.5"
 serde = "1.0.204"

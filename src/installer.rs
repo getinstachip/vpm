@@ -1,6 +1,8 @@
 use async_trait::async_trait;
 use std::{env::Args, time::Instant};
+use indicatif::{ProgressBar, ProgressStyle};
 
+use crate::http::GitHubFile;
 use crate::{
     command_handler::CommandHandler,
     http::HTTPRequest,
@@ -36,11 +38,8 @@ impl Installer {
 
     async fn install_package(
         client: reqwest::Client,
-        package_author: &str,
-        package_name: &str,
+        verilog_files: Vec<GitHubFile>,
     ) -> Result<(), CommandError> {
-        let verilog_files = HTTPRequest::get_verilog_files(client.clone(), package_author, package_name).await?;
-
         use std::fs;
         use std::path::Path;
 
@@ -48,6 +47,12 @@ impl Installer {
         if !vpm_modules_dir.exists() {
             fs::create_dir_all(vpm_modules_dir).map_err(CommandError::IOError)?;
         }
+
+        let pb = ProgressBar::new(verilog_files.len() as u64);
+        pb.set_style(ProgressStyle::default_bar()
+            .template("{spinner:.green} [{elapsed_precise}] [{bar:40.cyan/blue}] {pos}/{len} ({percent}%) {msg}")
+            .unwrap()
+            .progress_chars("=> "));
 
         for file in verilog_files {
             if let Some(download_url) = file.download_url {
@@ -63,10 +68,12 @@ impl Installer {
                 let file_path = vpm_modules_dir.join(&file.name);
                 fs::write(&file_path, content).map_err(|e| CommandError::IOError(e))?;
 
-                println!("Downloaded file: {}", file.name);
+                pb.set_message(format!("Downloading: {}", file.name));
+                pb.inc(1);
             }
         }
 
+        pb.finish_with_message("✨ All files downloaded successfully!");
         Ok(())
     }
 }
@@ -86,12 +93,11 @@ impl CommandHandler for Installer {
     }
 
     async fn execute(&self) -> Result<(), CommandError> {
-        println!("Installing '{}'..", self.package_name);
-
         let client = reqwest::Client::new();
         let now = Instant::now();
 
-        Self::install_package(client.clone(), &self.package_author, &self.package_name).await?;
+        let verilog_files = HTTPRequest::get_verilog_files(client.clone(), self.package_author.to_string(), self.package_name.to_string()).await?;
+        Self::install_package(client.clone(), verilog_files).await?;
 
         let elapsed = now.elapsed();
         println!("Elapsed: {}ms", elapsed.as_millis());

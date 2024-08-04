@@ -1,6 +1,10 @@
 use crate::errors::CommandError::{self, *};
 use reqwest::Client;
 use serde::Deserialize;
+use indicatif::{ProgressBar, ProgressStyle};
+use std::sync::Arc;
+use std::time::Duration;
+use tokio::time::sleep;
 
 pub const GITHUB_API_URL: &str = "https://api.github.com";
 
@@ -32,10 +36,23 @@ impl HTTPRequest {
 
     pub async fn get_verilog_files(
         client: Client,
-        owner: &str,
-        repo: &str,
+        owner: String,
+        repo: String,
     ) -> Result<Vec<GitHubFile>, CommandError> {
-        Self::get_verilog_files_recursive(client, owner, repo, "").await
+        println!("Parsing repository: https://github.com/{}/{}..", owner, repo);
+        let pb = ProgressBar::new_spinner();
+        pb.set_style(ProgressStyle::default_spinner()
+            .template("{spinner} {msg}")
+            .unwrap()
+            .tick_strings(&["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"]));
+        pb.set_message("Parsing repository structure...");
+        pb.enable_steady_tick(Duration::from_millis(100));
+
+        let pb = Arc::new(pb);
+        let verilog_files = Self::get_verilog_files_recursive(client, &owner, &repo, "", pb.clone()).await?;
+        
+        pb.finish_with_message("✨ Repository structure parsed successfully!");
+        Ok(verilog_files)
     }
 
     async fn get_verilog_files_recursive(
@@ -43,7 +60,11 @@ impl HTTPRequest {
         owner: &str,
         repo: &str,
         path: &str,
+        pb: Arc<ProgressBar>,
     ) -> Result<Vec<GitHubFile>, CommandError> {
+        pb.set_message(format!("Parsing: {}", path));
+        sleep(Duration::from_millis(10)).await;
+
         let response_raw = Self::api_request(
             client.clone(),
             format!("repos/{}/{}/contents/{}", owner, repo, path),
@@ -63,6 +84,7 @@ impl HTTPRequest {
                     owner,
                     repo,
                     &item.path,
+                    pb.clone(),
                 ))
                 .await?;
                 verilog_files.extend(sub_files);
