@@ -52,10 +52,13 @@ impl Installer {
         fs::create_dir_all(vpm_modules_dir.join(&package_name)).map_err(CommandError::IOError)?;
 
         let pb = ProgressBar::new(verilog_files.len() as u64);
-        pb.set_style(ProgressStyle::default_bar()
-            .template("{spinner:.green} [{elapsed_precise}] [{bar:40.cyan/blue}] {pos}/{len} ({percent}%) {msg}")
-            .unwrap()
-            .progress_chars("=> "));
+        pb.set_style(
+            ProgressStyle::default_bar()
+                .template("{spinner:.green} [{elapsed_precise}] [{bar:40.cyan/blue}] {pos}/{len} ({percent}%) {msg}")
+                .unwrap()
+                .tick_strings(&["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"])
+                .progress_chars("=> ")
+        );
 
         for file in verilog_files {
             if let Some(download_url) = file.download_url {
@@ -105,7 +108,7 @@ impl Installer {
         println!("Current directory: {:?}", current_dir);
         let documents = embed_library(&current_dir, &index_name).await.unwrap();
         println!("Number of embedded documents: {}", documents.len());
-        insert_documents(&es_client, &index_name, &documents)
+        insert_documents(&index_name, &documents)
             .await
             .unwrap();
         println!("Codebase embedded and stored successfully!");
@@ -125,10 +128,10 @@ impl CommandHandler for Installer {
             self.package_name.to_string(),
         )
         .await?;
-        let vpm_toml_path = std::path::Path::new("./Vpm.toml");
+        let vpm_toml_path = std::path::Path::new("./vpm.toml");
         if !vpm_toml_path.exists() {
             std::fs::File::create(vpm_toml_path).unwrap();
-            println!("Created Vpm.toml file");
+            println!("Created vpm.toml file");
         }
         let mut vpm_toml_content = std::fs::read_to_string(vpm_toml_path).unwrap();
         if !vpm_toml_content.contains("[dependencies]") {
@@ -146,7 +149,7 @@ impl CommandHandler for Installer {
         .await?;
         vpm_toml_content.push_str(&format!("{}/{}\n", self.package_author, self.package_name));
         std::fs::write(vpm_toml_path, vpm_toml_content).unwrap();
-        println!("Package '{}' added to Vpm.toml", self.package_name);
+        println!("Package '{}' added to vpm.toml", self.package_name);
         let elapsed = now.elapsed();
         println!("Elapsed: {}ms", elapsed.as_millis());
         Ok(())

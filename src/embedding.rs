@@ -1,10 +1,9 @@
 use async_openai::{types::CreateEmbeddingRequestArgs, Client};
-use elasticsearch::http::headers::{HeaderMap, HeaderName, HeaderValue, CONTENT_LENGTH};
-use elasticsearch::http::request::JsonBody;
+use elasticsearch::http::headers::{HeaderMap, HeaderValue, CONTENT_LENGTH};
 use elasticsearch::{
     http::transport::{SingleNodeConnectionPool, TransportBuilder},
     indices::IndicesCreateParts,
-    Elasticsearch, Error as ElasticsearchError, IndexParts,
+    Elasticsearch, Error as ElasticsearchError,
 };
 use reqwest::header::{AUTHORIZATION, CONTENT_TYPE};
 use reqwest::Client as ReqwestClient;
@@ -13,7 +12,6 @@ use std::collections::HashMap;
 use std::env;
 use std::fs;
 use std::path::Path;
-use walkdir::WalkDir;
 
 pub const ES_URL: &str = "https://69bc680d7967407080cd9090e3c12a25.us-central1.gcp.cloud.es.io:443";
 pub const ES_API_KEY: &str = "UWdUV0M1RUJjd1F5SmpPNHRJVlU6Ui1tenFqaUFReFc5d0k2ODJSVnBldw==";
@@ -119,7 +117,7 @@ pub(crate) async fn create_index(
     let body_string = serde_json::to_string(&body)?;
     let body_length = body_string.len();
 
-    let response = client
+    client
         .indices()
         .create(IndicesCreateParts::Index(index_name))
         .header(
@@ -134,7 +132,6 @@ pub(crate) async fn create_index(
 }
 
 pub(crate) async fn insert_documents(
-    es_client: &Elasticsearch,
     index_name: &str,
     embedded_documents: &Vec<Value>,
 ) -> Result<(), ElasticsearchError> {
@@ -159,48 +156,47 @@ pub(crate) async fn insert_documents(
             } else {
                 client.post(&url)
             };
-            let response = request.headers(headers).json(doc_body).send().await?;
+            request.headers(headers).json(doc_body).send().await?;
         }
     }
     Ok(())
 }
 
-pub(crate) async fn vector_search(
-    client: &Elasticsearch,
-    index_name: &str,
-    query_vector: Vec<f32>,
-    top_k: usize,
-) -> Result<Vec<HashMap<String, Value>>, ElasticsearchError> {
-    let search_query = json!({
-        "size": top_k,
-        "query": {
-            "script_score": {
-                "query": {"match_all": {}},
-                "script": {
-                    "source": "cosineSimilarity(params.query_vector, 'embedding') + 1.0",
-                    "params": {"query_vector": query_vector}
-                }
-            }
-        }
-    });
-
-    let response = client
-        .search(elasticsearch::SearchParts::Index(&[index_name]))
-        .body(search_query)
-        .send()
-        .await?;
-
-    let mut results = Vec::new();
-    if let Some(hits) = response.json::<Value>().await?["hits"]["hits"].as_array() {
-        for hit in hits {
-            results.push(HashMap::from([
-                ("id".to_string(), hit["_id"].clone()),
-                ("score".to_string(), hit["_score"].clone()),
-                ("name".to_string(), hit["_source"]["name"].clone()),
-                ("code".to_string(), hit["_source"]["code"].clone()),
-            ]));
-        }
-    }
-    Ok(results)
-}
-
+// pub(crate) async fn vector_search(
+//     client: &Elasticsearch,
+//     index_name: &str,
+//     query_vector: Vec<f32>,
+//     top_k: usize,
+// ) -> Result<Vec<HashMap<String, Value>>, ElasticsearchError> {
+//     let search_query = json!({
+//         "size": top_k,
+//         "query": {
+//             "script_score": {
+//                 "query": {"match_all": {}},
+//                 "script": {
+//                     "source": "cosineSimilarity(params.query_vector, 'embedding') + 1.0",
+//                     "params": {"query_vector": query_vector}
+//                 }
+//             }
+//         }
+//     });
+//
+//     let response = client
+//         .search(elasticsearch::SearchParts::Index(&[index_name]))
+//         .body(search_query)
+//         .send()
+//         .await?;
+//
+//     let mut results = Vec::new();
+//     if let Some(hits) = response.json::<Value>().await?["hits"]["hits"].as_array() {
+//         for hit in hits {
+//             results.push(HashMap::from([
+//                 ("id".to_string(), hit["_id"].clone()),
+//                 ("score".to_string(), hit["_score"].clone()),
+//                 ("name".to_string(), hit["_source"]["name"].clone()),
+//                 ("code".to_string(), hit["_source"]["code"].clone()),
+//             ]));
+//         }
+//     }
+//     Ok(results)
+// }
