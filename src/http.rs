@@ -73,8 +73,7 @@ impl HTTPRequest {
         )
         .await?;
 
-        let items: Vec<GitHubFile> =
-            serde_json::from_str(&response_raw).map_err(JSONParseError)?;
+        let items: Vec<GitHubFile> = serde_json::from_str(&response_raw).map_err(JSONParseError)?;
         let mut verilog_files = Vec::new();
 
         for item in &items {
