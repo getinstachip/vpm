@@ -24,7 +24,7 @@ impl HTTPRequest {
             .header("Accept", "application/vnd.github.v3+json")
             .header(
                 "Authorization",
-                format!("token {}", env::var("GITHUB_TOKEN").expect("GITHUB_TOKEN must be set")),
+                format!("token {}", "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"),
             )
             .header("User-Agent", "vpm")
             .send()
