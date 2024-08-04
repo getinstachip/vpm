@@ -19,7 +19,6 @@ pub struct Installer {
 impl Installer {
     fn parse_package_details(package_details: String) -> Result<(String, String), ParseError> {
         let mut split = package_details.split('/');
-        split.next();
 
         let author = split
             .next()
@@ -33,10 +32,33 @@ impl Installer {
 
         Ok((author, name))
     }
+
     async fn install_package(
         client: reqwest::Client,
+        package_author: &str,
+        package_name: &str,
     ) -> Result<(), CommandError> {
-        todo!()
+        let verilog_files = HTTPRequest::get_verilog_files(client.clone(), package_author, package_name).await?;
+
+        for file in verilog_files {
+            if let Some(download_url) = file.download_url {
+                let content = client
+                    .get(&download_url)
+                    .send()
+                    .await
+                    .map_err(CommandError::HTTPFailed)?
+                    .text()
+                    .await
+                    .map_err(CommandError::FailedResponseText)?;
+
+                // TODO: Implement file writing logic
+                println!("Downloaded file: {}", file.name);
+                // For now, we'll just print the content
+                println!("Content:\n{}", content);
+            }
+        }
+
+        Ok(())
     }
 }
 
@@ -60,9 +82,7 @@ impl CommandHandler for Installer {
         let client = reqwest::Client::new();
         let now = Instant::now();
 
-        let package_data =
-            HTTPRequest::get_verilog_files(client.clone(), &self.package_author, &self.package_name).await?;
-        Self::install_package(client).await?;
+        Self::install_package(client.clone(), &self.package_author, &self.package_name).await?;
 
         let elapsed = now.elapsed();
         println!("Elapsed: {}ms", elapsed.as_millis());

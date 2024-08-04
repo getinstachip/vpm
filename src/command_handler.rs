@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use std::env::Args;
 
-use crate:: {
+use crate::{
     errors::{
         CommandError,
         ParseError::{self, CommandNotFound},
@@ -16,6 +16,7 @@ pub trait CommandHandler {
 }
 
 pub async fn handle_args(mut args: Args) -> Result<(), ParseError> {
+    args.next();
     args.next();
 
     let command = match args.next() {
@@ -41,3 +42,4 @@ pub async fn handle_args(mut args: Args) -> Result<(), ParseError> {
 
     Ok(())
 }
+
