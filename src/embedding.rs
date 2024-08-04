@@ -133,7 +133,7 @@ pub(crate) async fn create_index(
 
 pub(crate) async fn insert_documents(
     index_name: &str,
-    embedded_documents: &Vec<Value>,
+    embedded_documents: &[Value],
 ) -> Result<(), ElasticsearchError> {
     let client = ReqwestClient::new();
     for chunk in embedded_documents.chunks(2) {

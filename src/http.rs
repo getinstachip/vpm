@@ -1,12 +1,10 @@
 use crate::errors::CommandError::{self, *};
 use indicatif::{ProgressBar, ProgressStyle};
-use reqwest::header::AUTHORIZATION;
 use reqwest::Client;
 use serde::Deserialize;
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::time::sleep;
-use std::env;
 
 pub const GITHUB_API_URL: &str = "https://api.github.com";
 
@@ -24,10 +22,10 @@ impl HTTPRequest {
             .get(format!("{}/{}", GITHUB_API_URL, route))
             .header("Accept", "application/vnd.github.v3+json")
             .header("User-Agent", "vpm")
-            .header(
-                "Authorization",
-                format!("token {}", ""),
-            )
+            // .header(
+            //     "Authorization",
+            //     format!("token {}", ""),
+            // )
             .send()
             .await
             .map_err(HTTPFailed)?
