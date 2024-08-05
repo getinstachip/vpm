@@ -2,7 +2,7 @@ use async_trait::async_trait;
 use std::{fs, path::Path, time::Instant, io::Read};
 use std::io::{Write, Seek};
 
-use crate::errors::CommandError;
+use crate::errors::{CommandError, ParseError};
 use crate::command_handler::CommandHandler;
 use crate::http::HTTPRequest;
 use crate::installer::Installer;
@@ -185,6 +185,44 @@ impl CommandHandler for Updater {
 
         let elapsed = now.elapsed();
         println!("Elapsed: {}ms", elapsed.as_millis());
+        Ok(())
+    }
+
+    async fn list() -> Result<(), ParseError> {
+        let vpm_toml_path = Path::new("./Vpm.toml");
+        if !vpm_toml_path.exists() {
+            println!("No packages installed. Vpm.toml file not found.");
+            return Ok(());
+        }
+
+        let content = fs::read_to_string(vpm_toml_path).unwrap();
+        let lines: Vec<String> = content.lines().map(String::from).collect();
+
+        println!("Packages that need updating:");
+        let mut updates_available = false;
+
+        for line in lines {
+            if line.contains('=') {
+                let parts: Vec<&str> = line.split('=').collect();
+                if parts.len() == 2 {
+                    let package = parts[0].trim();
+                    let current_commit = parts[1].trim().trim_matches('"');
+                    
+                    let updater = Updater::new(Some(package.to_string()), false);
+                    if let Ok(available) = updater.check_update_available(current_commit).await {
+                        if available {
+                            println!("  {}", package);
+                            updates_available = true;
+                        }
+                    }
+                }
+            }
+        }
+
+        if !updates_available {
+            println!("All packages are up to date.");
+        }
+
         Ok(())
     }
 }

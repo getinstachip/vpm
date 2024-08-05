@@ -1,7 +1,5 @@
 use async_trait::async_trait;
 use clap::{Parser, Subcommand};
-use std::fs;
-use std::path::Path;
 
 use crate::errors::{CommandError, ParseError};
 use crate::installer::Installer;
@@ -16,87 +14,90 @@ pub struct Args {
 
 #[derive(Subcommand, Debug)]
 pub enum Commands {
+    /// Install a package from a repository
     Install {
+        /// Repository name <author/repo>
         repo: Option<String>,
+        /// Install flex packages
         #[arg(long)]
         flex: bool,
+        /// List installed packages
         #[arg(long)]
         list: bool,
     },
+    /// Remove a package
     Remove {
-        package_name: String,
-    },
-    Update {
+        /// Package name
         package_name: Option<String>,
+        /// List installed packages
+        #[arg(long)]
+        list: bool,
+    },
+    /// Update a package
+    Update {
+        /// Package name
+        package_name: Option<String>,
+        /// Install flex packages
         #[arg(long)]
         flex: bool,
+        /// List packages that can be updated
+        #[arg(long)]
+        list: bool,
     },
 }
 
 #[async_trait]
 pub trait CommandHandler {
     async fn execute(&self) -> Result<(), CommandError>;
+    async fn list() -> Result<(), ParseError>;
 }
 
 pub async fn handle_args(args: Args) -> Result<(), ParseError> {
     match args.command {
         Some(Commands::Install { repo, flex, list }) => {
             if list {
-                list_installed_packages()?;
+                Installer::list().await?;
                 Ok(())
-            } else if let Some(repo) = repo {
-                let install_handler = Installer::new(repo, flex);
-                match install_handler.execute().await {
+            } else {
+                match repo {
+                    Some(repo_name) => {
+                        let install_handler = Installer::new(repo_name, flex);
+                        install_handler.execute().await
+                            .map_err(|e| ParseError::MissingArgument(e.to_string()))
+                    },
+                    None => Err(ParseError::MissingArgument("Repository name".to_string()))
+                }
+            }
+        }
+        Some(Commands::Remove { package_name, list }) => {
+            if list {
+                Remover::list().await?;
+                Ok(())
+            } else {
+                match package_name {
+                    Some(package_name) => {
+                        let remover = Remover::new(package_name);
+                        match remover.execute().await {
+                            Ok(_) => Ok(()),
+                            Err(e) => Err(ParseError::MissingArgument(e.to_string())),
+                        }
+                    }
+                    None => Err(ParseError::MissingArgument("Package name".to_string())),
+                }
+            }
+        }
+        Some(Commands::Update { package_name, flex, list }) => {
+            if list {
+                Updater::list().await?;
+                Ok(())
+            } else {
+                let updater = Updater::new(package_name, flex);
+                match updater.execute().await {
                     Ok(_) => Ok(()),
                     Err(e) => Err(ParseError::MissingArgument(e.to_string())),
                 }
-            } else {
-                Err(ParseError::MissingArgument("Repository name is required for installation".to_string()))
             }
         }
-        Some(Commands::Remove { package_name }) => {
-            let remover = Remover::new(package_name);
-            match remover.execute().await {
-                Ok(_) => Ok(()),
-                Err(e) => Err(ParseError::MissingArgument(e.to_string())),
-            }
-        },
-        Some(Commands::Update { package_name, flex }) => {
-            let updater = Updater::new(package_name, flex);
-            match updater.execute().await {
-                Ok(_) => Ok(()),
-                Err(e) => Err(ParseError::MissingArgument(e.to_string())),
-            }
-        },
-        None => Err(ParseError::MissingArgument("Command not found".to_string())),
+        _ => Err(ParseError::MissingArgument("Command not found".to_string())),
     }
-}
-
-fn list_installed_packages() -> Result<(), ParseError> {
-    let vpm_toml_path = Path::new("./vpm.toml");
-    if !vpm_toml_path.exists() {
-        println!("No packages installed. vpm.toml file not found.");
-        return Ok(());
-    }
-
-    let vpm_toml_content = fs::read_to_string(vpm_toml_path)
-        .map_err(|e| ParseError::MissingArgument(format!("Failed to read vpm.toml: {}", e)))?;
-
-    let mut found_dependencies = false;
-    for line in vpm_toml_content.lines() {
-        if line.trim() == "[dependencies]" {
-            found_dependencies = true;
-            println!("Installed packages:");
-            continue;
-        }
-        if found_dependencies && !line.trim().is_empty() {
-            println!("  {}", line.trim());
-        }
-    }
-
-    if !found_dependencies {
-        println!("No packages installed.");
-    }
-
-    Ok(())
 }

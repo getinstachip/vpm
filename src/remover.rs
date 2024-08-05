@@ -2,7 +2,7 @@ use async_trait::async_trait;
 use std::{fs, path::Path, time::Instant};
 use std::io::{BufRead, BufReader, Write};
 
-use crate::errors::CommandError;
+use crate::errors::{CommandError, ParseError};
 use crate::command_handler::CommandHandler;
 
 #[derive(Debug, Default)]
@@ -94,4 +94,34 @@ impl CommandHandler for Remover {
         println!("Elapsed: {}ms", elapsed.as_millis());
         Ok(())
     }
+
+    async fn list() -> Result<(), ParseError> {
+        let vpm_toml_path = Path::new("./vpm.toml");
+        if !vpm_toml_path.exists() {
+            println!("No packages installed. vpm.toml file not found.");
+            return Ok(());
+        }
+
+        let vpm_toml_content = fs::read_to_string(vpm_toml_path)
+            .map_err(|e| ParseError::MissingArgument(format!("Failed to read vpm.toml: {}", e)))?;
+
+        let mut found_dependencies = false;
+        for line in vpm_toml_content.lines() {
+            if line.trim() == "[dependencies]" {
+                found_dependencies = true;
+                println!("Installed packages:");
+                continue;
+            }
+            if found_dependencies && !line.trim().is_empty() {
+                println!("  {}", line.trim());
+            }
+        }
+
+        if !found_dependencies {
+            println!("No packages installed.");
+        }
+
+        Ok(())
+    }
+
 }

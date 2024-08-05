@@ -1,5 +1,3 @@
-use clap::Parser;
-
 mod embedding;
 mod errors;
 mod http;
@@ -9,12 +7,13 @@ mod remover;
 mod updater;
 mod command_handler;
 
+use clap::Parser;
+use command_handler::Args;
+
 #[tokio::main]
 async fn main() {
-    let args = command_handler::Args::parse();
-    let result = command_handler::handle_args(args).await;
-
+    let result = command_handler::handle_args(Args::parse()).await;
     if let Err(e) = result {
-        eprintln!("Error: {}", e);
+        eprintln!("Failed to handle arguments: {}", e);
     }
 }
