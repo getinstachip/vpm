@@ -22,10 +22,6 @@ impl HTTPRequest {
             .get(format!("{}/{}", GITHUB_API_URL, route))
             .header("Accept", "application/vnd.github.v3+json")
             .header("User-Agent", "vpm")
-            // .header(
-            //     "Authorization",
-            //     format!("token {}", ""),
-            // )
             .send()
             .await
             .map_err(HTTPFailed)?

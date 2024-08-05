@@ -22,4 +22,10 @@ pub enum CommandError {
     ElasticsearchConnectionError(String),
     #[error("failed to get latest commit id ({0})")]
     FailedGetLatestCommitId(String),
+    #[error("failed to update package ({0})")]
+    FailedUpdatePackage(String),
+    #[error("failed to update all packages")]
+    FailedUpdateAllPackages(String),
+    #[error("missing file ({0})")]
+    MissingFile(String),
 }
