@@ -1,8 +1,8 @@
-pub (crate) fn generate_header(content: &String, file_name: &str) -> String {
+pub (crate) fn generate_header(content: &str, file_name: &str) -> String {
     let mut header = String::new();
 
     // Add header guard
-    let guard_name = file_name.replace(".", "_").to_uppercase();
+    let guard_name = file_name.replace('.', "_").to_uppercase();
     header.push_str(&format!("`ifndef {}\n", guard_name));
     header.push_str(&format!("`define {}\n\n", guard_name));
 

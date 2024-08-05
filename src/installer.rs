@@ -181,7 +181,7 @@ impl CommandHandler for Installer {
             self.package_name.to_string(),
         )
         .await?;
-        let vpm_toml_path = std::path::Path::new("./Vpm.toml");
+        let vpm_toml_path = std::path::Path::new("./vpm.toml");
         if !vpm_toml_path.exists() {
             std::fs::File::create(vpm_toml_path).unwrap();
             println!("Created vpm.toml file");
