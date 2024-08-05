@@ -4,6 +4,7 @@ mod http;
 mod installer;
 mod headers;
 mod remover;
+mod updater;
 
 use async_trait::async_trait;
 use clap::{Parser, Subcommand};
@@ -15,6 +16,7 @@ use crate::errors::{CommandError, ParseError::CommandNotFound};
 
 use crate::installer::Installer;
 use crate::remover::Remover;
+use crate::updater::Updater;
 
 #[derive(Parser, Debug)]
 pub struct Args {
@@ -33,6 +35,11 @@ pub enum Commands {
     },
     Remove {
         package_name: String,
+    },
+    Update {
+        package_name: Option<String>,
+        #[arg(long)]
+        flex: bool,
     },
 }
 
@@ -73,7 +80,14 @@ pub async fn handle_args(args: Args) -> Result<(), ParseError> {
                 Ok(_) => Ok(()),
                 Err(e) => Err(ParseError::MissingArgument(e.to_string())),
             }
-        }
+        },
+        Some(Commands::Update { package_name, flex }) => {
+            let updater = Updater::new(package_name, flex);
+            match updater.execute().await {
+                Ok(_) => Ok(()),
+                Err(e) => Err(ParseError::MissingArgument(e.to_string())),
+            }
+        },
         None => Err(CommandNotFound(String::from(""))),
     }
 }

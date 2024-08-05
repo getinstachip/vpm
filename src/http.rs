@@ -26,7 +26,7 @@ impl HTTPRequest {
             .header("User-Agent", "vpm")
             .header(
                 "Authorization",
-                format!("token {}", ""),
+                format!("token {}", "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"),
             )
             .send()
             .await
