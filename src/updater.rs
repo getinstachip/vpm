@@ -1,10 +1,9 @@
 use async_trait::async_trait;
 use std::{fs, path::Path, time::Instant, io::Read};
-use std::io::{BufRead, BufReader, Write};
-use std::io::Seek;
+use std::io::{Write, Seek};
 
 use crate::errors::CommandError;
-use crate::CommandHandler;
+use crate::command_handler::CommandHandler;
 use crate::http::HTTPRequest;
 use crate::installer::Installer;
 
@@ -79,12 +78,12 @@ impl Updater {
         }
 
         let content = fs::read_to_string(vpm_toml_path).map_err(CommandError::IOError)?;
-        let mut lines: Vec<String> = content.lines().map(String::from).collect();
+        let lines: Vec<String> = content.lines().map(String::from).collect();
 
         let package_line = format!("{}/{} = ", self.package_author, self.package_name);
         let package_index = lines.iter().position(|line| line.starts_with(&package_line));
 
-        if let Some(index) = package_index {
+        if package_index.is_some() {
             let mut file = fs::OpenOptions::new()
                 .read(true)
                 .write(true)

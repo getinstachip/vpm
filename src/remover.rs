@@ -3,7 +3,7 @@ use std::{fs, path::Path, time::Instant};
 use std::io::{BufRead, BufReader, Write};
 
 use crate::errors::CommandError;
-use crate::CommandHandler;
+use crate::command_handler::CommandHandler;
 
 #[derive(Debug, Default)]
 pub struct Remover {

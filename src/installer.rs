@@ -8,7 +8,7 @@ use crate::{
     embedding::{create_client, create_index, embed_library, insert_documents},
     errors::CommandError,
     http::HTTPRequest,
-    CommandHandler,
+    command_handler::CommandHandler,
 };
 use crate::headers::generate_header;
 
