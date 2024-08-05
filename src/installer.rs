@@ -2,13 +2,14 @@ use async_trait::async_trait;
 use indicatif::{ProgressBar, ProgressStyle};
 use std::{fs, path::Path, time::Instant};
 use uuid::Uuid;
+use crate::errors::ParseError;
 
 use crate::http::GitHubFile;
 use crate::{
     embedding::{create_client, create_index, embed_library, insert_documents},
     errors::CommandError,
     http::HTTPRequest,
-    CommandHandler,
+    command_handler::CommandHandler,
 };
 use crate::headers::generate_header;
 
@@ -205,6 +206,35 @@ impl CommandHandler for Installer {
         println!("Package '{}' added to vpm.toml", self.package_name);
         let elapsed = now.elapsed();
         println!("Elapsed: {}ms", elapsed.as_millis());
+        Ok(())
+    }
+
+    async fn list() -> Result<(), ParseError> {
+        let vpm_toml_path = Path::new("./vpm.toml");
+        if !vpm_toml_path.exists() {
+            println!("No packages installed. vpm.toml file not found.");
+            return Ok(());
+        }
+
+        let vpm_toml_content = fs::read_to_string(vpm_toml_path)
+            .map_err(|e| ParseError::MissingArgument(format!("Failed to read vpm.toml: {}", e)))?;
+
+        let mut found_dependencies = false;
+        for line in vpm_toml_content.lines() {
+            if line.trim() == "[dependencies]" {
+                found_dependencies = true;
+                println!("Installed packages:");
+                continue;
+            }
+            if found_dependencies && !line.trim().is_empty() {
+                println!("  {}", line.trim());
+            }
+        }
+
+        if !found_dependencies {
+            println!("No packages installed.");
+        }
+
         Ok(())
     }
 }
