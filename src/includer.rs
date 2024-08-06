@@ -3,8 +3,10 @@ use std::{fs, path::Path};
 use crate::errors::ParseError;
 use crate::errors::CommandError;
 use crate::command_handler::CommandHandler;
+use crate::http::GitHubFile;
 use crate::http::HTTPRequest;
 use regex::Regex;
+use tree_sitter::{Parser, Language};
 
 #[derive(Debug, Default)]
 pub struct Includer {
@@ -20,64 +22,130 @@ impl Includer {
         }
     }
 
-    // Helper function to parse module instantiations
-    fn parse_module_instantiations(content: &str) -> Vec<String> {
-        let re = regex::Regex::new(r"(\w+)\s*#?\s*\(([\s\S]*?)\)?\s*(\w+)\s*\(([\s\S]*?)\);").unwrap();
-        let instances: Vec<String> = re.captures_iter(content)
-            .filter_map(|cap| cap.get(1))
-            .map(|m| m.as_str().to_string())
-            .collect();
-        instances
+    fn parse_module_hierarchy(content: &str) -> Vec<String> {
+        let mut parser = Parser::new();
+        parser.set_language(tree_sitter_verilog::language()).expect("Error loading Verilog grammar");
+        
+        let tree = parser.parse(content, None).expect("Failed to parse Verilog content");
+        let root_node = tree.root_node();
+        
+        let mut module_names = Vec::new();
+        Self::traverse_tree(&root_node, content, &mut module_names);
+        
+        module_names
+    }
+    fn traverse_tree(node: &tree_sitter::Node, source: &str, instances: &mut Vec<String>) {
+        if node.kind() == "module_instantiation" {
+            if let Some(first_child) = node.child(0) {
+                if let Ok(module_name) = first_child.utf8_text(source.as_bytes()) {
+                    instances.push(format!("{}.v", module_name));
+                }
+            }
+        }
+        
+        for child in node.children(&mut node.walk()) {
+            Self::traverse_tree(&child, source, instances);
+        }
+    }
+
+    async fn process_files(&self, client: reqwest::Client, github_files: Vec<GitHubFile>) -> Result<(), CommandError> {
+        let mut visited_files = std::collections::HashSet::new();
+        let mut files_to_process = vec![self.module_name.clone()];
+        let vpm_modules_dir = std::path::Path::new("vpm_modules").join(self.module_name.trim_end_matches(".v"));
+        let vpm_modules_path = vpm_modules_dir.as_path();
+        if !vpm_modules_path.exists() {
+            std::fs::create_dir_all(vpm_modules_path)
+                .map_err(|_| CommandError::WriteToVpmModulesError(format!("Failed to create vpm_modules directory")))?;
+        }
+        // Create module_name.toml file
+        let toml_file_name = format!("{}.toml", self.module_name.trim_end_matches(".v"));
+        let toml_file_path = vpm_modules_path.join(&toml_file_name);
+        let toml_content = format!(
+            "[package]\n\
+            name = \"{}\"\n\
+            repository = \"{}\"\n",
+            self.module_name.trim_end_matches(".v"),
+            self.repository
+        );
+        let mut toml_content = format!(
+            "[package]\n\
+            name = \"{}\"\n\
+            repository = \"{}\"\n\n\
+            [dependencies]\n",
+            self.module_name.trim_end_matches(".v"),
+            self.repository
+        );
+
+        std::fs::write(&toml_file_path, &toml_content)
+            .map_err(|_| CommandError::WriteToVpmModulesError(format!("Failed to create {} file", toml_file_name)))?;
+        println!("Created {} file", toml_file_name);
+
+        while let Some(current_file) = files_to_process.pop() {
+            if visited_files.contains(&current_file) {
+                continue;
+            }
+
+            if let Some(file) = github_files.iter().find(|f| f.name == current_file) {
+                if let Some(download_url) = &file.download_url {
+                    let content = client.get(download_url)
+                        .send()
+                        .await
+                        .map_err(CommandError::HTTPFailed)?
+                        .text()
+                        .await
+                        .map_err(CommandError::FailedResponseText)?;
+
+                    println!("Processing file: {}", current_file);
+                    println!("Module Hierarchy for {}:", current_file);
+                    // Write the content to a file in vpm_modules
+                    let file_path = vpm_modules_dir.join(&current_file);
+                    std::fs::write(&file_path, &content)
+                        .map_err(|_| CommandError::WriteToVpmModulesError(format!("Failed to write file {}", file_path.display())))?;
+
+                    println!("Added file to vpm_modules: {}", file_path.display());
+                    let instances = Self::parse_module_hierarchy(&content);
+                    for instance in instances {
+                        println!("Found instance: {}", instance);
+                        if !visited_files.contains(&instance) {
+                            files_to_process.push(instance.clone());
+                            // Add the instance to the dependencies section of the TOML file
+                            toml_content.push_str(&format!("{} = \"*\"\n", instance.trim_end_matches(".v")));
+                        }
+                    }
+
+                    println!("Files to process:");
+                    for file in &files_to_process {
+                        println!("  - {}", file);
+                    }
+                    println!();
+
+                    visited_files.insert(current_file);
+                }
+            }
+        }
+
+        // Update the TOML file with the final content including all dependencies
+        std::fs::write(&toml_file_path, &toml_content)
+            .map_err(|_| CommandError::WriteToVpmModulesError(format!("Failed to update {} file", toml_file_name)))?;
+        println!("Updated {} file with dependencies", toml_file_name);
+
+        Ok(())
     }
 }
 
 #[async_trait]
 impl CommandHandler for Includer {
     async fn execute(&self) -> Result<(), CommandError> {
-       // loop through all files in repo recursively
-        let client = reqwest::Client::new();
-
-        // Split the repository string to get author and name
         let mut repo_parts = self.repository.split('/');
         let author = repo_parts.next().ok_or_else(|| CommandError::ParseError("Invalid repository format".to_string()))?;
         let name = repo_parts.next().ok_or_else(|| CommandError::ParseError("Invalid repository format".to_string()))?;
-
+        let client = reqwest::Client::new();
         let github_files = HTTPRequest::get_verilog_files(
             client.clone(),
             author.to_string(),
             name.to_string(),
         ).await?;
-
-        // if verilog file matches module name
-        for file in github_files {
-            if let Some(download_url) = file.download_url {
-                if file.name == self.module_name {
-                    let content = client.get(&download_url)
-                    .send()
-                    .await
-                    .map_err(CommandError::HTTPFailed)?
-                    .text()
-                    .await
-                    .map_err(CommandError::FailedResponseText)?;               
-                    // Parse the Verilog file content to extract module instantiations
-                    let module_instances = Self::parse_module_instantiations(&content);
-                    // Print the module name and its instantiated submodules
-                    println!("Module: {}", self.module_name);
-                    if module_instances.is_empty() {
-                        println!("  No submodules instantiated.");
-                    } else {
-                        println!("  Instantiated submodules:");
-                        for instance in module_instances {
-                            println!("    - {}", instance);
-                        }
-                    }
-                    // Break the loop as we've found and processed the matching file
-                    break;
-                }
-            }
-        }
-
-        Ok(())
+        self.process_files(client, github_files).await
     }
 
     async fn list() -> Result<(), ParseError> {

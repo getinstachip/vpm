@@ -1,0 +1,7 @@
+vpm include zipbones.v openrisc
+/
+or1200
+
+vpm_modules
+-> ZipCPU
+    -> 
