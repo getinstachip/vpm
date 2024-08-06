@@ -51,10 +51,6 @@ pub enum Commands {
         query: String,
         /// Repository
         place_to_look: String,
-        #[arg(long)]
-        repo: bool,
-        #[arg(long)]
-        collection: bool,
     },
 }
 
@@ -110,8 +106,8 @@ pub async fn handle_args(args: Args) -> Result<(), ParseError> {
                 }
             }
         }
-        Some(Commands::Locate { query, place_to_look, repo, collection }) => {
-            let locator = Locator::new(query, place_to_look, repo, collection);
+        Some(Commands::Locate { query, place_to_look }) => {
+            let locator = Locator::new(query, place_to_look);
             match locator.execute().await {
                 Ok(_) => Ok(()),
                 Err(e) => Err(ParseError::MissingArgument(e.to_string())),
