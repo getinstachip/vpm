@@ -24,6 +24,4 @@ pub enum CommandError {
     MissingFile(String),
     #[error("failed to generate embedding ({0})")]
     EmbeddingError(String),
-    #[error("failed to parse TOML ({0})")]
-    ParseError(String),
 }
