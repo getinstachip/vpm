@@ -2,8 +2,8 @@ name: Publish Install Script and Release
 
 on:
   push:
-    tags:
-      - 'v*.*.*'
+    branches:
+      - main  # or your default branch
 
 jobs:
   publish:
@@ -12,10 +12,22 @@ jobs:
     steps:
     - name: Checkout repository
       uses: actions/checkout@v3
+      with:
+        fetch-depth: 0  # Fetch all history for all tags and branches
 
-    - name: Get the version
+    - name: Get latest tag and increment version
       id: get_version
-      run: echo ::set-output name=VERSION::${GITHUB_REF#refs/tags/}
+      run: |
+        git fetch --tags
+        LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
+        LATEST_VERSION=${LATEST_TAG#v}
+        IFS='.' read -ra VERSION_PARTS <<< "$LATEST_VERSION"
+        MAJOR=${VERSION_PARTS[0]}
+        MINOR=${VERSION_PARTS[1]}
+        PATCH=$((VERSION_PARTS[2] + 1))
+        NEW_VERSION="$MAJOR.$MINOR.$PATCH"
+        echo "NEW_VERSION=$NEW_VERSION" >> $GITHUB_ENV
+        echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
 
     - name: Make install.sh executable
       run: chmod +x install.sh
@@ -32,8 +44,8 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        tag_name: ${{ steps.get_version.outputs.VERSION }}
-        release_name: Release ${{ steps.get_version.outputs.VERSION }}
+        tag_name: v${{ steps.get_version.outputs.new_version }}
+        release_name: Release v${{ steps.get_version.outputs.new_version }}
         draft: false
         prerelease: false
 
@@ -46,3 +58,19 @@ jobs:
         asset_path: ./install.sh
         asset_name: install.sh
         asset_content_type: text/x-shellscript
+
+    - name: Update version in Cargo.toml
+      run: |
+        sed -i 's/^version = ".*"/version = "${{ env.NEW_VERSION }}"/' Cargo.toml
+
+    - name: Commit and push changes
+      run: |
+        git config user.name github-actions
+        git config user.email github-actions@github.com
+        git add Cargo.toml
+        git commit -m "Bump version to ${{ env.NEW_VERSION }}"
+        git push
+
+    - name: Push new tag
+      run: |
+        git push origin v${{ env.NEW_VERSION }}
