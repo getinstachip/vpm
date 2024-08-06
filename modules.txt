@@ -1018,3 +1018,19 @@ phillbush/legv8
 amamory-verification/uvm-basics
 blackmesalabs/s7_mini_fpga
 fast-codesign/OpenTSN2.0
+
+curl -i -H “Accept: application/json” -H “Content-Type: application/json” -H “Authorization: token <accessToken>” -X GET https://api.github.com/repos/<owner>/<repository>/contributors > contributors.json
+
+git log --pretty=format:“%an <%ae>” | sort | uniq > contributors_emails.txt
+
+
+
+
+
+
+
+
+
+
+2:02
+git log --pretty=format:“%an <%ae>” | sort | uniq > contributors_emails.txt
