@@ -9,9 +9,11 @@ use reqwest::header::{AUTHORIZATION, CONTENT_TYPE};
 use reqwest::Client as ReqwestClient;
 use serde_json::{json, Value};
 use std::collections::HashMap;
-use std::env;
 use std::fs;
 use std::path::Path;
+use crate::http::HTTPRequest;
+use crate::errors::CommandError;
+use indicatif::{ProgressBar, ProgressStyle};
 
 pub const ES_URL: &str = "https://69bc680d7967407080cd9090e3c12a25.us-central1.gcp.cloud.es.io:443";
 pub const ES_API_KEY: &str = "UWdUV0M1RUJjd1F5SmpPNHRJVlU6Ui1tenFqaUFReFc5d0k2ODJSVnBldw==";
@@ -160,41 +162,129 @@ pub(crate) async fn insert_documents(
     Ok(())
 }
 
-// pub(crate) async fn vector_search(
-//     client: &Elasticsearch,
-//     index_name: &str,
-//     query_vector: Vec<f32>,
-//     top_k: usize,
-// ) -> Result<Vec<HashMap<String, Value>>, ElasticsearchError> {
-//     let search_query = json!({
-//         "size": top_k,
-//         "query": {
-//             "script_score": {
-//                 "query": {"match_all": {}},
-//                 "script": {
-//                     "source": "cosineSimilarity(params.query_vector, 'embedding') + 1.0",
-//                     "params": {"query_vector": query_vector}
-//                 }
-//             }
-//         }
-//     });
-//
-//     let response = client
-//         .search(elasticsearch::SearchParts::Index(&[index_name]))
-//         .body(search_query)
-//         .send()
-//         .await?;
-//
-//     let mut results = Vec::new();
-//     if let Some(hits) = response.json::<Value>().await?["hits"]["hits"].as_array() {
-//         for hit in hits {
-//             results.push(HashMap::from([
-//                 ("id".to_string(), hit["_id"].clone()),
-//                 ("score".to_string(), hit["_score"].clone()),
-//                 ("name".to_string(), hit["_source"]["name"].clone()),
-//                 ("code".to_string(), hit["_source"]["code"].clone()),
-//             ]));
-//         }
-//     }
-//     Ok(results)
-// }
+
+pub async fn embed_github_repository(
+    author: &str,
+    repo: &str,
+    index_name: &str,
+) -> Result<(), CommandError> {
+    let client = ReqwestClient::new();
+    let verilog_files = HTTPRequest::get_verilog_files(
+        client.clone(),
+        author.to_string(),
+        repo.to_string(),
+    ).await?;
+
+    let es_client = create_client().map_err(|e| CommandError::ElasticsearchConnectionError(e.to_string()))?;
+
+    // Create index if it doesn't exist
+    if let Err(e) = create_index(&es_client, &index_name).await {
+        return Err(CommandError::ElasticsearchConnectionError(format!("Failed to create index: {}", e)));
+    }
+
+    // Create a progress bar
+    let pb = ProgressBar::new(verilog_files.len() as u64);
+    pb.set_style(ProgressStyle::default_bar()
+        .template("{spinner:.green} [{elapsed_precise}] [{bar:40.cyan/blue}] {pos}/{len} ({percent}%) {msg}")
+        .unwrap()
+        .progress_chars("=>-"));
+
+    // Set up progress bar to update every second
+    let pb_clone = pb.clone();
+    tokio::spawn(async move {
+        loop {
+            tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+            pb_clone.tick();
+        }
+    });
+
+    for file in verilog_files {
+        if let Some(download_url) = file.download_url {
+            if file.name.ends_with(".v") {
+                let content = client.get(&download_url)
+                    .send()
+                    .await
+                    .map_err(CommandError::HTTPFailed)?
+                    .text()
+                    .await
+                    .map_err(CommandError::FailedResponseText)?;
+
+                // Chunk the content
+                let chunks = chunk_content(&content, 1000); // Adjust chunk size as needed
+
+                for (chunk_index, chunk) in chunks.iter().enumerate() {
+                    let embedding = generate_embedding(chunk).await.map_err(|e| CommandError::EmbeddingError(e.to_string()))?;
+
+                    let document = serde_json::json!({
+                        "name": file.name,
+                        "path": file.path,
+                        "content": chunk,
+                        "embedding": embedding,
+                        "chunk_index": chunk_index,
+                        "total_chunks": chunks.len(),
+                    });
+
+                    // Insert document into Elasticsearch
+                    let doc_id = format!("{}_{}_{}", author, file.path.replace("/", "_"), chunk_index);
+                    es_client.index(elasticsearch::IndexParts::IndexId(&index_name, &doc_id))
+                        .body(document)
+                        .send()
+                        .await
+                        .map_err(|e| CommandError::ElasticsearchConnectionError(format!("Failed to insert document: {}", e)))?;
+                }
+            }
+        }
+        pb.inc(1);
+        pb.set_message(format!("Processed: {}", file.name));
+    }
+
+    pb.finish_with_message("Repository embedding completed");
+    Ok(())
+}
+
+fn chunk_content(content: &str, chunk_size: usize) -> Vec<String> {
+    content.chars()
+        .collect::<Vec<char>>()
+        .chunks(chunk_size)
+        .map(|chunk| chunk.iter().collect::<String>())
+        .collect()
+}
+
+pub(crate) async fn vector_search(
+    client: &Elasticsearch,
+    index_name: &str,
+    query_vector: Vec<f32>,
+    top_k: usize,
+) -> Result<Vec<HashMap<String, Value>>, ElasticsearchError> {
+    let search_query = json!({
+        "size": top_k,
+        "query": {
+            "script_score": {
+                "query": {"match_all": {}},
+                "script": {
+                    "source": "cosineSimilarity(params.query_vector, 'embedding') + 1.0",
+                    "params": {"query_vector": query_vector}
+                }
+            }
+        }
+    });
+
+    let response = client
+        .search(elasticsearch::SearchParts::Index(&[index_name]))
+        .body(search_query)
+        .send()
+        .await?;
+
+    let mut results = Vec::new();
+    if let Some(hits) = response.json::<Value>().await?["hits"]["hits"].as_array() {
+        for hit in hits {
+            results.push(HashMap::from([
+                ("id".to_string(), hit["_id"].clone()),
+                ("score".to_string(), hit["_score"].clone()),
+                ("name".to_string(), hit["_source"]["name"].clone()),
+                ("code".to_string(), hit["_source"]["code"].clone()),
+            ]));
+        }
+    }
+    Ok(results)
+}

@@ -5,6 +5,7 @@ use crate::errors::{CommandError, ParseError};
 use crate::installer::Installer;
 use crate::remover::Remover;
 use crate::updater::Updater;
+use crate::locator::Locator;
 
 #[derive(Parser, Debug)]
 pub struct Args {
@@ -43,6 +44,17 @@ pub enum Commands {
         /// List packages that can be updated
         #[arg(long)]
         list: bool,
+    },
+    /// Locate a package
+    Locate {
+        /// Query
+        query: String,
+        /// Repository
+        place_to_look: String,
+        #[arg(long)]
+        repo: bool,
+        #[arg(long)]
+        collection: bool,
     },
 }
 
@@ -96,6 +108,13 @@ pub async fn handle_args(args: Args) -> Result<(), ParseError> {
                     Ok(_) => Ok(()),
                     Err(e) => Err(ParseError::MissingArgument(e.to_string())),
                 }
+            }
+        }
+        Some(Commands::Locate { query, place_to_look, repo, collection }) => {
+            let locator = Locator::new(query, place_to_look, repo, collection);
+            match locator.execute().await {
+                Ok(_) => Ok(()),
+                Err(e) => Err(ParseError::MissingArgument(e.to_string())),
             }
         }
         _ => Err(ParseError::MissingArgument("Command not found".to_string())),

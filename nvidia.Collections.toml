@@ -1,7 +1,0 @@
-[details]
-name = "nvidia"
-id = "71ede692-7f8c-4eae-aa49-c2207ef07a51"
-
-[packages]
-dcache = "vpm_modules/zipcpu/files/rtl/core/dcache"
-FFTdecimation = "vpm_modules/modules/files/EE272_mods/FFTdecimation"

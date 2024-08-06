@@ -18,4 +18,4 @@ dotenv = "0.15.0"
 walkdir = "2.4.0"
 clap = { version = "4.5.13", features = ["derive"] }
 toml_edit = "0.22.6"
-dotenv = "0.15.0"
+toml = "0.7.3"
