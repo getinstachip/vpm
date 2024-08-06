@@ -19,3 +19,6 @@ walkdir = "2.4.0"
 clap = { version = "4.5.13", features = ["derive"] }
 toml_edit = "0.22.6"
 toml = "0.7.3"
+regex = "1.10.3"
+tree-sitter = "0.20.1"
+tree-sitter-verilog = { git = "https://github.com/tree-sitter/tree-sitter-verilog.git" }

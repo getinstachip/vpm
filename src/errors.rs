@@ -24,4 +24,8 @@ pub enum CommandError {
     MissingFile(String),
     #[error("failed to generate embedding ({0})")]
     EmbeddingError(String),
+    #[error("failed to parse TOML ({0})")]
+    ParseError(String),
+    #[error("failed to write file to vpm_modules ({0})")]
+    WriteToVpmModulesError(String),
 }
