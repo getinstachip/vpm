@@ -59,6 +59,9 @@ pub enum Commands {
         module_name: String,
         /// Repository
         repository: String,
+        /// Global?
+        #[arg(long)]
+        local: bool,
     },
 }
 
@@ -121,8 +124,8 @@ pub async fn handle_args(args: Args) -> Result<(), ParseError> {
                 Err(e) => Err(ParseError::MissingArgument(e.to_string())),
             }
         },
-        Some(Commands::Include { module_name, repository }) => {
-            let includer = Includer::new(module_name, repository);
+        Some(Commands::Include { module_name, repository, local }) => {
+            let includer = Includer::new(module_name, repository, local);
             match includer.execute().await {
                 Ok(_) => Ok(()),
                 Err(e) => Err(ParseError::MissingArgument(e.to_string())),

@@ -8,17 +8,21 @@ use crate::http::HTTPRequest;
 use regex::Regex;
 use tree_sitter::{Parser, Language};
 
+use crate::headers::generate_header;
+
 #[derive(Debug, Default)]
 pub struct Includer {
     module_name: String,
     repository: String,
+    local: bool,
 }
 
 impl Includer {
-    pub fn new(module_name: String, repository: String) -> Self {
+    pub fn new(module_name: String, repository: String, local: bool) -> Self {
         Self {
             module_name,
             repository,
+            local,
         }
     }
 
@@ -57,7 +61,6 @@ impl Includer {
             std::fs::create_dir_all(vpm_modules_path)
                 .map_err(|_| CommandError::WriteToVpmModulesError(format!("Failed to create vpm_modules directory")))?;
         }
-        // Create module_name.toml file
         let toml_file_name = format!("{}.toml", self.module_name.trim_end_matches(".v"));
         let toml_file_path = vpm_modules_path.join(&toml_file_name);
         let toml_content = format!(
@@ -78,7 +81,6 @@ impl Includer {
 
         std::fs::write(&toml_file_path, &toml_content)
             .map_err(|_| CommandError::WriteToVpmModulesError(format!("Failed to create {} file", toml_file_name)))?;
-        println!("Created {} file", toml_file_name);
 
         while let Some(current_file) = files_to_process.pop() {
             if visited_files.contains(&current_file) {
@@ -95,42 +97,57 @@ impl Includer {
                         .await
                         .map_err(CommandError::FailedResponseText)?;
 
-                    println!("Processing file: {}", current_file);
-                    println!("Module Hierarchy for {}:", current_file);
-                    // Write the content to a file in vpm_modules
                     let file_path = vpm_modules_dir.join(&current_file);
                     std::fs::write(&file_path, &content)
                         .map_err(|_| CommandError::WriteToVpmModulesError(format!("Failed to write file {}", file_path.display())))?;
+                    // Generate and write header file
+                    let header_content = generate_header(&content, &current_file);
+                    let header_file_name = format!("{}.vh", current_file.trim_end_matches(".v"));
+                    let header_file_path = vpm_modules_dir.join(&header_file_name);
+                    std::fs::write(&header_file_path, &header_content)
+                        .map_err(|_| CommandError::WriteToVpmModulesError(format!("Failed to write header file {}", header_file_path.display())))?;
 
-                    println!("Added file to vpm_modules: {}", file_path.display());
+                    println!("Generated header file: {}", header_file_name);
+
                     let instances = Self::parse_module_hierarchy(&content);
                     for instance in instances {
-                        println!("Found instance: {}", instance);
                         if !visited_files.contains(&instance) {
                             files_to_process.push(instance.clone());
-                            // Add the instance to the dependencies section of the TOML file
                             toml_content.push_str(&format!("{} = \"*\"\n", instance.trim_end_matches(".v")));
                         }
                     }
-
-                    println!("Files to process:");
-                    for file in &files_to_process {
-                        println!("  - {}", file);
-                    }
-                    println!();
 
                     visited_files.insert(current_file);
                 }
             }
         }
 
-        // Update the TOML file with the final content including all dependencies
         std::fs::write(&toml_file_path, &toml_content)
             .map_err(|_| CommandError::WriteToVpmModulesError(format!("Failed to update {} file", toml_file_name)))?;
+
         println!("Updated {} file with dependencies", toml_file_name);
 
         Ok(())
     }
+
+    pub async fn process_author_repos(&self, author: &str) -> Result<(), CommandError> {
+        let client = reqwest::Client::new();
+        let repos = HTTPRequest::get_author_repos(client.clone(), author.to_string()).await?;
+
+        for repo in repos {
+            println!("Processing repository: {}", repo);
+            let github_files = HTTPRequest::get_verilog_files(
+                client.clone(),
+                author.to_string(),
+                repo.clone(),
+            ).await?;
+            
+            self.process_files(client.clone(), github_files).await?;
+        }
+
+        Ok(())
+    }
+
 }
 
 #[async_trait]
@@ -140,12 +157,17 @@ impl CommandHandler for Includer {
         let author = repo_parts.next().ok_or_else(|| CommandError::ParseError("Invalid repository format".to_string()))?;
         let name = repo_parts.next().ok_or_else(|| CommandError::ParseError("Invalid repository format".to_string()))?;
         let client = reqwest::Client::new();
-        let github_files = HTTPRequest::get_verilog_files(
-            client.clone(),
-            author.to_string(),
-            name.to_string(),
-        ).await?;
-        self.process_files(client, github_files).await
+
+        if !self.local {
+            self.process_author_repos(author).await
+        } else {
+            let github_files = HTTPRequest::get_verilog_files(
+                client.clone(),
+                author.to_string(),
+                name.to_string(),
+            ).await?;
+            self.process_files(client, github_files).await
+        }
     }
 
     async fn list() -> Result<(), ParseError> {
