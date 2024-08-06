@@ -22,6 +22,10 @@ impl HTTPRequest {
             .get(format!("{}/{}", GITHUB_API_URL, route))
             .header("Accept", "application/vnd.github.v3+json")
             .header("User-Agent", "vpm")
+            .header(
+                "Authorization",
+                format!("token {}", std::env::var("GITHUB_TOKEN").expect("GITHUB_TOKEN must be set")),
+            )
             .send()
             .await
             .map_err(HTTPFailed)?
