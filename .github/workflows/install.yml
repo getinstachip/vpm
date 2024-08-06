@@ -1,11 +1,9 @@
-name: Publish Install Script
+name: Publish Install Script and Release
 
 on:
   push:
-    branches:
-      - main  # or your default branch
-  release:
-    types: [created]
+    tags:
+      - 'v*.*.*'
 
 jobs:
   publish:
@@ -14,6 +12,10 @@ jobs:
     steps:
     - name: Checkout repository
       uses: actions/checkout@v3
+
+    - name: Get the version
+      id: get_version
+      run: echo ::set-output name=VERSION::${GITHUB_REF#refs/tags/}
 
     - name: Make install.sh executable
       run: chmod +x install.sh
@@ -25,9 +27,22 @@ jobs:
         path: install.sh
 
     - name: Create GitHub Release
-      if: github.event_name == 'release'
-      uses: softprops/action-gh-release@v1
-      with:
-        files: install.sh
+      id: create_release
+      uses: actions/create-release@v1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ steps.get_version.outputs.VERSION }}
+        release_name: Release ${{ steps.get_version.outputs.VERSION }}
+        draft: false
+        prerelease: false
+
+    - name: Upload Release Asset
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./install.sh
+        asset_name: install.sh
+        asset_content_type: text/x-shellscript
