@@ -29,15 +29,15 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: v${{ steps.get_version.outputs.VERSION }}
-          release_name: Release v${{ steps.get_version.outputs.VERSION }}
+          tag_name: v${{ env.VERSION }}
+          release_name: Release v${{ env.VERSION }}
           draft: false
           prerelease: false
 
       - name: Build and package
         run: |
           cargo build --release
-          tar -czvf vpm-${{ steps.get_version.outputs.VERSION }}.tar.gz target/release/vpm
+          tar -czvf vpm-${{ env.VERSION }}.tar.gz target/release/vpm
 
       - name: Upload Release Asset
         uses: actions/upload-release-asset@v1
@@ -45,15 +45,15 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./vpm-${{ steps.get_version.outputs.VERSION }}.tar.gz
-          asset_name: vpm-${{ steps.get_version.outputs.VERSION }}.tar.gz
+          asset_path: ./vpm-${{ env.VERSION }}.tar.gz
+          asset_name: vpm-${{ env.VERSION }}.tar.gz
           asset_content_type: application/gzip
 
       - name: Update install.sh
         run: |
-          sed -i 's/VPM_VERSION=.*/VPM_VERSION="${{ steps.get_version.outputs.VERSION }}"/' install.sh
+          sed -i 's/VPM_VERSION=.*/VPM_VERSION="${{ env.VERSION }}"/' install.sh
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
           git add install.sh
-          git commit -m "Update install.sh with version ${{ steps.get_version.outputs.VERSION }}"
+          git commit -m "Update install.sh with version ${{ env.VERSION }}"
           git push
