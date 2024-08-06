@@ -57,7 +57,7 @@ async fn create_document(
     let embedding = generate_embedding(&module_code).await?;
     Ok(HashMap::from([
         (
-            "name".to_string(),
+            "path".to_string(),
             Value::String(fpath.file_name().unwrap().to_str().unwrap().to_string()),
         ),
         ("code".to_string(), Value::String(module_code)),
@@ -102,7 +102,7 @@ pub(crate) async fn create_index(
         },
         "mappings": {
             "properties": {
-                "name": {"type": "keyword"},
+                "path": {"type": "keyword"},
                 "code": {"type": "text"},
                 "embedding": {
                     "type": "dense_vector",
@@ -281,7 +281,7 @@ pub(crate) async fn vector_search(
             results.push(HashMap::from([
                 ("id".to_string(), hit["_id"].clone()),
                 ("score".to_string(), hit["_score"].clone()),
-                ("name".to_string(), hit["_source"]["name"].clone()),
+                ("path".to_string(), hit["_source"]["path"].clone()),
                 ("code".to_string(), hit["_source"]["code"].clone()),
             ]));
         }

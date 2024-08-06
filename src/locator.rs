@@ -80,7 +80,7 @@ impl CommandHandler for Locator {
         // Print all results (only the name)
         println!("{} relevant modules found for '{}':", results.len(), self.query);
         for (_i, result) in results.iter().enumerate() {
-            println!("{}", result.get("name").and_then(|v| v.as_str()).unwrap_or("N/A"));
+            println!("{}", result.get("path").and_then(|v| v.as_str()).unwrap_or("N/A"));
         }
 
         if results.is_empty() {

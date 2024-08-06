@@ -19,3 +19,4 @@ walkdir = "2.4.0"
 clap = { version = "4.5.13", features = ["derive"] }
 toml_edit = "0.22.6"
 toml = "0.7.3"
+regex = "1.10.3"
