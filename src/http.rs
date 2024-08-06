@@ -24,7 +24,7 @@ impl HTTPRequest {
             .header("User-Agent", "vpm")
             .header(
                 "Authorization",
-                format!("token {}", ""),
+                format!("token {}", std::env::var("GITHUB_TOKEN").expect("GITHUB_TOKEN must be set")),
             )
             .send()
             .await

@@ -28,4 +28,10 @@ pub enum CommandError {
     FailedUpdateAllPackages(String),
     #[error("missing file ({0})")]
     MissingFile(String),
+    #[error("failed to generate embedding ({0})")]
+    EmbeddingError(String),
+    #[error("invalid path ({0})")]
+    InvalidPath(String),
+    #[error("failed to parse TOML ({0})")]
+    ParseError(String),
 }

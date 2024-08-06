@@ -32,10 +32,8 @@ pub(crate) fn create_client() -> Result<Elasticsearch, Box<dyn std::error::Error
 pub(crate) async fn generate_embedding(
     code_snippet: &str,
 ) -> Result<Vec<f32>, Box<dyn std::error::Error>> {
-    let config = async_openai::config::OpenAIConfig::new().with_api_key(
-        env::var("OPENAI_API_KEY")
-            .expect("OPENAI_API_KEY must be set")
-            .as_str(),
+    let config = async_openai::config::OpenAIConfig::new().with_api_key
+    std::env::var("OPENAI_API_KEY").expect("OPENAI_API_KEY must be set")
     );
     let oai = Client::with_config(config);
     let response = oai

@@ -5,6 +5,8 @@ mod installer;
 mod headers;
 mod remover;
 mod updater;
+mod adder;
+mod collection_creator;
 
 use async_trait::async_trait;
 use clap::{Parser, Subcommand};
@@ -18,6 +20,9 @@ use crate::errors::{CommandError, ParseError::CommandNotFound};
 use crate::installer::Installer;
 use crate::remover::Remover;
 use crate::updater::Updater;
+use crate::locator::Locator;
+use crate::collection_creator::CollectionCreator;
+use crate::adder::Adder;
 
 #[derive(Parser, Debug)]
 pub struct Args {
@@ -41,6 +46,17 @@ pub enum Commands {
         package_name: Option<String>,
         #[arg(long)]
         flex: bool,
+    },
+    Locate {
+        query: String,
+        repo: String,
+    },
+    Create {
+        name: String,
+    },
+    Add {
+        package_path: String,
+        collection_name: String,
     },
 }
 
@@ -91,7 +107,27 @@ pub async fn handle_args(args: Args) -> Result<(), ParseError> {
                 Err(e) => Err(ParseError::MissingArgument(e.to_string())),
             }
         },
-        None => Err(CommandNotFound(String::from(""))),
+        Some(Commands::Locate { query, repo }) => {
+            let locator = Locator::new(query, repo);
+            match locator.execute().await {
+                Ok(_) => Ok(()),
+                Err(e) => Err(ParseError::MissingArgument(e.to_string())),
+            }
+        },
+        Some(Commands::Create { name }) => {
+            let creator = CollectionCreator::new(name);
+            match creator.execute().await {
+                Ok(_) => Ok(()),
+                Err(e) => Err(ParseError::MissingArgument(e.to_string())),
+            }
+        },
+        Some(Commands::Add { package_path, collection_name }) => {
+            let adder = Adder::new(package_path, collection_name);
+            match adder.execute().await {
+                Ok(_) => Ok(()),
+                Err(e) => Err(ParseError::MissingArgument(e.to_string())),
+            }
+        },
     }
 }
 
