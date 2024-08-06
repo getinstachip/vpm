@@ -11,6 +11,7 @@ use clap::{Parser, Subcommand};
 use errors::ParseError;
 use std::fs;
 use std::path::Path;
+use dotenv::dotenv;
 
 use crate::errors::{CommandError, ParseError::CommandNotFound};
 
@@ -50,8 +51,10 @@ pub trait CommandHandler {
 
 #[tokio::main]
 async fn main() {
+    dotenv::dotenv().ok();
     let args = Args::parse();
     let result = handle_args(args).await;
+
 
     if let Err(e) = result {
         eprintln!("Error: {}", e);
