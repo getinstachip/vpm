@@ -35,10 +35,22 @@ impl Includer {
         
         let mut module_names = Vec::new();
         Self::traverse_tree(&root_node, content, &mut module_names);
+
+        // Print module names
+        for module_name in &module_names {
+            println!("Module: {}", module_name);
+        }
         
         module_names
     }
     fn traverse_tree(node: &tree_sitter::Node, source: &str, instances: &mut Vec<String>) {
+        // if node.kind() == "class_identifier" {
+            // println!("Node: {:?}", node.kind());
+            // if let Ok(node_text) = node.utf8_text(source.as_bytes()) {
+                // println!("Node content: {}", node_text);
+            // }
+        // }
+
         if node.kind() == "module_instantiation" {
             if let Some(first_child) = node.child(0) {
                 if let Ok(module_name) = first_child.utf8_text(source.as_bytes()) {
@@ -48,7 +60,9 @@ impl Includer {
         }
         
         for child in node.children(&mut node.walk()) {
-            Self::traverse_tree(&child, source, instances);
+            // if child.start_position().row < 1718 {
+                Self::traverse_tree(&child, source, instances);
+            // }
         }
     }
 
