@@ -1,12 +1,9 @@
 use async_trait::async_trait;
 use indicatif::{ProgressBar, ProgressStyle};
 use std::time::Instant;
-use std::fs;
-use std::path::Path;
-use toml;
 
 use crate::{
-    embedding::{create_client, generate_embedding, embed_github_repository, vector_search, embed_library, create_index},
+    embedding::{create_client, generate_embedding, embed_github_repository, vector_search},
     errors::CommandError,
     command_handler::CommandHandler,
     errors::ParseError,

@@ -3,7 +3,16 @@
 set -e
 
 # Set the version
-VPM_VERSION="0.0.13"
+# Get the latest version from GitHub tags
+VPM_VERSION=$(curl -s https://api.github.com/repos/getinstachip/vpm/tags | grep -oP '"name": "\K(.*?)(?=")' | head -n 1)
+
+# Remove the 'v' prefix if present
+VPM_VERSION=${VPM_VERSION#v}
+
+if [ -z "$VPM_VERSION" ]; then
+    echo "Failed to fetch the latest version. Exiting."
+    exit 1
+fi
 
 # Download the tarball
 echo "Downloading VPM v${VPM_VERSION}..."

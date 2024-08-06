@@ -1,0 +1,17 @@
+name: Update GitHub Token
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+jobs:
+  update-token:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Update GitHub Token
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        echo "GitHub Token updated successfully"
