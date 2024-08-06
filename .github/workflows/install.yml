@@ -1,59 +1,33 @@
-name: Create Release
+name: Publish Install Script
 
 on:
   push:
     branches:
-      - main
+      - main  # or your default branch
+  release:
+    types: [created]
 
 jobs:
-  create_release:
+  publish:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v2
+    - name: Checkout repository
+      uses: actions/checkout@v3
 
-      - name: Set up Rust
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
+    - name: Make install.sh executable
+      run: chmod +x install.sh
 
-      - name: Get version from Cargo.toml
-        id: get_version
-        run: |
-          VERSION=$(grep '^version =' Cargo.toml | sed 's/.*= "\(.*\)"/\1/')
-          echo "VERSION=$VERSION" >> $GITHUB_ENV
+    - name: Upload install.sh as an artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: install-script
+        path: install.sh
 
-      - name: Create Release
-        id: create_release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: v${{ env.VERSION }}
-          release_name: Release v${{ env.VERSION }}
-          draft: false
-          prerelease: false
-
-      - name: Build and package
-        run: |
-          cargo build --release
-          tar -czvf vpm-${{ env.VERSION }}.tar.gz target/release/vpm
-
-      - name: Upload Release Asset
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./vpm-${{ env.VERSION }}.tar.gz
-          asset_name: vpm-${{ env.VERSION }}.tar.gz
-          asset_content_type: application/gzip
-
-      - name: Update install.sh
-        run: |
-          sed -i 's/VPM_VERSION=.*/VPM_VERSION="${{ env.VERSION }}"/' install.sh
-          git config --local user.email "action@github.com"
-          git config --local user.name "GitHub Action"
-          git add install.sh
-          git commit -m "Update install.sh with version ${{ env.VERSION }}"
-          git push
+    - name: Create GitHub Release
+      if: github.event_name == 'release'
+      uses: softprops/action-gh-release@v1
+      with:
+        files: install.sh
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
