@@ -1,59 +1,17 @@
-name: Publish Install Script and Release
+name: Update GitHub Token
 
 on:
   push:
     tags:
       - 'v*.*.*'
 
-permissions:
-  contents: write
-  packages: write
-
 jobs:
-  publish:
+  update-token:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v3
-
-    - name: Get the version
-      id: get_version
-      run: |
-        VERSION=${GITHUB_REF#refs/tags/}
-        echo "VERSION=${VERSION}" >> $GITHUB_ENV
-
-    - name: Make install.sh executable
-      run: chmod +x install.sh
-
-    - name: Update install.sh with version
-      run: |
-        VERSION=${{ env.VERSION }}
-        sed -i "s/__VERSION__/${VERSION}/g" install.sh
-
-    - name: Upload install.sh as an artifact
-      uses: actions/upload-artifact@v3
-      with:
-        name: install-script
-        path: install.sh
-
-    - name: Create GitHub Release
-      id: create_release
-      uses: actions/create-release@v1
+    - name: Update GitHub Token
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tag_name: ${{ env.VERSION }}
-        release_name: Release ${{ env.VERSION }}
-        draft: false
-        prerelease: false
-
-    - name: Upload Release Asset
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ./install.sh
-        asset_name: install.sh
-        asset_content_type: text/x-shellscript
+      run: |
+        echo "GitHub Token updated successfully"
