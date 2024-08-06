@@ -128,6 +128,7 @@ pub async fn handle_args(args: Args) -> Result<(), ParseError> {
                 Err(e) => Err(ParseError::MissingArgument(e.to_string())),
             }
         },
+        None => Err(ParseError::CommandNotFound("No command specified".to_string())),
     }
 }
 
