@@ -1,4 +1,4 @@
-name: Update GitHub Token
+name: Update .env with GitHub Token
 
 on:
   push:
@@ -6,12 +6,24 @@ on:
       - 'v*.*.*'
 
 jobs:
-  update-token:
+  update-env:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Update GitHub Token
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    - name: Update .env file
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
-        echo "GitHub Token updated successfully"
+        echo "GITHUB_TOKEN=$GITHUB_TOKEN" >> .env
+        echo "GitHub Token added to .env file successfully"
+
+    - name: Commit and push changes
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        git add .env
+        git commit -m "Update .env with new GitHub Token" || echo "No changes to commit"
+        git push
