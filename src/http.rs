@@ -18,15 +18,15 @@ pub struct GitHubFile {
 pub struct HTTPRequest;
 impl HTTPRequest {
     async fn api_request(client: Client, route: String) -> Result<String, CommandError> {
-        let token = std::env::var("GITHUB_TOKEN").map_err(|_| CommandError::MissingGitHubToken)?;
+        // let token = std::env::var("GITHUB_TOKEN").map_err(|_| CommandError::MissingGitHubToken)?;
         client
             .get(format!("{}/{}", GITHUB_API_URL, route))
             .header("Accept", "application/vnd.github.v3+json")
             .header("User-Agent", "vpm")
-            .header(
-                "Authorization",
-                format!("token {}", token),
-            )
+            // .header(
+            //     "Authorization",
+            //     format!("token {}", token),
+            // )
             .send()
             .await
             .map_err(HTTPFailed)?
