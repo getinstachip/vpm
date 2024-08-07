@@ -95,6 +95,30 @@ impl HTTPRequest {
         ))
     }
 
+    pub async fn get_author_repos(client: Client, author: String) -> Result<Vec<String>, CommandError> {
+        let mut all_repos = Vec::new();
+
+        loop {
+            let route = format!("users/{}/repos", author);
+            let response_raw = Self::api_request(client.clone(), route).await?;
+
+            let repos: Vec<serde_json::Value> = serde_json::from_str(&response_raw)
+                .map_err(|e| CommandError::JSONParseError(e))?;
+
+            if repos.is_empty() {
+                break;
+            }
+
+            for repo in repos {
+                if let Some(name) = repo["name"].as_str() {
+                    all_repos.push(name.to_string());
+                }
+            }
+        }
+
+        Ok(all_repos)
+    }
+
     async fn get_verilog_files_recursive(
         client: Client,
         owner: &str,
@@ -110,6 +134,8 @@ impl HTTPRequest {
             format!("repos/{}/{}/contents/{}", owner, repo, path),
         )
         .await?;
+
+        // println!("Connected successfully");
 
         let items: Vec<GitHubFile> = serde_json::from_str(&response_raw).map_err(JSONParseError)?;
         let mut all_files = Vec::new();

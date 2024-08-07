@@ -1,12 +1,10 @@
 use async_trait::async_trait;
 use indicatif::{ProgressBar, ProgressStyle};
 use std::{fs, path::Path, time::Instant};
-use uuid::Uuid;
 use crate::errors::ParseError;
 
 use crate::http::GitHubFile;
 use crate::{
-    embedding::{create_client, create_index, embed_library, insert_documents},
     errors::CommandError,
     http::HTTPRequest,
     command_handler::CommandHandler,
@@ -129,35 +127,6 @@ impl Installer {
         Ok(())
     }
 
-    async fn embed_codebase() -> Result<(), CommandError> {
-        println!("Performing flex install: Embedding and storing codebase...");
-        let es_client = match create_client() {
-            Ok(client) => client,
-            Err(e) => return Err(CommandError::ElasticsearchConnectionError(e.to_string())),
-        };
-        let random_key = Uuid::new_v4().to_string();
-        let stripped_key = random_key.replace(&['-', '_'][..], "");
-        let index_name = format!("codebase{}", stripped_key).to_lowercase();
-        println!("Creating index: {}", index_name);
-        match create_index(&es_client, &index_name).await {
-            Ok(_) => println!("Index '{}' created successfully", index_name),
-            Err(e) => {
-                return Err(CommandError::ElasticsearchConnectionError(format!(
-                    "Failed to create index: {}",
-                    e
-                )))
-            }
-        }
-        let current_dir = std::env::current_dir().unwrap();
-        println!("Current directory: {:?}", current_dir);
-        let documents = embed_library(&current_dir, &index_name).await.unwrap();
-        println!("Number of embedded documents: {}", documents.len());
-        insert_documents(&index_name, &documents)
-            .await
-            .unwrap();
-        println!("Codebase embedded and stored successfully!");
-        Ok(())
-    }
 }
 
 #[async_trait]
@@ -190,9 +159,6 @@ impl CommandHandler for Installer {
         let mut vpm_toml_content = std::fs::read_to_string(vpm_toml_path).unwrap();
         if !vpm_toml_content.contains("[dependencies]") {
             vpm_toml_content.push_str("[dependencies]\n");
-        }
-        if self.flex_install {
-            Self::embed_codebase().await?;
         }
         Self::install_package(
             client.clone(),
