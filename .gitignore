@@ -25,3 +25,5 @@ Vpm.toml
 vpm.toml
 .svlangserver/
 .env
+
+.DS_Store
