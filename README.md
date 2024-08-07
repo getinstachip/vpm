@@ -19,7 +19,7 @@ curl -sSL https://raw.githubusercontent.com/getinstachip/vpm/main/install_linux.
 
 For Mac:
 ```bash
-curl -sSL https://raw.githubusercontent.com/getinstachip/vpm/main/install_mac.sh | bash
+curl -sSL https://raw.githubusercontent.com/getinstachip/vpm/main/install_mac_bin.sh | bash
 ```
 
 After installation, you can use the `vpm` command in any terminal.
