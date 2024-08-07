@@ -1,1 +1,0 @@
-cargo:rustc-env=MIME_TYPES_GENERATED_PATH=/Users/sathvik.redrouthu/Desktop/ProcyonCorp/vpm/target/x86_64-apple-darwin/release/build/mime_guess-3817595e8bcedbad/out/mime_types_generated.rs
