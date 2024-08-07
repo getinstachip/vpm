@@ -4,8 +4,7 @@ set -e
 
 # Set the version
 # Get the latest version from GitHub tags
-VPM_VERSION=$(curl -s https://api.github.com/repos/getinstachip/vpm/tags | grep -oP '"name": "\K(.*?)(?=")' | head -n 1)
-
+VPM_VERSION=$(curl -s https://api.github.com/repos/getinstachip/vpm/tags | grep -Eo '"name": *"[^"]+"' | grep -Eo '[^"]+' | head -n 1)
 # Remove the 'v' prefix if present
 VPM_VERSION=${VPM_VERSION#v}
 
