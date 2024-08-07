@@ -1,0 +1,10 @@
+/Users/sathvik.redrouthu/Desktop/ProcyonCorp/vpm/target/x86_64-apple-darwin/release/deps/libunicase-794f6dce2d645490.rmeta: /Users/sathvik.redrouthu/.cargo/registry/src/index.crates.io-6f17d22bba15001f/unicase-2.7.0/src/lib.rs /Users/sathvik.redrouthu/.cargo/registry/src/index.crates.io-6f17d22bba15001f/unicase-2.7.0/src/ascii.rs /Users/sathvik.redrouthu/.cargo/registry/src/index.crates.io-6f17d22bba15001f/unicase-2.7.0/src/unicode/mod.rs /Users/sathvik.redrouthu/.cargo/registry/src/index.crates.io-6f17d22bba15001f/unicase-2.7.0/src/unicode/map.rs
+
+/Users/sathvik.redrouthu/Desktop/ProcyonCorp/vpm/target/x86_64-apple-darwin/release/deps/libunicase-794f6dce2d645490.rlib: /Users/sathvik.redrouthu/.cargo/registry/src/index.crates.io-6f17d22bba15001f/unicase-2.7.0/src/lib.rs /Users/sathvik.redrouthu/.cargo/registry/src/index.crates.io-6f17d22bba15001f/unicase-2.7.0/src/ascii.rs /Users/sathvik.redrouthu/.cargo/registry/src/index.crates.io-6f17d22bba15001f/unicase-2.7.0/src/unicode/mod.rs /Users/sathvik.redrouthu/.cargo/registry/src/index.crates.io-6f17d22bba15001f/unicase-2.7.0/src/unicode/map.rs
+
+/Users/sathvik.redrouthu/Desktop/ProcyonCorp/vpm/target/x86_64-apple-darwin/release/deps/unicase-794f6dce2d645490.d: /Users/sathvik.redrouthu/.cargo/registry/src/index.crates.io-6f17d22bba15001f/unicase-2.7.0/src/lib.rs /Users/sathvik.redrouthu/.cargo/registry/src/index.crates.io-6f17d22bba15001f/unicase-2.7.0/src/ascii.rs /Users/sathvik.redrouthu/.cargo/registry/src/index.crates.io-6f17d22bba15001f/unicase-2.7.0/src/unicode/mod.rs /Users/sathvik.redrouthu/.cargo/registry/src/index.crates.io-6f17d22bba15001f/unicase-2.7.0/src/unicode/map.rs
+
+/Users/sathvik.redrouthu/.cargo/registry/src/index.crates.io-6f17d22bba15001f/unicase-2.7.0/src/lib.rs:
+/Users/sathvik.redrouthu/.cargo/registry/src/index.crates.io-6f17d22bba15001f/unicase-2.7.0/src/ascii.rs:
+/Users/sathvik.redrouthu/.cargo/registry/src/index.crates.io-6f17d22bba15001f/unicase-2.7.0/src/unicode/mod.rs:
+/Users/sathvik.redrouthu/.cargo/registry/src/index.crates.io-6f17d22bba15001f/unicase-2.7.0/src/unicode/map.rs:

@@ -1,0 +1,10 @@
+/Users/sathvik.redrouthu/Desktop/ProcyonCorp/vpm/target/release/deps/libunicase-c8add0af4e1d8c7b.rmeta: /Users/sathvik.redrouthu/.cargo/registry/src/index.crates.io-6f17d22bba15001f/unicase-2.7.0/src/lib.rs /Users/sathvik.redrouthu/.cargo/registry/src/index.crates.io-6f17d22bba15001f/unicase-2.7.0/src/ascii.rs /Users/sathvik.redrouthu/.cargo/registry/src/index.crates.io-6f17d22bba15001f/unicase-2.7.0/src/unicode/mod.rs /Users/sathvik.redrouthu/.cargo/registry/src/index.crates.io-6f17d22bba15001f/unicase-2.7.0/src/unicode/map.rs
+
+/Users/sathvik.redrouthu/Desktop/ProcyonCorp/vpm/target/release/deps/libunicase-c8add0af4e1d8c7b.rlib: /Users/sathvik.redrouthu/.cargo/registry/src/index.crates.io-6f17d22bba15001f/unicase-2.7.0/src/lib.rs /Users/sathvik.redrouthu/.cargo/registry/src/index.crates.io-6f17d22bba15001f/unicase-2.7.0/src/ascii.rs /Users/sathvik.redrouthu/.cargo/registry/src/index.crates.io-6f17d22bba15001f/unicase-2.7.0/src/unicode/mod.rs /Users/sathvik.redrouthu/.cargo/registry/src/index.crates.io-6f17d22bba15001f/unicase-2.7.0/src/unicode/map.rs
+
+/Users/sathvik.redrouthu/Desktop/ProcyonCorp/vpm/target/release/deps/unicase-c8add0af4e1d8c7b.d: /Users/sathvik.redrouthu/.cargo/registry/src/index.crates.io-6f17d22bba15001f/unicase-2.7.0/src/lib.rs /Users/sathvik.redrouthu/.cargo/registry/src/index.crates.io-6f17d22bba15001f/unicase-2.7.0/src/ascii.rs /Users/sathvik.redrouthu/.cargo/registry/src/index.crates.io-6f17d22bba15001f/unicase-2.7.0/src/unicode/mod.rs /Users/sathvik.redrouthu/.cargo/registry/src/index.crates.io-6f17d22bba15001f/unicase-2.7.0/src/unicode/map.rs
+
+/Users/sathvik.redrouthu/.cargo/registry/src/index.crates.io-6f17d22bba15001f/unicase-2.7.0/src/lib.rs:
+/Users/sathvik.redrouthu/.cargo/registry/src/index.crates.io-6f17d22bba15001f/unicase-2.7.0/src/ascii.rs:
+/Users/sathvik.redrouthu/.cargo/registry/src/index.crates.io-6f17d22bba15001f/unicase-2.7.0/src/unicode/mod.rs:
+/Users/sathvik.redrouthu/.cargo/registry/src/index.crates.io-6f17d22bba15001f/unicase-2.7.0/src/unicode/map.rs:

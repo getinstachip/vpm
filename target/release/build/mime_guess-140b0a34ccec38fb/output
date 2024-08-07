@@ -1,0 +1,1 @@
+cargo:rustc-env=MIME_TYPES_GENERATED_PATH=/Users/sathvik.redrouthu/Desktop/ProcyonCorp/vpm/target/release/build/mime_guess-140b0a34ccec38fb/out/mime_types_generated.rs

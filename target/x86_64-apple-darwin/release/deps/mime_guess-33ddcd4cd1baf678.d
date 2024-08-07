@@ -1,0 +1,12 @@
+/Users/sathvik.redrouthu/Desktop/ProcyonCorp/vpm/target/x86_64-apple-darwin/release/deps/libmime_guess-33ddcd4cd1baf678.rmeta: /Users/sathvik.redrouthu/.cargo/registry/src/index.crates.io-6f17d22bba15001f/mime_guess-2.0.5/src/lib.rs /Users/sathvik.redrouthu/.cargo/registry/src/index.crates.io-6f17d22bba15001f/mime_guess-2.0.5/src/impl_bin_search.rs /Users/sathvik.redrouthu/.cargo/registry/src/index.crates.io-6f17d22bba15001f/mime_guess-2.0.5/src/mime_types.rs /Users/sathvik.redrouthu/Desktop/ProcyonCorp/vpm/target/x86_64-apple-darwin/release/build/mime_guess-3817595e8bcedbad/out/mime_types_generated.rs
+
+/Users/sathvik.redrouthu/Desktop/ProcyonCorp/vpm/target/x86_64-apple-darwin/release/deps/libmime_guess-33ddcd4cd1baf678.rlib: /Users/sathvik.redrouthu/.cargo/registry/src/index.crates.io-6f17d22bba15001f/mime_guess-2.0.5/src/lib.rs /Users/sathvik.redrouthu/.cargo/registry/src/index.crates.io-6f17d22bba15001f/mime_guess-2.0.5/src/impl_bin_search.rs /Users/sathvik.redrouthu/.cargo/registry/src/index.crates.io-6f17d22bba15001f/mime_guess-2.0.5/src/mime_types.rs /Users/sathvik.redrouthu/Desktop/ProcyonCorp/vpm/target/x86_64-apple-darwin/release/build/mime_guess-3817595e8bcedbad/out/mime_types_generated.rs
+
+/Users/sathvik.redrouthu/Desktop/ProcyonCorp/vpm/target/x86_64-apple-darwin/release/deps/mime_guess-33ddcd4cd1baf678.d: /Users/sathvik.redrouthu/.cargo/registry/src/index.crates.io-6f17d22bba15001f/mime_guess-2.0.5/src/lib.rs /Users/sathvik.redrouthu/.cargo/registry/src/index.crates.io-6f17d22bba15001f/mime_guess-2.0.5/src/impl_bin_search.rs /Users/sathvik.redrouthu/.cargo/registry/src/index.crates.io-6f17d22bba15001f/mime_guess-2.0.5/src/mime_types.rs /Users/sathvik.redrouthu/Desktop/ProcyonCorp/vpm/target/x86_64-apple-darwin/release/build/mime_guess-3817595e8bcedbad/out/mime_types_generated.rs
+
+/Users/sathvik.redrouthu/.cargo/registry/src/index.crates.io-6f17d22bba15001f/mime_guess-2.0.5/src/lib.rs:
+/Users/sathvik.redrouthu/.cargo/registry/src/index.crates.io-6f17d22bba15001f/mime_guess-2.0.5/src/impl_bin_search.rs:
+/Users/sathvik.redrouthu/.cargo/registry/src/index.crates.io-6f17d22bba15001f/mime_guess-2.0.5/src/mime_types.rs:
+/Users/sathvik.redrouthu/Desktop/ProcyonCorp/vpm/target/x86_64-apple-darwin/release/build/mime_guess-3817595e8bcedbad/out/mime_types_generated.rs:
+
+# env-dep:MIME_TYPES_GENERATED_PATH=/Users/sathvik.redrouthu/Desktop/ProcyonCorp/vpm/target/x86_64-apple-darwin/release/build/mime_guess-3817595e8bcedbad/out/mime_types_generated.rs

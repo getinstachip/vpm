@@ -1,0 +1,10 @@
+/Users/sathvik.redrouthu/Desktop/ProcyonCorp/vpm/target/x86_64-apple-darwin/release/deps/libsecrecy-fa08da279fff5276.rmeta: /Users/sathvik.redrouthu/.cargo/registry/src/index.crates.io-6f17d22bba15001f/secrecy-0.8.0/src/lib.rs /Users/sathvik.redrouthu/.cargo/registry/src/index.crates.io-6f17d22bba15001f/secrecy-0.8.0/src/boxed.rs /Users/sathvik.redrouthu/.cargo/registry/src/index.crates.io-6f17d22bba15001f/secrecy-0.8.0/src/string.rs /Users/sathvik.redrouthu/.cargo/registry/src/index.crates.io-6f17d22bba15001f/secrecy-0.8.0/src/vec.rs
+
+/Users/sathvik.redrouthu/Desktop/ProcyonCorp/vpm/target/x86_64-apple-darwin/release/deps/libsecrecy-fa08da279fff5276.rlib: /Users/sathvik.redrouthu/.cargo/registry/src/index.crates.io-6f17d22bba15001f/secrecy-0.8.0/src/lib.rs /Users/sathvik.redrouthu/.cargo/registry/src/index.crates.io-6f17d22bba15001f/secrecy-0.8.0/src/boxed.rs /Users/sathvik.redrouthu/.cargo/registry/src/index.crates.io-6f17d22bba15001f/secrecy-0.8.0/src/string.rs /Users/sathvik.redrouthu/.cargo/registry/src/index.crates.io-6f17d22bba15001f/secrecy-0.8.0/src/vec.rs
+
+/Users/sathvik.redrouthu/Desktop/ProcyonCorp/vpm/target/x86_64-apple-darwin/release/deps/secrecy-fa08da279fff5276.d: /Users/sathvik.redrouthu/.cargo/registry/src/index.crates.io-6f17d22bba15001f/secrecy-0.8.0/src/lib.rs /Users/sathvik.redrouthu/.cargo/registry/src/index.crates.io-6f17d22bba15001f/secrecy-0.8.0/src/boxed.rs /Users/sathvik.redrouthu/.cargo/registry/src/index.crates.io-6f17d22bba15001f/secrecy-0.8.0/src/string.rs /Users/sathvik.redrouthu/.cargo/registry/src/index.crates.io-6f17d22bba15001f/secrecy-0.8.0/src/vec.rs
+
+/Users/sathvik.redrouthu/.cargo/registry/src/index.crates.io-6f17d22bba15001f/secrecy-0.8.0/src/lib.rs:
+/Users/sathvik.redrouthu/.cargo/registry/src/index.crates.io-6f17d22bba15001f/secrecy-0.8.0/src/boxed.rs:
+/Users/sathvik.redrouthu/.cargo/registry/src/index.crates.io-6f17d22bba15001f/secrecy-0.8.0/src/string.rs:
+/Users/sathvik.redrouthu/.cargo/registry/src/index.crates.io-6f17d22bba15001f/secrecy-0.8.0/src/vec.rs:

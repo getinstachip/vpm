@@ -1,0 +1,2 @@
+cargo:rustc-cfg=RUSTC_IS_STABLE
+cargo:rustc-env=RUSTC_VERSION=1.79.0
