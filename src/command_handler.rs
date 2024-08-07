@@ -5,7 +5,6 @@ use crate::errors::{CommandError, ParseError};
 use crate::installer::Installer;
 use crate::remover::Remover;
 use crate::updater::Updater;
-use crate::locator::Locator;
 use crate::includer::Includer;
 
 #[derive(Parser, Debug)]
@@ -45,13 +44,6 @@ pub enum Commands {
         /// List packages that can be updated
         #[arg(long)]
         list: bool,
-    },
-    /// Locate a package
-    Locate {
-        /// Query
-        query: String,
-        /// Repository
-        place_to_look: String,
     },
     /// Include a package
     Include {
@@ -117,13 +109,6 @@ pub async fn handle_args(args: Args) -> Result<(), ParseError> {
                 }
             }
         }
-        Some(Commands::Locate { query, place_to_look }) => {
-            let locator = Locator::new(query, place_to_look);
-            match locator.execute().await {
-                Ok(_) => Ok(()),
-                Err(e) => Err(ParseError::MissingArgument(e.to_string())),
-            }
-        },
         Some(Commands::Include { module_name, repository, local }) => {
             let includer = Includer::new(module_name, repository, local);
             match includer.execute().await {

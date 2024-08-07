@@ -1,4 +1,3 @@
-mod embedding;
 mod errors;
 mod http;
 mod installer;
@@ -6,7 +5,6 @@ mod headers;
 mod remover;
 mod updater;
 mod command_handler;
-mod locator;
 mod includer;
 
 use clap::Parser;

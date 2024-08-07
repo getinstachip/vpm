@@ -5,8 +5,7 @@ use crate::errors::CommandError;
 use crate::command_handler::CommandHandler;
 use crate::http::GitHubFile;
 use crate::http::HTTPRequest;
-use regex::Regex;
-use tree_sitter::{Parser, Language};
+use tree_sitter::Parser;
 
 use crate::headers::generate_header;
 
@@ -77,13 +76,6 @@ impl Includer {
         }
         let toml_file_name = format!("{}.toml", self.module_name.trim_end_matches(".v"));
         let toml_file_path = vpm_modules_path.join(&toml_file_name);
-        let toml_content = format!(
-            "[package]\n\
-            name = \"{}\"\n\
-            repository = \"{}\"\n",
-            self.module_name.trim_end_matches(".v"),
-            self.repository
-        );
         let mut toml_content = format!(
             "[package]\n\
             name = \"{}\"\n\
@@ -144,6 +136,48 @@ impl Includer {
         Ok(())
     }
 
+    fn find_constraint_files(&self, github_files: Vec<GitHubFile>, module_name: &str) -> Vec<GitHubFile> {
+        let constraint_extensions = [".sdc", ".xdc", ".ucd"];
+        let module_name_without_extension = module_name.trim_end_matches(".v");
+
+        github_files
+            .iter()
+            .filter(|file| {
+                let file_name_without_extension = file.name.rsplit('.').next().unwrap_or(&file.name);
+                file_name_without_extension == module_name_without_extension
+                    && constraint_extensions.iter().any(|&ext| file.name.ends_with(ext))
+            })
+            .cloned()
+            .collect()
+    }
+
+    async fn download_constraint_files(&self, client: reqwest::Client, constraint_files: Vec<GitHubFile>, module_name: &str) -> Result<(), CommandError> {
+        let vpm_modules_dir = Path::new("vpm_modules").join(module_name).join("constraints");
+        fs::create_dir_all(&vpm_modules_dir)
+            .map_err(|_| CommandError::WriteToVpmModulesError(format!("Failed to create directory {}", vpm_modules_dir.display())))?;
+
+        for file in constraint_files {
+            if let Some(download_url) = file.download_url {
+                let content = client
+                    .get(&download_url)
+                    .send()
+                    .await
+                    .map_err(CommandError::HTTPFailed)?
+                    .text()
+                    .await
+                    .map_err(CommandError::FailedResponseText)?;
+
+                let file_path = vpm_modules_dir.join(&file.name);
+                fs::write(&file_path, &content)
+                    .map_err(|_| CommandError::WriteToVpmModulesError(format!("Failed to write file {}", file_path.display())))?;
+
+                println!("Downloaded constraint file: {}", file.name);
+            }
+        }
+
+        Ok(())
+    }
+
     pub async fn process_author_repos(&self, author: &str) -> Result<(), CommandError> {
         let client = reqwest::Client::new();
         let repos = HTTPRequest::get_author_repos(client.clone(), author.to_string()).await?;
@@ -171,17 +205,24 @@ impl CommandHandler for Includer {
         let author = repo_parts.next().ok_or_else(|| CommandError::ParseError("Invalid repository format".to_string()))?;
         let name = repo_parts.next().ok_or_else(|| CommandError::ParseError("Invalid repository format".to_string()))?;
         let client = reqwest::Client::new();
-
         if !self.local {
-            self.process_author_repos(author).await
+            self.process_author_repos(author).await?
         } else {
             let github_files = HTTPRequest::get_verilog_files(
                 client.clone(),
                 author.to_string(),
                 name.to_string(),
             ).await?;
-            self.process_files(client, github_files).await
+            let github_files_clone = github_files.clone();
+            self.process_files(client.clone(), github_files).await?;
+            let constraint_files = self.find_constraint_files(
+                github_files_clone,
+                name,
+            );
+            self.download_constraint_files(client, constraint_files, name).await?;
         }
+
+        Ok(())
     }
 
     async fn list() -> Result<(), ParseError> {

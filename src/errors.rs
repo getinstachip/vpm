@@ -16,14 +16,10 @@ pub enum CommandError {
     JSONParseError(serde_json::Error),
     #[error("failed to write file ({0})")]
     IOError(std::io::Error),
-    #[error("failed to connect to Elasticsearch ({0})")]
-    ElasticsearchConnectionError(String),
     #[error("failed to get latest commit id ({0})")]
     FailedGetLatestCommitId(String),
     #[error("missing file ({0})")]
     MissingFile(String),
-    #[error("failed to generate embedding ({0})")]
-    EmbeddingError(String),
     #[error("failed to parse TOML ({0})")]
     ParseError(String),
     #[error("failed to write file to vpm_modules ({0})")]

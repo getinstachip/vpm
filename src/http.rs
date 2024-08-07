@@ -96,7 +96,6 @@ impl HTTPRequest {
     }
 
     pub async fn get_author_repos(client: Client, author: String) -> Result<Vec<String>, CommandError> {
-        let mut page = 1;
         let mut all_repos = Vec::new();
 
         loop {
@@ -115,8 +114,6 @@ impl HTTPRequest {
                     all_repos.push(name.to_string());
                 }
             }
-
-            page += 1;
         }
 
         Ok(all_repos)
