@@ -2,6 +2,8 @@ use crate::errors::CommandError::{self, *};
 use indicatif::{ProgressBar, ProgressStyle};
 use reqwest::Client;
 use serde::Deserialize;
+use std::future::Future;
+use std::pin::Pin;
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::time::sleep;
@@ -56,7 +58,7 @@ impl HTTPRequest {
 
         let pb = Arc::new(pb);
         let verilog_files =
-            Self::get_verilog_files_recursive(client, &owner, &repo, "", pb.clone()).await?;
+            Self::get_verilog_files_recursive(client, owner, repo, "".to_string(), pb.clone()).await?;
 
         pb.finish_with_message("✨ Repository structure parsed successfully!");
         Ok(verilog_files)
@@ -119,42 +121,44 @@ impl HTTPRequest {
         Ok(all_repos)
     }
 
-    async fn get_verilog_files_recursive(
+    fn get_verilog_files_recursive(
         client: Client,
-        owner: &str,
-        repo: &str,
-        path: &str,
+        owner: String,
+        repo: String,
+        path: String,
         pb: Arc<ProgressBar>,
-    ) -> Result<Vec<GitHubFile>, CommandError> {
-        pb.set_message(format!("Parsing: {}", path));
-        sleep(Duration::from_millis(10)).await;
+    ) -> Pin<Box<dyn Future<Output = Result<Vec<GitHubFile>, CommandError>> + Send>> {
+        Box::pin(async move {
+            pb.set_message(format!("Parsing: {}", path));
+            sleep(Duration::from_millis(10)).await;
 
-        let response_raw = Self::api_request(
-            client.clone(),
-            format!("repos/{}/{}/contents/{}", owner, repo, path),
-        )
-        .await?;
+            let response_raw = Self::api_request(
+                client.clone(),
+                format!("repos/{}/{}/contents/{}", owner, repo, path),
+            )
+            .await?;
 
-        // println!("Connected successfully");
+            // println!("Connected successfully");
 
-        let items: Vec<GitHubFile> = serde_json::from_str(&response_raw).map_err(JSONParseError)?;
-        let mut all_files = Vec::new();
+            let items: Vec<GitHubFile> = serde_json::from_str(&response_raw).map_err(JSONParseError)?;
+            let mut all_files = Vec::new();
 
-        for item in &items {
-            all_files.push(item.clone());
-            if item.download_url.is_none() {
-                let sub_files = Box::pin(Self::get_verilog_files_recursive(
-                    client.clone(),
-                    owner,
-                    repo,
-                    &item.path,
-                    pb.clone(),
-                ))
-                .await?;
-                all_files.extend(sub_files);
+            for item in &items {
+                all_files.push(item.clone());
+                if item.download_url.is_none() {
+                    let sub_files = Self::get_verilog_files_recursive(
+                        client.clone(),
+                        owner.clone(),
+                        repo.clone(),
+                        item.path.clone(),
+                        pb.clone(),
+                    )
+                    .await?;
+                    all_files.extend(sub_files);
+                }
             }
-        }
 
-        Ok(all_files)
+            Ok(all_files)
+        })
     }
 }
