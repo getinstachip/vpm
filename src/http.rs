@@ -135,6 +135,8 @@ impl HTTPRequest {
         )
         .await?;
 
+        // println!("Connected successfully");
+
         let items: Vec<GitHubFile> = serde_json::from_str(&response_raw).map_err(JSONParseError)?;
         let mut all_files = Vec::new();
 

@@ -219,7 +219,7 @@ impl CommandHandler for Includer {
                 github_files_clone,
                 name,
             );
-            self.download_constraint_files(client, constraint_files, name).await?;
+            self.download_constraint_files(client, constraint_files, self.module_name.clone().as_str()).await?;
         }
 
         Ok(())
