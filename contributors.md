@@ -37,6 +37,6 @@ Once you submit a contribution, it will be signed off by either @Jag-M or @sathv
 We also hold weekly triage meetings in a public google meet that all contributors/interested persons may join. Any community feedback will be implemented as soon as possible (usually within a couple of hours).
 
 ## Philosophy
-Our philosophy is to provide robust tooling to make chip design as intuitive as possible [change as needed].
+Our philosophy is to provide robust tooling to make chip design as intuitive as possible.
 
 If you find yourself wishing for a feature that doesn't exist in Instachip, you are probably not alone. There are bound to be others out there with similar needs. Many of the features that Instachip has today have been added because our users saw the need. Open an issue on our issues list on GitHub which describes the feature you would like to see, why you need it, and how it should work.
