@@ -1,6 +1,6 @@
 # Contributing Guidelines
 
-First off, thank you for considering contributing to Instachip. It's people like you that make Instachip such a great tool.
+First off, thank you for considering contributing to the Verilog Package Manager (VPM). It's people like you that make VPM such a great tool.
 
 Following these guidelines helps to communicate that you respect the time of the developers managing and developing this open source project. In return, they should reciprocate that respect in addressing your issue, assessing changes, and helping you finalize your pull requests.
 
@@ -39,4 +39,4 @@ We also hold weekly triage meetings in a public google meet that all contributor
 ## Philosophy
 Our philosophy is to provide robust tooling to make chip design as intuitive as possible.
 
-If you find yourself wishing for a feature that doesn't exist in Instachip, you are probably not alone. There are bound to be others out there with similar needs. Many of the features that Instachip has today have been added because our users saw the need. Open an issue on our issues list on GitHub which describes the feature you would like to see, why you need it, and how it should work.
+If you find yourself wishing for a feature that doesn't exist in VPM, you are probably not alone. There are bound to be others out there with similar needs. Many of the features that VPM has today have been added because our users saw the need. Open an issue on our issues list on GitHub which describes the feature you would like to see, why you need it, and how it should work.
