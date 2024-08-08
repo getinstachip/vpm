@@ -61,7 +61,7 @@ jobs:
         with:
           key: ${{ matrix.target }}
       - name: Install cross
-        if: ${{ runner.os == "Linux" }}
+        if: ${{ runner.os == 'Linux' }}
         uses: actions-rs/cargo@v1
         with:
           command: install
@@ -71,7 +71,7 @@ jobs:
         with:
           command: build
           args: --release --locked --target=${{ matrix.target }} --color=always --verbose
-          use-cross: ${{ runner.os == "Linux" }}
+          use-cross: ${{ runner.os == 'Linux' }}
       - name: Install cargo-deb
         if: ${{ matrix.deb == true }}
         uses: actions-rs/install@v0.1
@@ -84,7 +84,7 @@ jobs:
           command: deb
           args: --no-build --no-strip --output=. --target=${{ matrix.target }}
       - name: Package (*nix)
-        if: runner.os != "Windows"
+        if: runner.os != 'Windows'
         run: |
           tar -cv LICENSE README.md man/ \
             -C contrib/ completions/ -C ../ \
@@ -92,7 +92,7 @@ jobs:
             gzip --best > \
             vpm-${{ steps.get_version.outputs.value }}-${{ matrix.target }}.tar.gz
       - name: Package (Windows)
-        if: runner.os == "Windows"
+        if: runner.os == 'Windows'
         run: |
           7z a vpm-${{ steps.get_version.outputs.value }}-${{ matrix.target }}.zip `
             LICENSE README.md ./man/ ./contrib/completions/ `
@@ -107,7 +107,7 @@ jobs:
             *.zip
       - name: Create release
         if: |
-          github.ref == "refs/heads/main" && startsWith(github.event.head_commit.message, "chore(release)")
+          github.ref == 'refs/heads/main' && startsWith(github.event.head_commit.message, 'chore(release)')
         uses: softprops/action-gh-release@v2
         with:
           draft: true
@@ -116,4 +116,4 @@ jobs:
             *.tar.gz
             *.zip
           name: ${{ steps.get_version.outputs.value }}
-          tag_name: ""
+          tag_name: ''
