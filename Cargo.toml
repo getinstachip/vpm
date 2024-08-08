@@ -3,6 +3,8 @@ name = "vpm"
 version = "0.1.0"
 edition = "2021"
 license = "MIT"
+copyright = "Copyright (c) 2024 Instachip"
+authors = ["Instachip <team@getinstachip.com>"]
 
 [dependencies]
 async-trait = "0.1.81"
