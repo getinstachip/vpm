@@ -12,8 +12,14 @@ VPM is a package manager for Verilog projects, written in Rust. It's designed to
 
 To install VPM, you don't need any dependencies! Just run the following command:
 
+For Linux:
 ```bash
-curl -sSL https://raw.githubusercontent.com/getinstachip/vpm/main/install.sh | bash
+curl -sSL https://raw.githubusercontent.com/getinstachip/vpm/main/install_linux.sh | bash
+```
+
+For Mac:
+```bash
+curl -sSL https://raw.githubusercontent.com/getinstachip/vpm/main/install_mac_bin.sh | bash
 ```
 
 After installation, you can use the `vpm` command in any terminal.
@@ -21,10 +27,29 @@ After installation, you can use the `vpm` command in any terminal.
 ### Basic Commands
 
 - Install a package: `vpm install <author/repo_name>`
-- Install a package tuned to your use case: `vpm install --flex <author/repo_name>` (COMING SOON)
-- Find something you forgot the name of: `vpm locate <loose description> <repository>`
-- Update a package: `vpm update <author/repo_name>`
-- Remove a package: `vpm remove <author/repo_name>`
+- Include a module and its sub-modules: `vpm include <module_name.v> <author/repo_name>`
+
+## Very useful stuff
+
+### vpm include "top_module"
+After running `vpm include "top_module.v"`, the Verilog Package Manager parses the file and downloads all the submodules too. It generates .vh files and handles synthesis collateral.
+
+Example: running `vpm include pfcache.v` finds all dependences and includes/configures them for you.
+
+your_project/
+├─ vpm_modules/
+│  ├─ pfcache/
+│     ├─ pfcache.v
+│     ├─ pfcache.vh
+│     ├─ ffetch/
+│     │  ├─ ffetch.v
+│     │  └─ ffetch.vh
+│     ├─ fwb_module/
+│     │  ├─ fwb_module.v
+│     │  └─ fwb_module.vh
+│     └─ .v
+└─ sim/
+   └─pfcache_tb.v
 
 ## Configuration
 
