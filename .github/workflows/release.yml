@@ -95,7 +95,7 @@ jobs:
         if: runner.os == 'Windows'
         run: |
           7z a vpm-${{ steps.get_version.outputs.value }}-${{ matrix.target }}.zip `
-            CHANGELOG.md LICENSE README.md ./man/ ./contrib/completions/ `
+            LICENSE README.md ./man/ ./contrib/completions/ `
             ./target/${{ matrix.target }}/release/vpm.exe
       - name: Upload artifact
         uses: actions/upload-artifact@v4
