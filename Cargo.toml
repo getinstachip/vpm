@@ -21,3 +21,4 @@ toml_edit = "0.22.6"
 regex = "1.10.3"
 tree-sitter = "0.20.1"
 tree-sitter-verilog = { git = "https://github.com/tree-sitter/tree-sitter-verilog.git" }
+anyhow = "1.0.86"

@@ -1,3 +1,5 @@
+mod cmd;
+
 mod errors;
 mod http;
 mod installer;
