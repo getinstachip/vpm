@@ -1,7 +1,6 @@
 mod cmd;
 mod config;
 mod error;
-mod package;
 mod types;
 mod versions;
 
@@ -11,7 +10,7 @@ use std::process::ExitCode;
 
 use clap::Parser;
 
-use crate::cmd::{Cmd, Run};
+use crate::cmd::{Cmd, Execute};
 use crate::error::SilentExit;
 
 pub fn main() -> ExitCode {
@@ -19,12 +18,12 @@ pub fn main() -> ExitCode {
     env::remove_var("RUST_LIB_BACKTRACE");
     env::remove_var("RUST_BACKTRACE");
 
-    match Cmd::parse().run() {
+    match Cmd::parse().execute() {
         Ok(()) => ExitCode::SUCCESS,
         Err(e) => match e.downcast::<SilentExit>() {
             Ok(SilentExit { code }) => code.into(),
             Err(e) => {
-                _ = writeln!(io::stderr(), "zoxide: {e:?}");
+                _ = writeln!(io::stderr(), "vpm: {e:?}");
                 ExitCode::FAILURE
             }
         },

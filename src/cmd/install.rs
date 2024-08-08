@@ -1,9 +1,9 @@
 use anyhow::Result;
 
-use crate::cmd::{Install, Run};
+use crate::cmd::{Install, Execute};
 
-impl Run for Install {
-    fn run(&self) -> Result<()> {
+impl Execute for Install {
+    fn execute(&self) -> Result<()> {
         // TODO: Add logic for install
         Ok(())
     }
