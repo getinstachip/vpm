@@ -1,5 +1,5 @@
-mod install;
 mod cmd;
+mod install;
 
 use anyhow::Result;
 

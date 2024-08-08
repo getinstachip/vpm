@@ -1,6 +1,6 @@
 use clap::Parser;
 
-#[derive(Debug)]
+#[derive(Debug, Parser)]
 pub enum Cmd {
     Install(Install),
 }

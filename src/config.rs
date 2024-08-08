@@ -10,7 +10,7 @@ pub struct Config {
     pub home: Option<PathBuf>,
 }
 
-impl Config  {
+impl Config {
     // TODO: Create workspace
     // #[must_use]
     // pub fn workspace(&self) -> Workspace {
