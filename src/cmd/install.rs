@@ -9,7 +9,7 @@ impl Execute for Install {
 
         if let Some(url) = &self.url {
             install_from_url(url, LOCATION)?;
-        } else if let Some(name) = &self.package_name {
+        } else if let Some(_name) = &self.package_name {
             // TODO: Add package install logic
         }
 
