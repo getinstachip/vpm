@@ -1,5 +1,6 @@
 use anyhow::{Context, Result};
 use std::process::Command;
+use std::path::PathBuf;
 
 use crate::cmd::{Execute, Install};
 
@@ -17,18 +18,12 @@ impl Execute for Install {
     }
 }
 
-fn install_from_url(url: &String, location: &str) -> Result<()>{
+fn install_from_url(url: &String, location: &str) -> Result<()> {
+    let repo_path = PathBuf::from(location).join(url.split('/').last().unwrap_or_default());
     Command::new("git")
-        .arg("clone")
-        .arg("--depth")
-        .arg("1")
-        .arg("--single-branch")
-        .arg("--jobs")
-        .arg("4")
-        .arg(url)
-        .arg(location)
+        .args(["clone", "--depth", "1", "--single-branch", "--jobs", "4", url, repo_path.to_str().unwrap_or_default()])
         .status()
         .with_context(|| format!("Failed to clone repository from URL: '{}'", url))?;
-    
+
     Ok(())
 }
