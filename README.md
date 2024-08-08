@@ -35,7 +35,7 @@ After installation, you can use the `vpm` command in any terminal.
 After running `vpm include "top_module.v"`, the Verilog Package Manager parses the file and downloads all the submodules too. It generates .vh files and handles synthesis collateral.
 
 Example: running `vpm include pfcache.v` finds all dependences and includes/configures them for you.
-
+```
 your_project/
 ├─ vpm_modules/
 │  ├─ pfcache/
@@ -50,6 +50,7 @@ your_project/
 │     └─ .v
 └─ sim/
    └─pfcache_tb.v
+```
 
 ## Configuration
 
