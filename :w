@@ -1,6 +1,15 @@
 mod cmd;
 mod config;
 
+mod errors;
+mod http;
+mod installer;
+mod headers;
+mod remover;
+mod updater;
+mod command_handler;
+mod includer;
+
 use std::env;
 use std::io::{self, Write};
 use std::process::ExitCode;
