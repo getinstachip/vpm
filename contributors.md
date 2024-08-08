@@ -4,11 +4,8 @@ First off, thank you for considering contributing to Instachip. It's people like
 
 Following these guidelines helps to communicate that you respect the time of the developers managing and developing this open source project. In return, they should reciprocate that respect in addressing your issue, assessing changes, and helping you finalize your pull requests.
 
-Getting started
-Before contributing
-You will need to sign a CLA
-Passing a system compatibility tests is a prerequisite to contributing
-Join our Instachip developers Slack
+# Getting started
+Anybody is welcome to contribute—we encourage anybody who is interested in this project to join the VPM discord. We'll discuss upcoming changes, user suggesions, and roadmaps.
 
 
 
