@@ -13,7 +13,7 @@ VPM is a package manager for Verilog projects, written in Rust. It's designed to
 To install VPM, you don't need any dependencies! Just run the following command:
 
 ```bash
-curl -sSL https://raw.githubusercontent.com/getinstachip/vpm/main/install.sh | bash
+curl -sSfL https://raw.githubusercontent.com/getinstachip/vpm/main/install.sh | sh
 ```
 
 After installation, you can use the `vpm` command in any terminal.
