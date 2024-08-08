@@ -1,6 +1,9 @@
 mod cmd;
 mod config;
 mod error;
+mod package;
+mod types;
+mod versions;
 
 use std::env;
 use std::io::{self, Write};
@@ -27,4 +30,3 @@ pub fn main() -> ExitCode {
         },
     }
 }
-
