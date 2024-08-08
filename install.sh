@@ -59,10 +59,10 @@ main() {
     ensure try_sudo chmod +x "${BIN_DIR}/${_bin_name}"
     echo "Installed vpm to ${BIN_DIR}"
 
-    # Install manpages.
-    ensure try_sudo mkdir -p -- "${MAN_DIR}/man1"
-    ensure try_sudo cp -- "man/man1/"* "${MAN_DIR}/man1/"
-    echo "Installed manpages to ${MAN_DIR}"
+    # TODO: Install manpages
+    # ensure try_sudo mkdir -p -- "${MAN_DIR}/man1"
+    # ensure try_sudo cp -- "man/man1/"* "${MAN_DIR}/man1/"
+    # echo "Installed manpages to ${MAN_DIR}"
 
     # Print success message and check $PATH.
     echo ""
@@ -75,11 +75,11 @@ main() {
 # Parse the arguments passed and set variables accordingly.
 parse_args() {
     BIN_DIR_DEFAULT="${HOME}/.local/bin"
-    MAN_DIR_DEFAULT="${HOME}/.local/share/man"
+    # MAN_DIR_DEFAULT="${HOME}/.local/share/man"
     SUDO_DEFAULT="sudo"
 
     BIN_DIR="${BIN_DIR_DEFAULT}"
-    MAN_DIR="${MAN_DIR_DEFAULT}"
+    # MAN_DIR="${MAN_DIR_DEFAULT}"
     SUDO="${SUDO_DEFAULT}"
 
     while [ "$#" -gt 0 ]; do
@@ -88,8 +88,8 @@ parse_args() {
         --arch=*) ARCH="${1#*=}" && shift 1 ;;
         --bin-dir) BIN_DIR="$2" && shift 2 ;;
         --bin-dir=*) BIN_DIR="${1#*=}" && shift 1 ;;
-        --man-dir) MAN_DIR="$2" && shift 2 ;;
-        --man-dir=*) MAN_DIR="${1#*=}" && shift 1 ;;
+        # --man-dir) MAN_DIR="$2" && shift 2 ;;
+        # --man-dir=*) MAN_DIR="${1#*=}" && shift 1 ;;
         --sudo) SUDO="$2" && shift 2 ;;
         --sudo=*) SUDO="${1#*=}" && shift 1 ;;
         -h | --help) usage && exit 0 ;;
@@ -120,7 +120,7 @@ ${_text_heading}Usage:${_text_reset}
 ${_text_heading}Options:${_text_reset}
       --arch     Override the architecture identified by the installer [current: ${_arch}]
       --bin-dir  Override the installation directory [default: ${BIN_DIR_DEFAULT}]
-      --man-dir  Override the manpage installation directory [default: ${MAN_DIR_DEFAULT}]
+      # --man-dir  Override the manpage installation directory [default: ${MAN_DIR_DEFAULT}]
       --sudo     Override the command used to elevate to root privileges [default: ${SUDO_DEFAULT}]
   -h, --help     Print help"
 }
