@@ -1,0 +1,119 @@
+name: release
+on:
+  push:
+  workflow_dispatch:
+env:
+  CARGO_INCREMENTAL: 0
+permissions:
+  contents: write
+jobs:
+  release:
+    name: ${{ matrix.target }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-musl
+            deb: true
+          - os: ubuntu-latest
+            target: arm-unknown-linux-musleabihf
+          - os: ubuntu-latest
+            target: armv7-unknown-linux-musleabihf
+            deb: true
+          - os: ubuntu-latest
+            target: aarch64-unknown-linux-musl
+            deb: true
+          - os: ubuntu-latest
+            target: i686-unknown-linux-musl
+            deb: true
+          - os: ubuntu-latest
+            target: aarch64-linux-android
+          - os: macos-11
+            target: x86_64-apple-darwin
+          - os: macos-11
+            target: aarch64-apple-darwin
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+          - os: windows-latest
+            target: aarch64-pc-windows-msvc
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Get version
+        id: get_version
+        uses: SebRollen/toml-action@v1.2.0
+        with:
+          file: Cargo.toml
+          field: package.version
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          profile: minimal
+          override: true
+          target: ${{ matrix.target }}
+      - name: Setup cache
+        uses: Swatinem/rust-cache@v2.7.3
+        with:
+          key: ${{ matrix.target }}
+      - name: Install cross
+        if: ${{ runner.os == 'Linux' }}
+        uses: actions-rs/cargo@v1
+        with:
+          command: install
+          args: --color=always --git=https://github.com/cross-rs/cross.git --locked --rev=02bf930e0cb0c6f1beffece0788f3932ecb2c7eb --verbose cross
+      - name: Build binary
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --release --locked --target=${{ matrix.target }} --color=always --verbose
+          use-cross: ${{ runner.os == 'Linux' }}
+      - name: Install cargo-deb
+        if: ${{ matrix.deb == true }}
+        uses: actions-rs/install@v0.1
+        with:
+          crate: cargo-deb
+      - name: Build deb
+        if: ${{ matrix.deb == true }}
+        uses: actions-rs/cargo@v1
+        with:
+          command: deb
+          args: --no-build --no-strip --output=. --target=${{ matrix.target }}
+      - name: Package (*nix)
+        if: runner.os != 'Windows'
+        run: |
+          tar -cv CHANGELOG.md LICENSE README.md man/ \
+            -C contrib/ completions/ -C ../ \
+            -C target/${{ matrix.target }}/release/ vpm |
+            gzip --best > \
+            vpm-${{ steps.get_version.outputs.value }}-${{ matrix.target }}.tar.gz
+      - name: Package (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          7z a vpm-${{ steps.get_version.outputs.value }}-${{ matrix.target }}.zip `
+            CHANGELOG.md LICENSE README.md ./man/ ./contrib/completions/ `
+            ./target/${{ matrix.target }}/release/vpm.exe
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.target }}
+          path: |
+            *.deb
+            *.tar.gz
+            *.zip
+      - name: Create release
+        if: |
+          github.ref == 'refs/heads/main' && startsWith(github.event.head_commit.message, 'chore(release)')
+        uses: softprops/action-gh-release@v2
+        with:
+          draft: true
+          files: |
+            *.deb
+            *.tar.gz
+            *.zip
+          name: ${{ steps.get_version.outputs.value }}
+          tag_name: ""

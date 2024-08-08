@@ -12,7 +12,6 @@ use command_handler::Args;
 
 #[tokio::main]
 async fn main() {
-    dotenv::dotenv().ok();
     let result = command_handler::handle_args(Args::parse()).await;
     if let Err(e) = result {
         eprintln!("Failed to handle arguments. Error: {}", e);
