@@ -1,5 +1,4 @@
 mod cmd;
-//mod config;
 mod error;
 //mod types;
 // mod versions; will add once versiong is needed
@@ -13,13 +12,12 @@ use clap::Parser;
 use crate::cmd::{Cmd, Execute};
 use crate::error::SilentExit;
 
-#[tokio::main]
-pub async fn main() -> ExitCode {
+pub fn main() -> ExitCode {
     // Forcibly disable backtraces.
     env::remove_var("RUST_LIB_BACKTRACE");
     env::remove_var("RUST_BACKTRACE");
 
-    match Cmd::parse().execute().await {
+    match Cmd::parse().execute() {
         Ok(()) => ExitCode::SUCCESS,
         Err(e) => match e.downcast::<SilentExit>() {
             Ok(SilentExit { code }) => code.into(),

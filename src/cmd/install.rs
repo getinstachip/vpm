@@ -4,33 +4,60 @@ use std::io::Read;
 use std::{fs, process::Command};
 use std::path::PathBuf;
 use tree_sitter::Parser;
-use chatgpt::prelude::*;
 use regex::Regex;
+use toml::{Value, map::Map};
 
 use crate::cmd::{Execute, Install};
 
+const VPM_TOML: &str = "vpm.toml";
 const STD_LIB_URL: &str = "https://github.com/vlang/v/tree/master/thirdparty/"; // edit to accept stdlib url
 
 impl Execute for Install {
-    async fn execute(&self) -> Result<()> {
+    fn execute(&self) -> Result<()> {
         if let (Some(url), Some(name)) = (&self.url, &self.package_name) {
             println!("Installing module '{}' from URL: '{}'", name, url);
             install_module_from_url(name, url)?;
-            generate_docs(name, "./vpm_modules/").await?;
+            add_dependency("repositories", url, "0.1.0")?;
+            add_dependency("modules", name, "0.1.0")?;
         } else if let Some(arg) = &self.url.as_ref().or(self.package_name.as_ref()) {
             if Regex::new(r"^(https?://|git://|ftp://|file://|www\.)[\w\-\.]+\.\w+(/[\w\-\.]*)*/?$").unwrap().is_match(arg) {
                 let url = arg.to_string();
                 println!("Installing repository from URL: '{}'", url);
                 install_repo_from_url(&url, "./vpm_modules/")?;
+                add_dependency("repositories", &url, "0.1.0")?;
             } else {
                 let name = arg.to_string();
                 println!("Installing module '{}' from standard library", name);
                 install_module_from_url(&name, STD_LIB_URL)?;
+                add_dependency("modules", &name, "0.1.0")?;
             }
         }
 
         Ok(())
     }
+}
+
+fn add_dependency(section: &str, package: &str, version: &str) -> Result<()> {
+    if !PathBuf::from(VPM_TOML).exists() {
+        fs::OpenOptions::new().create_new(true).write(true).open(PathBuf::from(VPM_TOML))?;
+    }
+
+    let content = fs::read_to_string(VPM_TOML)?;
+    let mut toml_value: Value = content.parse()?;
+
+    let table = toml_value.as_table_mut().unwrap();
+    let section_map = table.entry(section.to_string())
+        .or_insert_with(|| Value::Table(Map::new()))
+        .as_table_mut()
+        .unwrap();
+
+    section_map.insert(package.to_string(), Value::String(version.to_string()));
+
+    let new_content = toml::to_string(&toml_value)?;
+
+    fs::write(VPM_TOML, new_content)?;
+
+    Ok(())
 }
 
 fn name_from_url(url: &str) -> Result<String> {
@@ -39,7 +66,7 @@ fn name_from_url(url: &str) -> Result<String> {
         .unwrap_or_default().to_string())
 }
 
-fn install_module_from_url(url: &str, module: &str) -> Result<()> {
+fn install_module_from_url(module: &str, url: &str) -> Result<()> {
     let package_name = name_from_url(url)?;
     let mut visited_modules = HashSet::new();
 
@@ -119,42 +146,6 @@ fn clone_repo(url: &str, repo_path: &str) -> Result<()> {
     .args(["clone", "--depth", "1", "--single-branch", "--jobs", "4", url, repo_path])
     .status()
     .with_context(|| format!("Failed to clone repository from URL: '{}'", url))?;
-
-    Ok(())
-}
-
-async fn generate_docs(package_name: &str, location: &str) -> Result<()> {
-    let package_path = PathBuf::from(location).join(package_name);
-
-    let readme_path = package_path.join("README.md");
-    let content = if readme_path.exists() {
-        fs::read_to_string(readme_path)?
-    } else {
-        // If README.md doesn't exist, try to find a Verilog file
-        let verilog_files: Vec<_> = fs::read_dir(&package_path)?
-            .filter_map(|entry| {
-                let entry = entry.ok()?;
-                let path = entry.path();
-                if path.extension()?.to_str()? == "v" {
-                    Some(path)
-                } else {
-                    None
-                }
-            })
-            .collect::<Vec<_>>();
-
-        fs::read_to_string(&verilog_files[0])?
-    };
-    let key = std::env::var("OPENAI_API_KEY").unwrap();
-    let openai_client = ChatGPT::new(key)?;
-    let response = openai_client.send_message(content).await?;
-    let content = response.message().content.clone();
-
-    // Save the generated documentation to a README.md file
-    let readme_path = package_path.join("README.md");
-    fs::write(&readme_path, content)?;
-
-    println!("Documentation saved to: {}", readme_path.display());
 
     Ok(())
 }

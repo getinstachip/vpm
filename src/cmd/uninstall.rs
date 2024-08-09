@@ -6,7 +6,7 @@ use anyhow::Result;
 use crate::cmd::{Execute, Uninstall};
 
 impl Execute for Uninstall {
-    async fn execute(&self) -> Result<()> {
+    fn execute(&self) -> Result<()> {
         fs::remove_dir_all(PathBuf::from("./vpm_modules").join(&self.package_name))?;
         Ok(())
     }
