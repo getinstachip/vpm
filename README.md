@@ -39,7 +39,6 @@ your_project/
 │     ├─ pfcache.vh
 │     ├─ ffetch.v
 │     ├─ ffetch.vh
-│     ├─ fwb_module/
 │     ├─ fwb_module.v
 │     ├─ fwb_module.vh
 │     └─ pfcache.toml
@@ -76,7 +75,10 @@ Close your eyes, relax. Submodule dependencies are taken care of with our parser
 
 [modules]
 pfcache = "https://github.com/ZipCPU/zipcpu/commit/ee644d451910a6b6fbd430a4e79edb4e95852d9f"
+ffetch = "https://github.com/ZipCPU/zipcpu/commit/ee644d451910a6b6fbd430a4e79edb4e95852d9f"
+fwb_module = "https://github.com/ZipCPU/zipcpu/commit/ee644d451910a6b6fbd430a4e79edb4e95852d9f"
 axis_arb_mux = "https://github.com/alexforencich/verilog-pcie/commit/25156a9a162c41c60f11f41590c7d006d015ae5a"
+// ... (subdependencies for axis_arb_mux) 
 ```
 
 ## Enterprise version
