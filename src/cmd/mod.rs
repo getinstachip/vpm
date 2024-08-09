@@ -1,5 +1,4 @@
 mod cmd;
-mod include;
 mod install;
 mod uninstall;
 
@@ -16,7 +15,6 @@ impl Execute for Cmd {
         match self {
             Cmd::Install(cmd) => cmd.execute(),
             Cmd::Uninstall(cmd) => cmd.execute(),
-            Cmd::Include(cmd) => cmd.execute(),
         }
     }
 }
