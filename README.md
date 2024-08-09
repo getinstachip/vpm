@@ -52,7 +52,7 @@ your_project/
 
 Example `vpm.toml` file:
 
-```toml
+```yaml
 // you can include entire repositories
 [repositories]
 https://github.com/ZipCPU/zipcpu = "ee644d4"
@@ -67,7 +67,7 @@ axis_arb_mux = "https://github.com/alexforencich/verilog-pcie/commit/25156a9a162
 Close your eyes, relax. Submodule dependencies are taken care of with our parser. We are working on handling synthesis collateral.
 
 ### vpm.lock
-```lock
+```yaml
 [repositories]
 "https://github.com/ZipCPU/zipcpu" = "ee644d4"
 "https://github.com/bensampson5/libsv" = "c5aff5d"
