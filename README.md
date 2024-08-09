@@ -55,14 +55,14 @@ Example `vpm.toml` file:
 ```yaml
 // you can include entire repositories
 [repositories]
-https://github.com/ZipCPU/zipcpu = "ee644d4"
-https://github.com/bensampson5/libsv = "c5aff5d"
-https://github.com/alexforencich/verilog-pcie = "25156a9"
+https://github.com/ZipCPU/zipcpu = "0.4.4"
+https://github.com/bensampson5/libsv = "0.1.2"
+https://github.com/alexforencich/verilog-pcie = "0.2.4"
 
 // or just specific modules
 [modules]
-pfcache = "https://github.com/ZipCPU/zipcpu"
-axis_arb_mux = "https://github.com/alexforencich/verilog-pcie@25156a9"
+pfcache = "0.4.4"
+axis_arb_mux = "0.2.2"
 ```
 Close your eyes, relax. Submodule dependencies are taken care of with our parser. We are working on handling synthesis collateral.
 
