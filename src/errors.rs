@@ -24,4 +24,6 @@ pub enum CommandError {
     ParseError(String),
     #[error("failed to write file to vpm_modules ({0})")]
     WriteToVpmModulesError(String),
+    #[error("failed to read file from standard library ({0})")]
+    ReadFromStdModulesError(String),
 }

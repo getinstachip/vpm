@@ -136,6 +136,61 @@ impl Includer {
         Ok(())
     }
 
+    async fn process_standard_files(&self, lib_path: &str) -> Result<(), CommandError> {
+        // get all .v files in the directory and subdirectories
+        let verilog_files = fs::read_dir(lib_path)
+            .map_err(|_| CommandError::ReadFromStdModulesError(format!("Failed to read directory {}", lib_path)))?
+            .filter_map(|entry| {
+                entry.ok().and_then(|e| {
+                    if e.path().is_file() && e.path().extension().map_or(false, |ext| ext == "v") {
+                        Some(e.path())
+                    } else {
+                        None
+                    }
+                })
+            })
+            .collect::<Vec<_>>();
+
+        // create vpm_modules directory if it doesn't exist yet 
+        let vpm_modules_dir = Path::new(lib_path).join("vpm_modules");
+        fs::create_dir_all(&vpm_modules_dir)
+            .map_err(|_| CommandError::WriteToVpmModulesError(format!("Failed to create directory {}", vpm_modules_dir.display())))?;
+
+        
+        // process each file
+        for file in verilog_files {
+            let content = fs::read_to_string(&file)
+                .map_err(|_| CommandError::ReadFromStdModulesError(format!("Failed to read file {}", file.display())))?;
+            let module_name = file.file_name().unwrap().to_str().unwrap();
+            let instances = Self::parse_module_hierarchy(&content);
+            let vpm_modules_dir = Path::new("vpm_modules").join(module_name.trim_end_matches(".v"));
+            fs::create_dir_all(&vpm_modules_dir)
+                .map_err(|_| CommandError::WriteToVpmModulesError(format!("Failed to create directory {}", vpm_modules_dir.display())))?;
+            let toml_file_name = format!("{}.toml", module_name.trim_end_matches(".v"));
+            let toml_file_path = vpm_modules_dir.join(&toml_file_name);
+            let mut toml_content = format!(
+                "[package]\n\
+                name = \"{}\"\n\n\
+                [dependencies]\n",
+                module_name.trim_end_matches(".v")
+            );
+
+            fs::write(&toml_file_path, &toml_content)
+                .map_err(|_| CommandError::WriteToVpmModulesError(format!("Failed to create {} file", toml_file_name)))?;
+
+            for instance in instances {
+                toml_content.push_str(&format!("{} = \"*\"\n", instance.trim_end_matches(".v")));
+            }
+
+            fs::write(&toml_file_path, &toml_content)
+                .map_err(|_| CommandError::WriteToVpmModulesError(format!("Failed to update {} file", toml_file_name)))?;
+
+            println!("Updated {} file with dependencies", toml_file_name);
+        }
+
+        Ok(())
+    }
+
     fn find_constraint_files(&self, github_files: Vec<GitHubFile>, module_name: &str) -> Vec<GitHubFile> {
         let constraint_extensions = [".sdc", ".xdc", ".ucd"];
         let module_name_without_extension = module_name.trim_end_matches(".v");
@@ -201,28 +256,34 @@ impl Includer {
 #[async_trait]
 impl CommandHandler for Includer {
     async fn execute(&self) -> Result<(), CommandError> {
-        let mut repo_parts = self.repository.split('/');
-        let author = repo_parts.next().ok_or_else(|| CommandError::ParseError("Invalid repository format".to_string()))?;
-        let name = repo_parts.next().ok_or_else(|| CommandError::ParseError("Invalid repository format".to_string()))?;
-        let client = reqwest::Client::new();
-        if !self.local {
-            self.process_author_repos(author).await?
+        
+        if self.repository.is_empty() {
+            self.process_standard_files("../std-lib").await?;
         } else {
-            let github_files = HTTPRequest::get_verilog_files(
-                client.clone(),
-                author.to_string(),
-                name.to_string(),
-            ).await?;
-            let github_files_clone = github_files.clone();
-            self.process_files(client.clone(), github_files).await?;
-            let constraint_files = self.find_constraint_files(
-                github_files_clone,
-                name,
-            );
-            self.download_constraint_files(client, constraint_files, self.module_name.clone().as_str()).await?;
+            let mut repo_parts = self.repository.split('/');
+            let author = repo_parts.next().ok_or_else(|| CommandError::ParseError("Invalid repository format".to_string()))?;
+            let name = repo_parts.next().ok_or_else(|| CommandError::ParseError("Invalid repository format".to_string()))?;
+            let client = reqwest::Client::new();
+            if !self.local {
+                self.process_author_repos(author).await?
+            } else {
+                let github_files = HTTPRequest::get_verilog_files(
+                    client.clone(),
+                    author.to_string(),
+                    name.to_string(),
+                ).await?;
+                let github_files_clone = github_files.clone();
+                self.process_files(client.clone(), github_files).await?;
+                let constraint_files = self.find_constraint_files(
+                    github_files_clone,
+                    name,
+                );
+                self.download_constraint_files(client, constraint_files, self.module_name.clone().as_str()).await?;
+            }
         }
 
         Ok(())
+
     }
 
     async fn list() -> Result<(), ParseError> {
