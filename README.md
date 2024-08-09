@@ -28,22 +28,21 @@ After installation, you can use the `vpm` command in any terminal.
 ## Very useful stuff
 
 ### vpm include "top_module"
-After running `vpm include "top_module.v"`, the Verilog Package Manager parses the file and downloads all the submodules too. It generates .vh files and handles synthesis collateral.
+After running `vpm include "top_module"`, the Verilog Package Manager parses the file and downloads all the submodules too. It generates .vh files and handles synthesis collateral.
 
-Example: running `vpm include pfcache.v` finds all dependences and includes/configures them for you.
+Example: running `vpm include pfcache` finds all dependences and includes/configures them for you.
 ```
 your_project/
 ├─ vpm_modules/
 │  ├─ pfcache/
 │     ├─ pfcache.v
 │     ├─ pfcache.vh
-│     ├─ ffetch/
-│     │  ├─ ffetch.v
-│     │  └─ ffetch.vh
+│     ├─ ffetch.v
+│     ├─ ffetch.vh
 │     ├─ fwb_module/
-│     │  ├─ fwb_module.v
-│     │  └─ fwb_module.vh
-│     └─ .v
+│     ├─ fwb_module.v
+│     ├─ fwb_module.vh
+│     └─ pfcache.toml
 └─ sim/
    └─pfcache_tb.v
 ```
