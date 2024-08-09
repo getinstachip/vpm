@@ -55,15 +55,21 @@ your_project/
 Example `vpm.toml` file:
 
 ```yaml
+// you can include entire repositories
 [repositories]
 https://github.com/ZipCPU/zipcpu = "ee644d4"
 https://github.com/bensampson5/libsv = "c5aff5d"
 https://github.com/alexforencich/verilog-pcie = "25156a9"
 
+// or just specific modules
 [modules]
-pfcache.v
-axilops.v
+pfcache = "https://github.com/ZipCPU/zipcpu/commit/ee644d451910a6b6fbd430a4e79edb4e95852d9f"
+axis_arb_mux = "https://github.com/alexforencich/verilog-pcie/commit/25156a9a162c41c60f11f41590c7d006d015ae5a"
 ```
+Close your eyes, relax. Submodule dependencies are taken care of with our parser.
+
+### vpm.lock
+
 
 ## Support
 
