@@ -74,10 +74,10 @@ Close your eyes, relax. Submodule dependencies are taken care of with our parser
 "https://github.com/alexforencich/verilog-pcie" = "25156a9"
 
 [modules]
-pfcache = { "https://github.com/ZipCPU/zipcpu/commit/ee644d451910a6b6fbd430a4e79edb4e95852d9f", ffetch, fwb_module }
-ffetch = { "https://github.com/ZipCPU/zipcpu/commit/ee644d451910a6b6fbd430a4e79edb4e95852d9f" }
-fwb_module = { "https://github.com/ZipCPU/zipcpu/commit/ee644d451910a6b6fbd430a4e79edb4e95852d9f" }
-axis_arb_mux = { "https://github.com/alexforencich/verilog-pcie/commit/25156a9a162c41c60f11f41590c7d006d015ae5a", ... }
+pfcache = { "https://github.com/ZipCPU/zipcpu/commit/ee6...", ffetch, fwb_module }
+ffetch = { "https://github.com/ZipCPU/zipcpu/commit/ee6..." }
+fwb_module = { "https://github.com/ZipCPU/zipcpu/commit/ee6..." }
+axis_arb_mux = { "https://github.com/alexforencich/verilog-pcie/commit/251...", ... }
 // ... (subdependencies for axis_arb_mux) 
 ```
 
