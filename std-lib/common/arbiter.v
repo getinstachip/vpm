@@ -1,4 +1,4 @@
-module oh_arbiter #( parameter N    = 1,
+module arbiter #( parameter N    = 1,
 		     parameter TYPE = "FIXED" // or ROUNDROBIN, FAIR
 		     ) 
    (
