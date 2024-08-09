@@ -56,11 +56,13 @@ Example `vpm.toml` file:
 
 ```yaml
 [repositories]
-ZipCPU/zipcpu = "0.0.1"
-LibSV/libsv = "1.0.0"
-OpenCores/opencores = "2.1.3"
-VerilogPCIe/verilog-pcie = "0.0.5"
-getinstachip/openchips = "0.1.4"
+https://github.com/ZipCPU/zipcpu = "ee644d4"
+https://github.com/bensampson5/libsv = "c5aff5d"
+https://github.com/alexforencich/verilog-pcie = "25156a9"
+
+[modules]
+pfcache.v
+axilops.v
 ```
 
 ## Support
