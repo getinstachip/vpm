@@ -7,17 +7,12 @@ copyright = "Copyright (c) 2024 Instachip"
 authors = ["Instachip <team@getinstachip.com>"]
 
 [dependencies]
-async-trait = "0.1.81"
-indicatif = "0.17.8"
-serde = { version = "1", features = ["derive"] }
-serde_json = "1"
-thiserror = "1"
-tokio = { version = "1", features = ["fs", "io-std", "io-util", "macros", "rt-multi-thread"] }
-uuid = { version = "1.7.0", features = ["v4", "fast-rng", "serde"] }
-reqwest = { version = "0.11", default-features = false, features = ["json", "rustls-tls"] }
-walkdir = "2.4.0"
 clap = { version = "4.5.13", features = ["derive"] }
-toml_edit = "0.22.6"
-regex = "1.10.3"
-tree-sitter = "0.20.1"
-tree-sitter-verilog = { git = "https://github.com/tree-sitter/tree-sitter-verilog.git" }
+anyhow = "1.0.86"
+tree-sitter = "0.20.6"
+tree-sitter-verilog = { git = "https://github.com/tree-sitter/tree-sitter-verilog" }
+regex = "1.10.6"
+toml = "0.8.19"
+
+[build-dependencies]
+cc="*"
