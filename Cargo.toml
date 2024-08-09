@@ -13,9 +13,6 @@ semver = "1.0.23"
 serde = { version = "1.0.205", features = ["derive"] }
 tree-sitter = "0.20.6"
 tree-sitter-verilog = { git = "https://github.com/tree-sitter/tree-sitter-verilog" }
-
-[build-dependencies]
-cc="*"
 async-openai = "0.18.3"
 reqwest = { version = "0.11", default-features = false, features = ["json", "rustls-tls"] }
 dotenv = "0.15.0"
@@ -23,3 +20,6 @@ walkdir = "2.4.0"
 tokio = { version = "1", features = ["full"] }
 chatgpt_rs = "1.2.3"
 regex = "1.10.6"
+
+[build-dependencies]
+cc="*"

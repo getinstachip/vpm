@@ -1,7 +1,7 @@
 use anyhow::{Context, Result};
 use std::collections::HashSet;
 use std::io::Read;
-use std::{fs, process::Command, process::Stdio};
+use std::{fs, process::Command};
 use std::path::PathBuf;
 use tree_sitter::Parser;
 use chatgpt::prelude::*;
@@ -16,7 +16,7 @@ impl Execute for Install {
         if let (Some(url), Some(name)) = (&self.url, &self.package_name) {
             println!("Installing module '{}' from URL: '{}'", name, url);
             install_module_from_url(name, url)?;
-            generate_docs(name).await?;
+            generate_docs(name, "./vpm_modules/").await?;
         } else if let Some(arg) = &self.url.as_ref().or(self.package_name.as_ref()) {
             if Regex::new(r"^(https?://|git://|ftp://|file://|www\.)[\w\-\.]+\.\w+(/[\w\-\.]*)*/?$").unwrap().is_match(arg) {
                 let url = arg.to_string();
@@ -26,7 +26,6 @@ impl Execute for Install {
                 let name = arg.to_string();
                 println!("Installing module '{}' from standard library", name);
                 install_module_from_url(&name, STD_LIB_URL)?;
-                fetch_docs_from_stdlib(&name).await?;
             }
         }
 
@@ -40,7 +39,7 @@ fn name_from_url(url: &str) -> Result<String> {
         .unwrap_or_default().to_string())
 }
 
-fn install_module_from_url(url: &String, module: &str) -> Result<()> {
+fn install_module_from_url(url: &str, module: &str) -> Result<()> {
     let package_name = name_from_url(url)?;
     let mut visited_modules = HashSet::new();
 
@@ -110,8 +109,7 @@ fn install_repo_from_url(url: &str, location: &str) -> Result<()> {
             .unwrap_or_default()
     );
 
-    dbg!(url.split('/').last().unwrap_or_default());
-    clone_repo(url, repo_path.to_str().unwrap_or_default());
+    clone_repo(url, repo_path.to_str().unwrap_or_default())?;
 
     Ok(())
 }
@@ -125,13 +123,8 @@ fn clone_repo(url: &str, repo_path: &str) -> Result<()> {
     Ok(())
 }
 
-async fn fetch_docs_from_stdlib(package_name: &str) -> Result<()> {
-    let url = format!("{}/{}", STD_LIB_URL, package_name);
-    Ok(())
-}
-
 async fn generate_docs(package_name: &str, location: &str) -> Result<()> {
-    let package_path = PathBuf::new(location).join(package_name).with_context("Package '{}' not found in {}", package_name, location);
+    let package_path = PathBuf::from(location).join(package_name);
 
     let readme_path = package_path.join("README.md");
     let content = if readme_path.exists() {
@@ -148,8 +141,7 @@ async fn generate_docs(package_name: &str, location: &str) -> Result<()> {
                     None
                 }
             })
-            .collect()
-            .with_context("No README.md or Verilog files found in package '{}'", package_name);
+            .collect::<Vec<_>>();
 
         fs::read_to_string(&verilog_files[0])?
     };
