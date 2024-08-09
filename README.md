@@ -73,7 +73,7 @@ Close your eyes, relax. Submodule dependencies are taken care of with our parser
 
 We are receiving overwhelming interest for an enterprise version to manage internal IP for ASIC/FPGA companies.
 
-[Join the waitlist if you're interested.](https://www.waitlistr.com/lists/ce1719b7/vpm-enterprise-version-waitlist), we're launching an enterprise batch trial soon.
+[Join the waitlist if you're interested](https://www.waitlistr.com/lists/ce1719b7/vpm-enterprise-version-waitlist), we're launching an enterprise batch trial soon.
 
 ## Support
 
