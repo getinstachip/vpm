@@ -10,7 +10,7 @@ pub enum Cmd {
 #[derive(Debug, Parser)]
 #[clap(author)]
 pub struct Install {
-    #[arg(long)]
+    #[arg(help="URL of repository to install from")]
     pub url: Option<String>,
     #[arg(help="Name of package to install from OpenChips")]
     pub package_name: Option<String>,
