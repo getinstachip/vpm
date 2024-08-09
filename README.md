@@ -6,9 +6,9 @@ VPM is a package manager for Verilog projects, written in Rust. It's designed to
 
 ## Features
 
-- Manage Verilog project dependencies
-- Install packages from various sources (GitHub, local repositories, etc.)
-- Auto-download specialized IP optimized for your use case (coming soon!)
+- Install submodules within repositories with dependencies automatically resolved
+- Automatically handle synthesis collateral including what's needed for build (COMING SOON!)
+- God-tier version control with a .lock file
 
 ## Installation
 
