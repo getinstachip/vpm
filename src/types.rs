@@ -21,14 +21,12 @@ pub struct PackageData {
 
 #[derive(Serialize, Deserialize)]
 pub struct PackageLock {
-    #[serde(rename="isLatest")]
+    #[serde(rename = "isLatest")]
     pub is_latest: bool,
 }
 
 impl PackageLock {
     pub fn new(is_latest: bool) -> Self {
-        Self {
-            is_latest
-        }
+        Self { is_latest }
     }
 }

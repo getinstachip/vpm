@@ -88,13 +88,15 @@ impl Versions {
 
         if semantic_version.op == Op::Less {
             if let (Some(minor), Some(patch)) = (semantic_version.minor, semantic_version.patch) {
-                let version_position = versions.iter().position(|(ver, _)| {
-                    ver == &&Self::stringify_from_numbers(semantic_version.major, minor, patch)
-                })
-                .context("Invalid version provided")?;
+                let version_position = versions
+                    .iter()
+                    .position(|(ver, _)| {
+                        ver == &&Self::stringify_from_numbers(semantic_version.major, minor, patch)
+                    })
+                    .context("Invalid version provided")?;
 
                 return Ok(versions
-                    .get(version_position- 1)
+                    .get(version_position - 1)
                     .expect("Invalid version provided (no smaller versions available)")
                     .0
                     .to_string());
