@@ -1,7 +1,7 @@
 use anyhow::{Context, Result};
 use regex::Regex;
 use std::collections::HashSet;
-use std::io::Read;
+use std::io::{Read, Write};
 use std::path::PathBuf;
 use std::{fs, process::Command};
 use toml::{map::Map, Value};
@@ -17,6 +17,7 @@ impl Execute for Install {
         if let (Some(url), Some(name)) = (&self.url, &self.package_name) {
             println!("Installing module '{}' from URL: '{}'", name, url);
             install_module_from_url(name, url)?;
+
             add_dependency("repositories", url, "0.1.0")?;
             add_dependency("modules", name, "0.1.0")?;
         } else if let Some(arg) = &self.url.as_ref().or(self.package_name.as_ref()) {
@@ -84,12 +85,7 @@ fn install_module_from_url(module: &str, url: &str) -> Result<()> {
         &mut visited_modules,
     )?;
 
-    fn download_module(
-        dir: &str,
-        module: &str,
-        package_name: &str,
-        visited_modules: &mut HashSet<String>,
-    ) -> Result<()> {
+    fn download_module( dir: &str, module: &str, package_name: &str, visited_modules: &mut HashSet<String>) -> Result<()> {
         for entry in fs::read_dir(dir)? {
             let entry = entry?;
             let path = entry.path();
@@ -111,13 +107,15 @@ fn install_module_from_url(module: &str, url: &str) -> Result<()> {
                         &contents,
                         visited_modules,
                     )?;
-                }
+                    let destination_dir = format!("./vpm_modules/{}", package_name);
+                    fs::create_dir_all(&destination_dir)?;
+                    let destination_path = format!("{}/{}", destination_dir, module);
+                    fs::copy(&path, destination_path)?;
+                    fs::remove_file(&path)?;
 
-                let destination_dir = format!("./vpm_modules/{}", package_name);
-                fs::create_dir_all(&destination_dir)?;
-                let destination_path = format!("{}/{}", destination_dir, module);
-                fs::copy(&path, destination_path)?;
-                fs::remove_file(&path)?;
+                    println!("Generating header files for {}", module);
+                    fs::File::create(PathBuf::from(destination_dir).join(format!("{}h", module)))?.write_all(generate_headers(root_node, module, &contents)?.as_bytes())?;
+                }
 
                 return Ok(());
             } else if path.is_dir() {
@@ -174,16 +172,43 @@ fn install_repo_from_url(url: &str, location: &str) -> Result<()> {
             .unwrap_or_default(),
     );
 
+    fn clone_repo(url: &str, repo_path: &str) -> Result<()> {
+        Command::new("git")
+            .args(["clone", "--depth", "1", "--single-branch", "--jobs", "4", url, repo_path])
+            .status()
+            .with_context(|| format!("Failed to clone repository from URL: '{}'", url))?;
+
+        Ok(())
+    }
+
     clone_repo(url, repo_path.to_str().unwrap_or_default())?;
 
     Ok(())
 }
 
-fn clone_repo(url: &str, repo_path: &str) -> Result<()> {
-    Command::new("git")
-        .args(["clone", "--depth", "1", "--single-branch", "--jobs", "4", url, repo_path])
-        .status()
-        .with_context(|| format!("Failed to clone repository from URL: '{}'", url))?;
+fn generate_headers(root_node: tree_sitter::Node, module: &str, contents: &str) -> Result<String> {
+    let mut header_content = format!("// Header for module {}\n\n", module);
+    let guard_name = module.replace('.', "_").to_uppercase();
 
-    Ok(())
+    header_content.push_str(&format!("`ifndef _{0}H_\n`define _{0}H_\n\n", guard_name));
+
+    fn process_node(node: tree_sitter::Node, contents: &str, header_content: &mut String) -> Result<()> {
+        let mut cursor = node.walk();
+        for child in node.children(&mut cursor) {
+            if child.kind() == "parameter_declaration" || child.kind() == "local_parameter_declaration" {
+                let mut cursor_node = child.walk();
+                for node in child.children(&mut cursor_node) {
+                    header_content.push_str(node.utf8_text(contents.as_bytes())?);
+                    header_content.push(' ');
+                }
+                header_content.push('\n');
+            }
+            process_node(child, contents, header_content)?;
+        }
+        Ok(())
+    }
+
+    process_node(root_node, contents, &mut header_content)?;
+
+    Ok(header_content)
 }
