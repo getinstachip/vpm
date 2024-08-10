@@ -1,5 +1,5 @@
 use anyhow::{Context, Result};
-use std::collections::{HashSet, VecDeque};
+use std::collections::HashSet;
 use std::io::Read;
 use std::vec;
 use std::{fs, process::Command};
@@ -22,20 +22,24 @@ impl Execute for Install {
         let version = &self.version.clone().unwrap_or("0.1.0".to_string());
         if let (Some(url), Some(name)) = (&self.url, &self.package_name) {
             println!("Installing module '{}' (vers:{}) from URL: '{}'", name, version, url);
-            let dependencies = install_module_from_url(name, url);
-            add_dependency("repositories", name, url, version, Some(&dependencies))?;
-            add_dependency("modules", name, url, version, Some(&dependencies))?;
+            install_module_from_url(name, url)?;
+            update_toml("modules", name, url, version)?;
+            update_toml("repositories", name, url, version)?;
+            // update_lock("modules", name, url, commit_code)?;
+            update_lock("repositories", name, url, &get_commit_code(url)?, None)?;
         } else if let Some(arg) = &self.url.as_ref().or(self.package_name.as_ref()) {
             if Regex::new(r"^(https?://|git://|ftp://|file://|www\.)[\w\-\.]+\.\w+(/[\w\-\.]*)*/?$").unwrap().is_match(arg) {
                 let url = arg.to_string();
                 println!("Installing repository from URL: '{}' (vers:{})", url, version);
                 install_repo_from_url(&url, "./vpm_modules/")?;
-                add_dependency("repositories", &url, &url, version, None)?;
+                update_toml("repositories", "", &url, version)?;
+                update_lock("repositories", "", &url, &get_commit_code(&url)?, None)?;
             } else {
                 let name = arg.to_string();
                 println!("Installing module '{}' (vers:{}) from standard library", name, version);
-                let dependencies = install_module_from_url(&name, STD_LIB_URL);
-                add_dependency("modules", &name, &name, version, Some(&dependencies))?;
+                install_module_from_url(&name, STD_LIB_URL)?;
+                // update_toml("modules", &name, STD_LIB_URL, version)?;
+                // update_lock("modules", &name, STD_LIB_URL, commit_code)?;
             }
         }
 
@@ -43,52 +47,53 @@ impl Execute for Install {
     }
 }
 
-fn add_dependency(section: &str, package: &str, uri: &str, version: &str, dependencies: Option<&VecDeque<Vec<String>>>) -> Result<()> {
+fn update_toml(section_name: &str, module_name: &str, uri: &str, version: &str) -> Result<()> {
     if !PathBuf::from(VPM_TOML).exists() {
         fs::OpenOptions::new().create_new(true).write(true).open(PathBuf::from(VPM_TOML))?;
     }
-    if !PathBuf::from(VPM_LOCK).exists() {
-        fs::OpenOptions::new().create_new(true).write(true).open(PathBuf::from(VPM_LOCK))?;
-    }
-
     let mut toml_value: Value = fs::read_to_string(VPM_TOML)?.parse()?;
-    let mut lock_value: Value = fs::read_to_string(VPM_LOCK)?.parse()?;
-
     let toml_table = toml_value.as_table_mut().unwrap();
-    let toml_section_map = toml_table.entry(section.to_string())
+    let toml_section_map = toml_table.entry(section_name.to_string())
         .or_insert_with(|| Value::Table(Map::new()))
         .as_table_mut()
         .unwrap();
 
-    let lock_table = lock_value.as_table_mut().unwrap();
-    let lock_section_map = lock_table.entry(section.to_string())
-        .or_insert_with(|| Value::Table(Map::new()))
-        .as_table_mut()
-        .unwrap();
-
-    if section == "modules" {
+    if section_name == "modules" {
         let mut toml_entry_table = Map::new();
         toml_entry_table.insert("version".to_string(), Value::String(version.to_string()));
         toml_entry_table.insert("uri".to_string(), Value::String(uri.to_string()));
-        // toml_entry_table.insert("branch".to_string(), Value::String("master".to_string()));
-        toml_section_map.insert(package.to_string(), Value::Table(toml_entry_table));
-
-        let mut queue = dependencies.unwrap().clone();
-        while !queue.is_empty() {
-            let dependency = queue.pop_front().unwrap();
-            if lock_section_map.contains_key(&dependency[0]) { continue; }
-            lock_section_map.insert(dependency[0].to_string(), Value::Array(dependency.iter().skip(1).map(|s| Value::String(s.to_string())).collect()));
-        }
-    } else if section == "repositories" {
-        toml_section_map.insert(uri.to_string(), Value::String(version.to_string()));
-        lock_section_map.insert(uri.to_string(), Value::String(version.to_string()));
+        toml_entry_table.insert("branch".to_string(), Value::String("master".to_string()));
+        toml_section_map.insert(module_name.to_string(), Value::Table(toml_entry_table));
+    } else if section_name == "repositories" {
+        toml_section_map.insert(module_name.to_string(), Value::String(uri.to_string()));
     }
 
-
     let new_toml_content = toml::to_string(&toml_value)?;
-    let new_lock_content = toml::to_string(&lock_value)?;
-
     fs::write(VPM_TOML, new_toml_content)?;
+
+    Ok(())
+}
+
+fn update_lock(section_name: &str, root_module: &str, repo_uri: &str, commit_code: &str, dependecies: Option<&Vec<&str>>) -> Result<()> {
+    if !PathBuf::from(VPM_LOCK).exists() {
+        fs::OpenOptions::new().create_new(true).write(true).open(PathBuf::from(VPM_LOCK))?;
+    }
+    let mut lock_value: Value = fs::read_to_string(VPM_LOCK)?.parse()?;
+    let lock_table = lock_value.as_table_mut().unwrap();
+    let lock_section_map = lock_table.entry(section_name.to_string())
+        .or_insert_with(|| Value::Table(Map::new()))
+        .as_table_mut()
+        .unwrap();
+
+    if section_name == "modules" {
+        let mut values = dependecies.unwrap_or(&Vec::new()).iter().map(|x| x.to_string()).collect::<Vec<String>>();
+        values.insert(0, repo_uri.to_string());
+        lock_section_map.insert(root_module.to_string(), Value::Array(values.iter().map(|x| Value::String(x.to_string())).collect()));
+    } else if section_name == "repositories" {
+        lock_section_map.insert(repo_uri.to_string(), Value::String(commit_code.to_string()));
+    }
+
+    let new_lock_content = toml::to_string(&lock_value)?;
     fs::write(VPM_LOCK, new_lock_content)?;
 
     Ok(())
@@ -100,15 +105,26 @@ fn name_from_url(url: &str) -> Result<String> {
         .unwrap_or_default().to_string())
 }
 
-fn install_module_from_url(module: &str, url: &str) -> VecDeque<Vec<String>> {
+fn get_commit_code(url: &str) -> Result<String> {
+    let commit_code = Command::new("git")
+        .args(["ls-remote", "--refs", url])
+        .output()
+        .with_context(|| format!("Failed to get commit code from URL: '{}'", url))?;
+
+    let commit_code = String::from_utf8(commit_code.stdout)?;
+    let commit_code = commit_code.split_whitespace().next().unwrap_or_default().to_string();
+
+    Ok(commit_code)
+}
+
+fn install_module_from_url(module: &str, url: &str) -> Result<()> {
     let package_name = name_from_url(url).unwrap();
     let mut visited_modules = HashSet::new();
-    let mut dependencies: VecDeque<Vec<String>> = VecDeque::new();
 
     install_repo_from_url(url, "/tmp/").unwrap();
-    download_module(&format!("/tmp/{}", package_name), module, &package_name, url, &mut visited_modules, &mut dependencies).unwrap();
+    download_module(&format!("/tmp/{}", package_name), module, &package_name, url, &mut visited_modules).unwrap();
 
-    fn download_module(dir: &str, module: &str, package_name: &str, uri: &str, visited_modules: &mut HashSet<String>, dependencies: &mut VecDeque<Vec<String>>) -> Result<()> {
+    fn download_module(dir: &str, module: &str, package_name: &str, uri: &str, visited_modules: &mut HashSet<String>) -> Result<()> {
         for entry in fs::read_dir(dir)? {
             let entry = entry?;
             let path = entry.path();
@@ -122,7 +138,7 @@ fn install_module_from_url(module: &str, url: &str) -> VecDeque<Vec<String>> {
 
                 if let Some(tree) = parser.parse(&contents, None) {
                     let root_node = tree.root_node();
-                    find_module_instantiations(root_node, package_name, &contents, visited_modules, module, uri, dependencies)?;
+                    find_module_instantiations(root_node, package_name, &contents, visited_modules, module, uri)?;
                 }
 
                 let destination_dir = format!("./vpm_modules/{}", package_name);
@@ -133,11 +149,11 @@ fn install_module_from_url(module: &str, url: &str) -> VecDeque<Vec<String>> {
 
                 return Ok(())
             } else if path.is_dir() {
-                download_module(path.to_str().unwrap_or_default(), module, package_name, uri, visited_modules, dependencies)?;
+                download_module(path.to_str().unwrap_or_default(), module, package_name, uri, visited_modules)?;
             }
         }
 
-        fn find_module_instantiations(root_node: tree_sitter::Node, package_name: &str, contents: &str, visited_modules: &mut HashSet<String>, module: &str, uri: &str, dependencies: &mut VecDeque<Vec<String>>) -> Result<()> {
+        fn find_module_instantiations(root_node: tree_sitter::Node, package_name: &str, contents: &str, visited_modules: &mut HashSet<String>, module: &str, uri: &str) -> Result<()> {
             let mut cursor = root_node.walk();
             let mut dependency = vec![module.to_string(), uri.to_string()];
             for child in root_node.children(&mut cursor) {
@@ -148,14 +164,13 @@ fn install_module_from_url(module: &str, url: &str) -> VecDeque<Vec<String>> {
                             if !visited_modules.contains(&module_name) {
                                 dependency.push(module_name.clone());
                                 visited_modules.insert(module_name.clone());
-                                download_module(&format!("/tmp/{}", package_name), &module_name, package_name, uri, visited_modules, dependencies)?;
+                                download_module(&format!("/tmp/{}", package_name), &module_name, package_name, uri, visited_modules)?;
                             }
                         }
                     }
                 }
-                find_module_instantiations(child, package_name, contents, visited_modules, module, uri, dependencies)?;
+                find_module_instantiations(child, package_name, contents, visited_modules, module, uri)?;
             }
-            dependencies.push_back(dependency);
             Ok(())
         }
 
@@ -163,7 +178,7 @@ fn install_module_from_url(module: &str, url: &str) -> VecDeque<Vec<String>> {
     }
 
     fs::remove_dir_all(format!("/tmp/{}", name_from_url(url).unwrap())).unwrap();
-    return dependencies;
+    Ok(())
 }
 
 fn install_repo_from_url(url: &str, location: &str) -> Result<()> {
