@@ -36,6 +36,8 @@ impl Execute for Install {
                 install_module_from_url(&name, STD_LIB_URL)?;
                 add_dependency("modules", &name, "0.1.0")?;
             }
+        } else {
+            println!("Command not found!");
         }
 
         Ok(())
