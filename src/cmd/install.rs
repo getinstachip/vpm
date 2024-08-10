@@ -6,6 +6,7 @@ use std::path::PathBuf;
 use std::{fs, process::Command};
 use toml::{map::Map, Value};
 use tree_sitter::Parser;
+use std::fmt::Write as FmtWrite;
 
 use crate::cmd::{Execute, Install};
 
@@ -152,7 +153,9 @@ fn install_module_from_url(module: &str, url: &str) -> Result<()> {
                         }
                     }
                 }
-                find_module_instantiations(child, package_name, contents, visited_modules)?;
+                else {
+                    find_module_instantiations(child, package_name, contents, visited_modules)?;
+                }
             }
 
             Ok(())
@@ -195,20 +198,25 @@ fn generate_headers(root_node: tree_sitter::Node, module: &str, contents: &str) 
     fn process_node(node: tree_sitter::Node, contents: &str, header_content: &mut String) -> Result<()> {
         let mut cursor = node.walk();
         for child in node.children(&mut cursor) {
-            if child.kind() == "parameter_declaration" || child.kind() == "local_parameter_declaration" {
-                let mut cursor_node = child.walk();
-                for node in child.children(&mut cursor_node) {
-                    header_content.push_str(node.utf8_text(contents.as_bytes())?);
-                    header_content.push(' ');
+            match child.kind() {
+                "parameter_declaration" | "local_parameter_declaration" | "default_nettype_compiler_directive" => {
+                    let mut cursor_node = child.walk();
+                    for node in child.children(&mut cursor_node) {
+                        write!(header_content, "{} ", node.utf8_text(contents.as_bytes())?)?;
+                    }
+                    header_content.push('\n');
                 }
-                header_content.push('\n');
+                _ => {
+                    process_node(child, contents, header_content)?;
+                }
             }
-            process_node(child, contents, header_content)?;
         }
         Ok(())
     }
 
     process_node(root_node, contents, &mut header_content)?;
+
+    header_content.push_str(&format!("\n`endif // _{}H_\n", guard_name));
 
     Ok(header_content)
 }
