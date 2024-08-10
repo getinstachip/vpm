@@ -89,7 +89,7 @@ fn install_module_from_url(module: &str, url: &str) -> Result<()> {
                     let root_node = tree.root_node();
                     find_module_instantiations(root_node, package_name, top_module, &contents, visited_modules)?;
                 }
-
+ 
                 let destination_dir = format!("./vpm_modules/{}", top_module);
                 fs::create_dir_all(&destination_dir)?;
                 let destination_path = format!("{}/{}", destination_dir, module);
