@@ -20,6 +20,8 @@ pub struct Install {
     pub package_name: Option<String>,
     #[arg(help="URL of repository to install from")]
     pub url: Option<String>,
+    #[arg(help="Version of package to install")]
+    pub version: Option<String>,
 }
 
 #[derive(Debug, Parser)]

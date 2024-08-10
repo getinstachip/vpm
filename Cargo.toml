@@ -13,6 +13,8 @@ tree-sitter = "0.20.6"
 tree-sitter-verilog = { git = "https://github.com/tree-sitter/tree-sitter-verilog" }
 regex = "1.10.6"
 toml = "0.8.19"
+semver = "1.0.23"
+serde = "1.0.205"
 
 [build-dependencies]
 cc="*"

@@ -3,8 +3,6 @@ use std::{collections::HashMap, str::FromStr};
 use anyhow::{anyhow, Context, Ok, Result};
 use semver::{BuildMetadata, Comparator, Op, Prerelease, Version, VersionReq};
 
-use crate::types::VersionData;
-
 pub const EMPTY_VERSION: Version = Version {
     major: 0,
     minor: 0,
@@ -16,6 +14,18 @@ pub const EMPTY_VERSION: Version = Version {
 pub const LATEST: &str = "latest";
 
 type PackageDetails = (String, Option<Comparator>);
+
+#[derive(Debug)]
+pub struct Dist {
+    pub tarball: String,
+}
+
+#[derive(Debug)]
+pub struct VersionData {
+    pub name: String,
+    pub version: String,
+    pub dist: Dist,
+}
 
 #[derive(Debug)]
 pub struct Versions;

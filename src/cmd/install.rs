@@ -9,27 +9,31 @@ use toml::{Value, map::Map};
 
 use crate::cmd::{Execute, Install};
 
+#[path ="../versions.rs"]
+mod versions;
+
 const VPM_TOML: &str = "vpm.toml";
 const STD_LIB_URL: &str = "https://github.com/vlang/v/tree/master/thirdparty/"; // edit to accept stdlib url
 
 impl Execute for Install {
     fn execute(&self) -> Result<()> {
+        let version = &self.version.clone().unwrap_or("0.1.0".to_string());
         if let (Some(url), Some(name)) = (&self.url, &self.package_name) {
-            println!("Installing module '{}' from URL: '{}'", name, url);
+            println!("Installing module '{}' (vers:{}) from URL: '{}'", name, version, url);
             install_module_from_url(name, url)?;
-            add_dependency("repositories", url, "0.1.0")?;
-            add_dependency("modules", name, "0.1.0")?;
+            add_dependency("repositories", url, version)?;
+            add_dependency("modules", name, version)?;
         } else if let Some(arg) = &self.url.as_ref().or(self.package_name.as_ref()) {
             if Regex::new(r"^(https?://|git://|ftp://|file://|www\.)[\w\-\.]+\.\w+(/[\w\-\.]*)*/?$").unwrap().is_match(arg) {
                 let url = arg.to_string();
-                println!("Installing repository from URL: '{}'", url);
+                println!("Installing repository from URL: '{}' (vers:{})", url, version);
                 install_repo_from_url(&url, "./vpm_modules/")?;
-                add_dependency("repositories", &url, "0.1.0")?;
+                add_dependency("repositories", &url, version)?;
             } else {
                 let name = arg.to_string();
-                println!("Installing module '{}' from standard library", name);
+                println!("Installing module '{}' (vers:{}) from standard library", name, version);
                 install_module_from_url(&name, STD_LIB_URL)?;
-                add_dependency("modules", &name, "0.1.0")?;
+                add_dependency("modules", &name, version)?;
             }
         }
 
@@ -51,7 +55,11 @@ fn add_dependency(section: &str, package: &str, version: &str) -> Result<()> {
         .as_table_mut()
         .unwrap();
 
-    section_map.insert(package.to_string(), Value::String(version.to_string()));
+    let mut entry_table = Map::new();
+    entry_table.insert("version".to_string(), Value::String(version.to_string()));
+    entry_table.insert("uri".to_string(), Value::String(package.to_string()));
+    entry_table.insert("branch".to_string(), Value::String("master".to_string()));
+    section_map.insert(package.to_string(), Value::Table(entry_table));
 
     let new_content = toml::to_string(&toml_value)?;
 
