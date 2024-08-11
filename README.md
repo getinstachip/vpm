@@ -27,27 +27,6 @@ After installation, you can use the `vpm` command in any terminal.
 - `vpm docs <top_module.v> <repo_url>`: generate documentation for anything
 ![docs](https://github.com/user-attachments/assets/9f1b9cb4-05e1-4e69-9440-16d498277f0f)
 
-## Very useful stuff
-
-### vpm include "top_module"
-After running `vpm include "top_module.v"`, the Verilog Package Manager parses the file and downloads all the submodules too. It generates .vh files and handles synthesis collateral.
-
-Example: running `vpm include pfcache.v` finds all dependences and includes/configures them for you.
-```
-your_project/
-├─ vpm_modules/
-│  ├─ pfcache/
-│     ├─ pfcache.v
-│     ├─ pfcache.vh
-│     ├─ ffetch.v
-│     ├─ ffetch.vh
-│     ├─ fwb_module.v
-│     ├─ fwb_module.vh
-│     └─ README.md // documentation of component you installed
-└─ sim/
-   └─pfcache_tb.v
-```
-
 ## Configuration
 
 ### vpm.toml
