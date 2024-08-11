@@ -147,6 +147,7 @@ fn install_module_from_url(module: &str, url: &str) -> Result<()> {
         fn find_module_instantiations(
             root_node: tree_sitter::Node,
             package_name: &str,
+            top_module: &str,
             contents: &str,
             visited_modules: &mut HashSet<String>,
         ) -> Result<()> {
@@ -170,7 +171,7 @@ fn install_module_from_url(module: &str, url: &str) -> Result<()> {
                     }
                 }
                 else {
-                    find_module_instantiations(child, package_name, contents, visited_modules)?;
+                    find_module_instantiations(child, package_name, top_module, contents, visited_modules)?;
                 }
             }
 
@@ -181,7 +182,7 @@ fn install_module_from_url(module: &str, url: &str) -> Result<()> {
     }
 
     let rt = Runtime::new()?;
-    rt.block_on(generate_docs(&format!("./vpm_modules/{}/", package_name), module))?;
+    rt.block_on(generate_docs(&format!("./vpm_modules/{}/", module), module))?;
     fs::remove_dir_all(format!("/tmp/{}", package_name))?;
 
     Ok(())
@@ -241,7 +242,7 @@ fn generate_headers(root_node: tree_sitter::Node, module: &str, contents: &str) 
 }
 
 async fn generate_docs(dir: &str, module: &str) -> Result<()> {
-    println!("Generating Documentation for for {}, will be written to {}/README.md", module, dir);
+    println!("Generating Documentation for for {}, will be written to {}README.md", module, dir);
 
     let mut file = fs::File::open(format!("{}/{}", dir, module))?;
     let mut contents = String::new();
