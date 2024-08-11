@@ -64,7 +64,7 @@ fn update_toml(section_name: &str, module_name: &str, uri: &str, version: &str) 
         toml_entry_table.insert("branch".to_string(), Value::String(get_commit_details(uri)?[1].to_string()));
         toml_section_map.insert(module_name.to_string(), Value::Table(toml_entry_table));
     } else if section_name == "repositories" {
-        toml_section_map.insert(module_name.to_string(), Value::String(uri.to_string()));
+        toml_section_map.insert(uri.to_string(), Value::String(version.to_string()));
     }
 
     let new_toml_content = toml::to_string(&toml_value)?;
