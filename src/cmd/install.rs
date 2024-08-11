@@ -1,7 +1,6 @@
 use anyhow::{Context, Result};
 use std::collections::HashSet;
 use std::io::Read;
-use std::vec;
 use std::{fs, process::Command};
 use std::path::PathBuf;
 use tree_sitter::Parser;
@@ -10,8 +9,8 @@ use toml::{Value, map::Map};
 
 use crate::cmd::{Execute, Install};
 
-#[path ="../versions.rs"]
-mod versions;
+// #[path ="../versions.rs"]
+// mod versions;
 
 const VPM_TOML: &str = "vpm.toml";
 const VPM_LOCK: &str = "vpm.lock";
@@ -26,19 +25,19 @@ impl Execute for Install {
             update_toml("modules", name, url, version)?;
             update_toml("repositories", name, url, version)?;
             // update_lock("modules", name, url, commit_code)?;
-            update_lock("repositories", name, url, &get_commit_code(url)?, None)?;
+            update_lock("repositories", name, url, &get_commit_details(url)?[0], None)?;
         } else if let Some(arg) = &self.url.as_ref().or(self.package_name.as_ref()) {
             if Regex::new(r"^(https?://|git://|ftp://|file://|www\.)[\w\-\.]+\.\w+(/[\w\-\.]*)*/?$").unwrap().is_match(arg) {
                 let url = arg.to_string();
                 println!("Installing repository from URL: '{}' (vers:{})", url, version);
                 install_repo_from_url(&url, "./vpm_modules/")?;
                 update_toml("repositories", "", &url, version)?;
-                update_lock("repositories", "", &url, &get_commit_code(&url)?, None)?;
+                update_lock("repositories", "", &url, &get_commit_details(&url)?[0], None)?;
             } else {
                 let name = arg.to_string();
                 println!("Installing module '{}' (vers:{}) from standard library", name, version);
                 install_module_from_url(&name, STD_LIB_URL)?;
-                // update_toml("modules", &name, STD_LIB_URL, version)?;
+                update_toml("modules", &name, STD_LIB_URL, version)?;
                 // update_lock("modules", &name, STD_LIB_URL, commit_code)?;
             }
         }
@@ -62,7 +61,7 @@ fn update_toml(section_name: &str, module_name: &str, uri: &str, version: &str) 
         let mut toml_entry_table = Map::new();
         toml_entry_table.insert("version".to_string(), Value::String(version.to_string()));
         toml_entry_table.insert("uri".to_string(), Value::String(uri.to_string()));
-        toml_entry_table.insert("branch".to_string(), Value::String("master".to_string()));
+        toml_entry_table.insert("branch".to_string(), Value::String(get_commit_details(uri)?[1].to_string()));
         toml_section_map.insert(module_name.to_string(), Value::Table(toml_entry_table));
     } else if section_name == "repositories" {
         toml_section_map.insert(module_name.to_string(), Value::String(uri.to_string()));
@@ -105,16 +104,22 @@ fn name_from_url(url: &str) -> Result<String> {
         .unwrap_or_default().to_string())
 }
 
-fn get_commit_code(url: &str) -> Result<String> {
+fn get_commit_details(url: &str) -> Result<Vec<String>> {
     let commit_code = Command::new("git")
         .args(["ls-remote", "--refs", url])
         .output()
         .with_context(|| format!("Failed to get commit code from URL: '{}'", url))?;
-
     let commit_code = String::from_utf8(commit_code.stdout)?;
     let commit_code = commit_code.split_whitespace().next().unwrap_or_default().to_string();
 
-    Ok(commit_code)
+    let branch = Command::new("git")
+        .args(["ls-remote", "--refs", url])
+        .output()
+        .with_context(|| format!("Failed to get branch from URL: '{}'", url))?;
+    let branch = String::from_utf8(branch.stdout)?;
+    let branch = branch.split_whitespace().nth(1).unwrap_or_default().to_string();
+
+    Ok(vec![commit_code, branch])
 }
 
 fn install_module_from_url(module: &str, url: &str) -> Result<()> {
@@ -153,24 +158,26 @@ fn install_module_from_url(module: &str, url: &str) -> Result<()> {
             }
         }
 
-        fn find_module_instantiations(root_node: tree_sitter::Node, package_name: &str, contents: &str, visited_modules: &mut HashSet<String>, module: &str, uri: &str) -> Result<()> {
+        fn find_module_instantiations(root_node: tree_sitter::Node, package_name: &str, contents: &str, visited_modules: &mut HashSet<String>, root_mod_name: &str, uri: &str) -> Result<()> {
             let mut cursor = root_node.walk();
-            let mut dependency = vec![module.to_string(), uri.to_string()];
+            let mut dependencies: Vec<&str> = Vec::new();
             for child in root_node.children(&mut cursor) {
                 if child.kind().contains("instantiation") {
                     if let Some(first_child) = child.child(0) {
                         if let Ok(module) = first_child.utf8_text(contents.as_bytes()) {
                             let module_name = format!("{}.v", module);
                             if !visited_modules.contains(&module_name) {
-                                dependency.push(module_name.clone());
+                                dependencies.push(module);
                                 visited_modules.insert(module_name.clone());
                                 download_module(&format!("/tmp/{}", package_name), &module_name, package_name, uri, visited_modules)?;
                             }
                         }
                     }
                 }
-                find_module_instantiations(child, package_name, contents, visited_modules, module, uri)?;
+                find_module_instantiations(child, package_name, contents, visited_modules, root_mod_name, uri)?;
             }
+            
+            update_lock("modules", root_mod_name, uri, &get_commit_details(uri)?[0], Some(&dependencies))?;
             Ok(())
         }
 
