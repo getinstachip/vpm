@@ -23,6 +23,7 @@ After installation, you can use the `vpm` command in any terminal.
 ### Basic Commands
 
 - `vpm install <top_module.v> <repo_url>`: install a .v file and all submodule dependencies
+  ![Local GIF](yourFile.gif)
 - `vpm docs <top_module.v> <repo_url>`: generate documentation for anything
 
 ## Very useful stuff
