@@ -7,6 +7,16 @@ use std::{fs, process::Command};
 use toml::{map::Map, Value};
 use tree_sitter::Parser;
 use std::fmt::Write as FmtWrite;
+use tokio::runtime::Runtime;
+
+use clust::messages::{
+    ClaudeModel,
+    MaxTokens,
+    Message,
+    MessagesRequestBody,
+    SystemPrompt
+};
+use clust::Client;
 
 use crate::cmd::{Execute, Install};
 
@@ -21,6 +31,7 @@ impl Execute for Install {
 
             add_dependency("repositories", url, "0.1.0")?;
             add_dependency("modules", name, "0.1.0")?;
+
         } else if let Some(arg) = &self.url.as_ref().or(self.package_name.as_ref()) {
             if Regex::new(r"^(https?://|git://|ftp://|file://|www\.)[\w\-\.]+\.\w+(/[\w\-\.]*)*/?$")
                 .unwrap()
@@ -88,7 +99,7 @@ fn install_module_from_url(module: &str, url: &str) -> Result<()> {
         &mut visited_modules,
     )?;
 
-    fn download_module( dir: &str, module: &str, package_name: &str, visited_modules: &mut HashSet<String>) -> Result<()> {
+    fn download_module(dir: &str, module: &str, package_name: &str, visited_modules: &mut HashSet<String>) -> Result<()> {
         for entry in fs::read_dir(dir)? {
             let entry = entry?;
             let path = entry.path();
@@ -118,6 +129,8 @@ fn install_module_from_url(module: &str, url: &str) -> Result<()> {
 
                     println!("Generating header files for {}", module);
                     fs::File::create(PathBuf::from(destination_dir).join(format!("{}h", module)))?.write_all(generate_headers(root_node, module, &contents)?.as_bytes())?;
+
+
                 }
 
                 return Ok(());
@@ -166,7 +179,10 @@ fn install_module_from_url(module: &str, url: &str) -> Result<()> {
         Ok(())
     }
 
+    let rt = Runtime::new()?;
+    rt.block_on(generate_docs(&format!("./vpm_modules/{}/", package_name), module))?;
     fs::remove_dir_all(format!("/tmp/{}", package_name))?;
+
     Ok(())
 }
 
@@ -221,4 +237,48 @@ fn generate_headers(root_node: tree_sitter::Node, module: &str, contents: &str) 
     header_content.push_str(&format!("\n`endif // _{}H_\n", guard_name));
 
     Ok(header_content)
+}
+
+async fn generate_docs(dir: &str, module: &str) -> Result<()> {
+    println!("Generating Documentation for for {}, will be written to {}/README.md", module, dir);
+
+    let mut file = fs::File::open(format!("{}/{}", dir, module))?;
+    let mut contents = String::new();
+    file.read_to_string(&mut contents)?;
+
+    let client = Client::from_env()?;
+    let model = ClaudeModel::Claude35Sonnet20240620;
+    let messages = vec![Message::user(
+        format!(
+            "Create a comprehensive Markdown documentation for the following Verilog module. Include an overview, module description, port list, parameters, and any important implementation details: {}",
+            contents
+        ),
+    )];
+    let max_tokens = MaxTokens::new(2048, model)?;
+    let system_prompt = SystemPrompt::new("You are an expert Verilog engineer tasked with creating clear and detailed documentation.");
+    let request_body = MessagesRequestBody {
+        model,
+        messages,
+        max_tokens,
+        system: Some(system_prompt),
+        ..Default::default()
+    };
+
+    let response = client.create_a_message(request_body).await?;
+    let response_content = response.content;
+
+    let parsed_response: Value = serde_json::from_str(&response_content.to_string())?;
+    let generated_text = parsed_response[0]["text"].as_str().unwrap_or("");
+
+    let readme_path = PathBuf::from(dir).join("README.md");
+    let mut readme_file = fs::File::create(&readme_path)?;
+
+    writeln!(readme_file, "# {}", module)?;
+    writeln!(readme_file)?;
+
+    write!(readme_file, "{}", generated_text)?;
+
+    println!("Documentation for {} written to {}", module, readme_path.display());
+
+    Ok(())
 }
