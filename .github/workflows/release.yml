@@ -43,12 +43,14 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+
       - name: Get version
         id: get_version
         uses: SebRollen/toml-action@v1.2.0
         with:
           file: Cargo.toml
           field: package.version
+
       - name: Install Rust
         uses: actions-rs/toolchain@v1
         with:
@@ -56,36 +58,62 @@ jobs:
           profile: minimal
           override: true
           target: ${{ matrix.target }}
+
       - name: Setup cache
         uses: Swatinem/rust-cache@v2.7.3
         with:
           key: ${{ matrix.target }}
-      - name: Set OPENSSL_DIR
-        if: runner.os == 'Linux' || runner.os == 'macOS'
-        run: echo "OPENSSL_DIR=/usr/local/ssl" >> $GITHUB_ENV
+
+      - name: Set OpenSSL environment variables (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libssl-dev
+          echo "OPENSSL_DIR=/usr" >> $GITHUB_ENV
+          echo "OPENSSL_LIB_DIR=/usr/lib" >> $GITHUB_ENV
+          echo "OPENSSL_INCLUDE_DIR=/usr/include" >> $GITHUB_ENV
+
+      - name: Set OpenSSL environment variables (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          echo "OPENSSL_DIR=/usr/local/opt/openssl" >> $GITHUB_ENV
+          echo "OPENSSL_LIB_DIR=/usr/local/opt/openssl/lib" >> $GITHUB_ENV
+          echo "OPENSSL_INCLUDE_DIR=/usr/local/opt/openssl/include" >> $GITHUB_ENV
+
+      - name: Set OpenSSL environment variables (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          echo "OPENSSL_DIR=C:\\OpenSSL-Win64" >> $GITHUB_ENV
+          echo "OPENSSL_LIB_DIR=C:\\OpenSSL-Win64\\lib" >> $GITHUB_ENV
+          echo "OPENSSL_INCLUDE_DIR=C:\\OpenSSL-Win64\\include" >> $GITHUB_ENV
+
       - name: Install cross
         if: ${{ runner.os == 'Linux' }}
         uses: actions-rs/cargo@v1
         with:
           command: install
           args: --color=always --git=https://github.com/cross-rs/cross.git --locked --rev=02bf930e0cb0c6f1beffece0788f3932ecb2c7eb --verbose cross
+
       - name: Build binary
         uses: actions-rs/cargo@v1
         with:
           command: build
           args: --release --locked --target=${{ matrix.target }} --color=always --verbose
           use-cross: ${{ runner.os == 'Linux' }}
+
       - name: Install cargo-deb
         if: ${{ matrix.deb == true }}
         uses: actions-rs/install@v0.1
         with:
           crate: cargo-deb
+
       - name: Build deb
         if: ${{ matrix.deb == true }}
         uses: actions-rs/cargo@v1
         with:
           command: deb
           args: --no-build --no-strip --output=. --target=${{ matrix.target }}
+
       - name: Package (*nix)
         if: runner.os != 'Windows'
         run: |
@@ -93,12 +121,14 @@ jobs:
             -C target/${{ matrix.target }}/release/ vpm |
             gzip --best > \
             vpm-${{ steps.get_version.outputs.value }}-${{ matrix.target }}.tar.gz
+
       - name: Package (Windows)
         if: runner.os == 'Windows'
         run: |
           7z a vpm-${{ steps.get_version.outputs.value }}-${{ matrix.target }}.zip `
             LICENSE README.md `
             ./target/${{ matrix.target }}/release/vpm.exe
+
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
@@ -107,6 +137,7 @@ jobs:
             *.deb
             *.tar.gz
             *.zip
+
       - name: Create release
         if: |
           github.ref == 'refs/heads/main' && startsWith(github.event.head_commit.message, 'chore(release)')
