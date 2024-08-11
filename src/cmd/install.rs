@@ -148,9 +148,9 @@ fn install_module_from_url(module: &str, url: &str) -> Result<()> {
 
     install_repo_from_url(url, "/tmp/")?;
 
-    download_module(&format!("/tmp/{}", package_name), module, &package_name, &mut visited_modules)?;
+    download_module(&format!("/tmp/{}", package_name), module, &package_name, url, &mut visited_modules)?;
 
-    fn download_module(dir: &str, module: &str, top_module: &str, package_name: &str, uri: &str, visited_modules: &mut HashSet<String>) -> Result<()> {
+    fn download_module(dir: &str, module: &str, package_name: &str, uri: &str, visited_modules: &mut HashSet<String>) -> Result<()> {
         for entry in fs::read_dir(dir)? {
             let entry = entry?;
             let path = entry.path();
@@ -170,11 +170,12 @@ fn install_module_from_url(module: &str, url: &str) -> Result<()> {
                     find_module_instantiations(
                         root_node,
                         package_name,
-                        top_module,
                         &contents,
-                        visited_modules)?;
+                        visited_modules,
+                        module,
+                        uri)?;
                   
-                    let destination_dir = format!("./vpm_modules/{}", top_module);
+                    let destination_dir = format!("./vpm_modules/{}", module);
                     fs::create_dir_all(&destination_dir)?;
                     let destination_path = format!("{}/{}", destination_dir, module);
                     fs::copy(&path, destination_path)?;
@@ -182,8 +183,6 @@ fn install_module_from_url(module: &str, url: &str) -> Result<()> {
 
                     println!("Generating header files for {}", module);
                     fs::File::create(PathBuf::from(destination_dir).join(format!("{}h", module)))?.write_all(generate_headers(root_node, module, &contents)?.as_bytes())?;
-
-                    find_module_instantiations(root_node, package_name, top_module, &contents, visited_modules)?;
                 }
 
                 return Ok(());
@@ -191,8 +190,8 @@ fn install_module_from_url(module: &str, url: &str) -> Result<()> {
                 download_module(
                     path.to_str().unwrap_or_default(),
                     module,
-                    top_module,
                     package_name,
+                    uri,
                     visited_modules,
                 )?;
             }
