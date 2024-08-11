@@ -1,7 +1,5 @@
 mod cmd;
 mod error;
-// mod types;
-// mod versions; will add once versioning is needed
 
 use std::env;
 use std::io::{self, Write};
