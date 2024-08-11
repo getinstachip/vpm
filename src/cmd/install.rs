@@ -7,16 +7,6 @@ use std::{fs, process::Command};
 use toml::{map::Map, Value};
 use tree_sitter::Parser;
 use std::fmt::Write as FmtWrite;
-use tokio::runtime::Runtime;
-
-use clust::messages::{
-    ClaudeModel,
-    MaxTokens,
-    Message,
-    MessagesRequestBody,
-    SystemPrompt
-};
-use clust::Client;
 
 use crate::cmd::{Execute, Install};
 
@@ -27,7 +17,7 @@ impl Execute for Install {
     fn execute(&self) -> Result<()> {
         if let (Some(url), Some(name)) = (&self.url, &self.package_name) {
             println!("Installing module '{}' from URL: '{}'", name, url);
-            install_module_from_url(name, url)?;
+            install_module_from_url(name, url, true)?;
 
             add_dependency("repositories", url, "0.1.0")?;
             add_dependency("modules", name, "0.1.0")?;
@@ -44,7 +34,7 @@ impl Execute for Install {
             } else {
                 let name = arg.to_string();
                 println!("Installing module '{}' from standard library", name);
-                install_module_from_url(&name, STD_LIB_URL)?;
+                install_module_from_url(&name, STD_LIB_URL, true)?;
                 add_dependency("modules", &name, "0.1.0")?;
             }
         } else {
@@ -82,7 +72,7 @@ fn add_dependency(section: &str, package: &str, version: &str) -> Result<()> {
     Ok(())
 }
 
-fn install_module_from_url(module: &str, url: &str) -> Result<()> {
+pub fn install_module_from_url(module: &str, url: &str, sub: bool) -> Result<()> {
     let package_name = url
         .rsplit('/')
         .find(|segment| !segment.is_empty())
@@ -93,14 +83,22 @@ fn install_module_from_url(module: &str, url: &str) -> Result<()> {
 
     install_repo_from_url(url, "/tmp/")?;
 
-    download_module(&format!("/tmp/{}", package_name), module, module, &package_name, &mut visited_modules)?;
+    download_module(&format!("/tmp/{}", package_name), module, module, &package_name, &mut visited_modules, sub)?;
 
-    fn download_module(dir: &str, module: &str, top_module: &str, package_name: &str, visited_modules: &mut HashSet<String>) -> Result<()> {
+    fn download_module(dir: &str, module: &str, top_module: &str, package_name: &str, visited_modules: &mut HashSet<String>, sub: bool) -> Result<()> {
         for entry in fs::read_dir(dir)? {
             let entry = entry?;
             let path = entry.path();
             if path.is_file() && path.file_name().map_or(false, |name| name == module) {
                 let mut file = fs::File::open(&path)?;
+                if !sub {
+                    let destination_dir = format!("./vpm_modules/{}", top_module);
+                    fs::create_dir_all(&destination_dir)?;
+                    let destination_path = format!("{}/{}", destination_dir, module);
+                    fs::copy(&path, destination_path)?;
+                    fs::remove_file(&path)?;
+                    return Ok(());
+                }
                 let mut contents = String::new();
                 file.read_to_string(&mut contents)?;
 
@@ -140,6 +138,7 @@ fn install_module_from_url(module: &str, url: &str) -> Result<()> {
                     top_module,
                     package_name,
                     visited_modules,
+                    true,
                 )?;
             }
         }
@@ -165,6 +164,7 @@ fn install_module_from_url(module: &str, url: &str) -> Result<()> {
                                     top_module,
                                     package_name,
                                     visited_modules,
+                                    true,
                                 )?;
                             }
                         }
@@ -181,14 +181,12 @@ fn install_module_from_url(module: &str, url: &str) -> Result<()> {
         Ok(())
     }
 
-    let rt = Runtime::new()?;
-    // rt.block_on(generate_docs(&format!("./vpm_modules/{}/", module), module))?;
     fs::remove_dir_all(format!("/tmp/{}", package_name))?;
 
     Ok(())
 }
 
-fn install_repo_from_url(url: &str, location: &str) -> Result<()> {
+pub fn install_repo_from_url(url: &str, location: &str) -> Result<()> {
     let repo_path = PathBuf::from(location).join(
         url.rsplit('/')
             .find(|segment| !segment.is_empty())
@@ -239,48 +237,4 @@ fn generate_headers(root_node: tree_sitter::Node, module: &str, contents: &str) 
     header_content.push_str(&format!("\n`endif // _{}H_\n", guard_name));
 
     Ok(header_content)
-}
-
-async fn generate_docs(dir: &str, module: &str) -> Result<()> {
-    println!("Generating Documentation for for {}, will be written to {}README.md", module, dir);
-
-    let mut file = fs::File::open(format!("{}/{}", dir, module))?;
-    let mut contents = String::new();
-    file.read_to_string(&mut contents)?;
-
-    let client = Client::from_env()?;
-    let model = ClaudeModel::Claude35Sonnet20240620;
-    let messages = vec![Message::user(
-        format!(
-            "Create a comprehensive Markdown documentation for the following Verilog module. Include an overview, module description, port list, parameters, and any important implementation details: {}",
-            contents
-        ),
-    )];
-    let max_tokens = MaxTokens::new(2048, model)?;
-    let system_prompt = SystemPrompt::new("You are an expert Verilog engineer tasked with creating clear and detailed documentation.");
-    let request_body = MessagesRequestBody {
-        model,
-        messages,
-        max_tokens,
-        system: Some(system_prompt),
-        ..Default::default()
-    };
-
-    let response = client.create_a_message(request_body).await?;
-    let response_content = response.content;
-
-    let parsed_response: Value = serde_json::from_str(&response_content.to_string())?;
-    let generated_text = parsed_response[0]["text"].as_str().unwrap_or("");
-
-    let readme_path = PathBuf::from(dir).join("README.md");
-    let mut readme_file = fs::File::create(&readme_path)?;
-
-    writeln!(readme_file, "# {}", module)?;
-    writeln!(readme_file)?;
-
-    write!(readme_file, "{}", generated_text)?;
-
-    println!("Documentation for {} written to {}", module, readme_path.display());
-
-    Ok(())
 }

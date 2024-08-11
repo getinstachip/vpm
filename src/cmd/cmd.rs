@@ -46,6 +46,7 @@ pub struct Uninstall {
 )]
 pub struct Docs {
     #[arg(help = "Name of package to fetch documentation for")]
-    pub package_name: String,
+    pub package_name: Option<String>,
+    #[arg(help = "URL of repository to fetch documentation for")]
     pub url: Option<String>,
 }
