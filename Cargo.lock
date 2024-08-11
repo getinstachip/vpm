@@ -1446,7 +1446,6 @@ dependencies = [
  "clust",
  "dotenv",
  "regex",
- "serde_json",
  "tokio",
  "toml",
  "tree-sitter",

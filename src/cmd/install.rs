@@ -1,12 +1,13 @@
-use anyhow::{Context, Result};
-use regex::Regex;
 use std::collections::HashSet;
 use std::io::{Read, Write};
 use std::path::PathBuf;
-use std::{fs, process::Command};
-use toml::{map::Map, Value};
-use tree_sitter::Parser;
 use std::fmt::Write as FmtWrite;
+use std::{fs, process::Command};
+
+use anyhow::{Context, Result};
+use regex::Regex;
+use toml::{map::Map, Value};
+use tree_sitter::{Parser, Node};
 use tokio::runtime::Runtime;
 
 use clust::messages::{
@@ -145,8 +146,9 @@ fn install_module_from_url(module: &str, url: &str) -> Result<()> {
         }
 
         fn find_module_instantiations(
-            root_node: tree_sitter::Node,
+            root_node: Node,
             package_name: &str,
+            top_module: &str,
             contents: &str,
             visited_modules: &mut HashSet<String>,
         ) -> Result<()> {
@@ -170,7 +172,7 @@ fn install_module_from_url(module: &str, url: &str) -> Result<()> {
                     }
                 }
                 else {
-                    find_module_instantiations(child, package_name, contents, visited_modules)?;
+                    find_module_instantiations(child, package_name, top_module, contents, visited_modules)?;
                 }
             }
 
@@ -208,13 +210,13 @@ fn install_repo_from_url(url: &str, location: &str) -> Result<()> {
     Ok(())
 }
 
-fn generate_headers(root_node: tree_sitter::Node, module: &str, contents: &str) -> Result<String> {
+fn generate_headers(root_node: Node, module: &str, contents: &str) -> Result<String> {
     let mut header_content = format!("// Header for module {}\n\n", module);
     let guard_name = module.replace('.', "_").to_uppercase();
 
     header_content.push_str(&format!("`ifndef _{0}H_\n`define _{0}H_\n\n", guard_name));
 
-    fn process_node(node: tree_sitter::Node, contents: &str, header_content: &mut String) -> Result<()> {
+    fn process_node(node: Node, contents: &str, header_content: &mut String) -> Result<()> {
         let mut cursor = node.walk();
         for child in node.children(&mut cursor) {
             match child.kind() {
@@ -266,15 +268,12 @@ async fn generate_docs(dir: &str, module: &str) -> Result<()> {
     };
 
     let response = client.create_a_message(request_body).await?;
-    let response_content = response.content;
-
-    let parsed_response: Value = serde_json::from_str(&response_content.to_string())?;
-    let generated_text = parsed_response[0]["text"].as_str().unwrap_or("");
+    let generated_text = response.content.flatten_into_text().unwrap_or("Error generating docs");
 
     let readme_path = PathBuf::from(dir).join("README.md");
     let mut readme_file = fs::File::create(&readme_path)?;
 
-    writeln!(readme_file, "# {}", module)?;
+    writeln!(readme_file, "```{}```", module)?;
     writeln!(readme_file)?;
 
     write!(readme_file, "{}", generated_text)?;
