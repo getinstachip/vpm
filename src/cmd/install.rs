@@ -21,7 +21,7 @@ use clust::Client;
 use crate::cmd::{Execute, Install};
 
 const VPM_TOML: &str = "vpm.toml";
-const STD_LIB_URL: &str = "https://github.com/vlang/v/tree/master/thirdparty/"; // edit to accept stdlib url
+const STD_LIB_URL: &str = "https://github.com/getinstachip/openchips";
 
 impl Execute for Install {
     fn execute(&self) -> Result<()> {
@@ -92,14 +92,10 @@ fn install_module_from_url(module: &str, url: &str) -> Result<()> {
     let mut visited_modules = HashSet::new();
 
     install_repo_from_url(url, "/tmp/")?;
-    download_module(
-        &format!("/tmp/{}", package_name),
-        module,
-        &package_name,
-        &mut visited_modules,
-    )?;
 
-    fn download_module(dir: &str, module: &str, package_name: &str, visited_modules: &mut HashSet<String>) -> Result<()> {
+    download_module(&format!("/tmp/{}", package_name), module, module, &package_name, &mut visited_modules)?;
+
+    fn download_module(dir: &str, module: &str, top_module: &str, package_name: &str, visited_modules: &mut HashSet<String>) -> Result<()> {
         for entry in fs::read_dir(dir)? {
             let entry = entry?;
             let path = entry.path();
@@ -115,13 +111,16 @@ fn install_module_from_url(module: &str, url: &str) -> Result<()> {
 
                 if let Some(tree) = parser.parse(&contents, None) {
                     let root_node = tree.root_node();
+                  
                     find_module_instantiations(
                         root_node,
                         package_name,
+                        top_module,
                         &contents,
-                        visited_modules,
+                        visited_modules
                     )?;
-                    let destination_dir = format!("./vpm_modules/{}", package_name);
+                  
+                    let destination_dir = format!("./vpm_modules/{}", top_module);
                     fs::create_dir_all(&destination_dir)?;
                     let destination_path = format!("{}/{}", destination_dir, module);
                     fs::copy(&path, destination_path)?;
@@ -130,7 +129,7 @@ fn install_module_from_url(module: &str, url: &str) -> Result<()> {
                     println!("Generating header files for {}", module);
                     fs::File::create(PathBuf::from(destination_dir).join(format!("{}h", module)))?.write_all(generate_headers(root_node, module, &contents)?.as_bytes())?;
 
-
+                    find_module_instantiations(root_node, package_name, top_module, &contents, visited_modules)?;
                 }
 
                 return Ok(());
@@ -138,6 +137,7 @@ fn install_module_from_url(module: &str, url: &str) -> Result<()> {
                 download_module(
                     path.to_str().unwrap_or_default(),
                     module,
+                    top_module,
                     package_name,
                     visited_modules,
                 )?;
@@ -155,12 +155,13 @@ fn install_module_from_url(module: &str, url: &str) -> Result<()> {
                 if child.kind().contains("instantiation") {
                     if let Some(first_child) = child.child(0) {
                         if let Ok(module) = first_child.utf8_text(contents.as_bytes()) {
-                            let module_name = format!("{}.v", module);
+                            let module_name: String = format!("{}.v", module);
                             if !visited_modules.contains(&module_name) {
                                 visited_modules.insert(module_name.clone());
                                 download_module(
                                     &format!("/tmp/{}", package_name),
                                     &module_name,
+                                    top_module,
                                     package_name,
                                     visited_modules,
                                 )?;
