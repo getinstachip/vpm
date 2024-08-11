@@ -182,7 +182,7 @@ fn install_module_from_url(module: &str, url: &str) -> Result<()> {
     }
 
     let rt = Runtime::new()?;
-    rt.block_on(generate_docs(&format!("./vpm_modules/{}/", module), module))?;
+    // rt.block_on(generate_docs(&format!("./vpm_modules/{}/", module), module))?;
     fs::remove_dir_all(format!("/tmp/{}", package_name))?;
 
     Ok(())
