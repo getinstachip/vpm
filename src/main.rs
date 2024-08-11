@@ -1,7 +1,7 @@
 mod cmd;
 mod error;
-//mod types;
-// mod versions; will add once versiong is needed
+// mod types;
+// mod versions; will add once versioning is needed
 
 use std::env;
 use std::io::{self, Write};
@@ -13,6 +13,7 @@ use crate::cmd::{Cmd, Execute};
 use crate::error::SilentExit;
 
 pub fn main() -> ExitCode {
+    dotenv::dotenv().ok();
     // Forcibly disable backtraces.
     env::remove_var("RUST_LIB_BACKTRACE");
     env::remove_var("RUST_BACKTRACE");

@@ -13,12 +13,12 @@ pub enum Cmd {
     author,
     disable_help_subcommand = true,
     propagate_version = true,
-    version,
+    version
 )]
 pub struct Install {
-    #[arg(help="Name of package to install from OpenChips")]
+    #[arg(help = "Name of package to install from OpenChips")]
     pub package_name: Option<String>,
-    #[arg(help="URL of repository to install from")]
+    #[arg(help = "URL of repository to install from")]
     pub url: Option<String>,
 }
 
@@ -28,9 +28,9 @@ pub struct Install {
     author,
     disable_help_subcommand = true,
     propagate_version = true,
-    version,
+    version
 )]
 pub struct Uninstall {
-    #[arg(help="Name of package to Uninstall")]
+    #[arg(help = "Name of package to Uninstall")]
     pub package_name: String,
 }
