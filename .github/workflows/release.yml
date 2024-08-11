@@ -60,6 +60,9 @@ jobs:
         uses: Swatinem/rust-cache@v2.7.3
         with:
           key: ${{ matrix.target }}
+      - name: Set OPENSSL_DIR
+        if: runner.os == 'Linux' || runner.os == 'macOS'
+        run: echo "OPENSSL_DIR=/usr/local/ssl" >> $GITHUB_ENV
       - name: Install cross
         if: ${{ runner.os == 'Linux' }}
         uses: actions-rs/cargo@v1
