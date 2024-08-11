@@ -22,8 +22,8 @@ After installation, you can use the `vpm` command in any terminal.
 
 ### Basic Commands
 
-- Install a .v file and all submodule dependencies: `vpm install <top_module.v> <repo_url>`
-- Generate documentation for anything: `vpm docs <top_module.v> <repo_url>`
+- `vpm install <top_module.v> <repo_url>`: install a .v file and all submodule dependencies
+- `vpm docs <top_module.v> <repo_url>`: generate documentation for anything
 
 ## Very useful stuff
 
