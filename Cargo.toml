@@ -17,6 +17,7 @@ serde = "1.0.205"
 clust = "0.9.0"
 dotenv = "0.15.0"
 tokio = { version = "1.39.2", features = ["full"] }
+openssl = { version = "0.10", features = ["vendored"] }
 
 [build-dependencies]
 cc="*"

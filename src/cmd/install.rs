@@ -1,5 +1,3 @@
-use anyhow::{Context, Result};
-use regex::Regex;
 use std::collections::HashSet;
 use std::io::{Read, Write};
 use std::path::PathBuf;
@@ -193,7 +191,7 @@ pub fn install_module_from_url(module: &str, url: &str, sub: bool) -> Result<()>
         }
 
         fn find_module_instantiations(
-            root_node: tree_sitter::Node,
+            root_node: Node,
             package_name: &str,
             top_module: &str,
             contents: &str,
@@ -264,13 +262,13 @@ pub fn install_repo_from_url(url: &str, location: &str) -> Result<()> {
     Ok(())
 }
 
-fn generate_headers(root_node: tree_sitter::Node, module: &str, contents: &str) -> Result<String> {
+fn generate_headers(root_node: Node, module: &str, contents: &str) -> Result<String> {
     let mut header_content = format!("// Header for module {}\n\n", module);
     let guard_name = module.replace('.', "_").to_uppercase();
 
     header_content.push_str(&format!("`ifndef _{0}H_\n`define _{0}H_\n\n", guard_name));
 
-    fn process_node(node: tree_sitter::Node, contents: &str, header_content: &mut String) -> Result<()> {
+    fn process_node(node: Node, contents: &str, header_content: &mut String) -> Result<()> {
         let mut cursor = node.walk();
         for child in node.children(&mut cursor) {
             match child.kind() {
