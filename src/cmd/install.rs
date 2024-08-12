@@ -3,20 +3,10 @@ use regex::Regex;
 use std::collections::HashSet;
 use std::io::{Read, Write};
 use std::path::PathBuf;
-use std::{fs, process::Command};
+use std::{fs, process::Command, process::Stdio};
 use toml::{map::Map, Value};
 use tree_sitter::Parser;
 use std::fmt::Write as FmtWrite;
-use tokio::runtime::Runtime;
-
-use clust::messages::{
-    ClaudeModel,
-    MaxTokens,
-    Message,
-    MessagesRequestBody,
-    SystemPrompt
-};
-use clust::Client;
 
 use crate::cmd::{Execute, Install};
 
@@ -29,7 +19,7 @@ impl Execute for Install {
         let version = &self.version.clone().unwrap_or("0.1.0".to_string());
         if let (Some(url), Some(name)) = (&self.url, &self.package_name) {
             println!("Installing module '{}' (vers:{}) from URL: '{}'", name, version, url);
-            install_module_from_url(name, url)?;
+            install_module_from_url(name, url, true)?;
             update_toml("modules", name, url, version)?;
             update_toml("repositories", name, url, version)?;
             update_lock("repositories", name, url, &get_commit_details(url)?[0], None)?;
@@ -46,7 +36,7 @@ impl Execute for Install {
             } else {
                 let name = arg.to_string();
                 println!("Installing module '{}' (vers:{}) from standard library", name, version);
-                install_module_from_url(&name, STD_LIB_URL)?;
+                install_module_from_url(&name, STD_LIB_URL, true)?;
                 update_toml("modules", &name, STD_LIB_URL, version)?;
                 // update_lock("modules", &name, STD_LIB_URL, commit_code)?;
             }
@@ -113,12 +103,6 @@ fn update_lock(section_name: &str, root_module: &str, repo_uri: &str, commit_cod
     Ok(())
 }
 
-fn name_from_url(url: &str) -> Result<String> {
-    Ok(url.rsplit('/')
-        .find(|segment| !segment.is_empty())
-        .unwrap_or_default().to_string())
-}
-
 fn get_commit_details(url: &str) -> Result<Vec<String>> {
     let commit_code = Command::new("git")
         .args(["ls-remote", "--refs", url])
@@ -137,7 +121,7 @@ fn get_commit_details(url: &str) -> Result<Vec<String>> {
     Ok(vec![commit_code, branch])
 }
 
-fn install_module_from_url(module: &str, url: &str) -> Result<()> {
+pub fn install_module_from_url(module: &str, url: &str, sub: bool) -> Result<()> {
     let package_name = url
         .rsplit('/')
         .find(|segment| !segment.is_empty())
@@ -148,14 +132,22 @@ fn install_module_from_url(module: &str, url: &str) -> Result<()> {
 
     install_repo_from_url(url, "/tmp/")?;
 
-    download_module(&format!("/tmp/{}", package_name), module, &package_name, url, &mut visited_modules)?;
+    download_module(&format!("/tmp/{}", package_name), module, module, &package_name, url, &mut visited_modules, sub)?;
 
-    fn download_module(dir: &str, module: &str, package_name: &str, uri: &str, visited_modules: &mut HashSet<String>) -> Result<()> {
+    fn download_module(dir: &str, module: &str, top_module: &str, package_name: &str, uri: &str, visited_modules: &mut HashSet<String>, sub: bool) -> Result<()> {
         for entry in fs::read_dir(dir)? {
             let entry = entry?;
             let path = entry.path();
             if path.is_file() && path.file_name().map_or(false, |name| name == module) {
                 let mut file = fs::File::open(&path)?;
+                if !sub {
+                    let destination_dir = format!("./vpm_modules/{}", top_module);
+                    fs::create_dir_all(&destination_dir)?;
+                    let destination_path = format!("{}/{}", destination_dir, module);
+                    fs::copy(&path, destination_path)?;
+                    fs::remove_file(&path)?;
+                    return Ok(());
+                }
                 let mut contents = String::new();
                 file.read_to_string(&mut contents)?;
 
@@ -170,6 +162,7 @@ fn install_module_from_url(module: &str, url: &str) -> Result<()> {
                     find_module_instantiations(
                         root_node,
                         package_name,
+                        top_module,
                         &contents,
                         visited_modules,
                         module,
@@ -190,14 +183,24 @@ fn install_module_from_url(module: &str, url: &str) -> Result<()> {
                 download_module(
                     path.to_str().unwrap_or_default(),
                     module,
+                    top_module,
                     package_name,
                     uri,
                     visited_modules,
+                    sub,
                 )?;
             }
         }
 
-        fn find_module_instantiations(root_node: tree_sitter::Node, package_name: &str, contents: &str, visited_modules: &mut HashSet<String>, root_mod_name: &str, uri: &str) -> Result<()> {
+        fn find_module_instantiations(
+            root_node: tree_sitter::Node,
+            package_name: &str,
+            top_module: &str,
+            contents: &str,
+            visited_modules: &mut HashSet<String>,
+            root_mod_name: &str,
+            uri: &str
+        ) -> Result<()> {
             let mut cursor = root_node.walk();
             let mut dependencies: Vec<&str> = Vec::new();
             for child in root_node.children(&mut cursor) {
@@ -208,12 +211,22 @@ fn install_module_from_url(module: &str, url: &str) -> Result<()> {
                             if !visited_modules.contains(&module_name) {
                                 dependencies.push(module);
                                 visited_modules.insert(module_name.clone());
-                                download_module(&format!("/tmp/{}", package_name), &module_name, package_name, uri, visited_modules)?;
+                                download_module(
+                                    &format!("/tmp/{}", package_name),
+                                    &module_name,
+                                    top_module,
+                                    package_name,
+                                    uri,
+                                    visited_modules,
+                                    true,
+                                )?;
                             }
                         }
                     }
                 }
-                find_module_instantiations(child, package_name, contents, visited_modules, root_mod_name, uri)?;
+                else {
+                    find_module_instantiations(child, package_name, top_module, contents, visited_modules, root_mod_name, uri)?;
+                }
             }
             
             update_lock("modules", root_mod_name, uri, &get_commit_details(uri)?[0], Some(&dependencies))?;
@@ -223,14 +236,12 @@ fn install_module_from_url(module: &str, url: &str) -> Result<()> {
         Ok(())
     }
 
-    let rt = Runtime::new()?;
-    rt.block_on(generate_docs(&format!("./vpm_modules/{}/", package_name), module))?;
     fs::remove_dir_all(format!("/tmp/{}", package_name))?;
 
     Ok(())
 }
 
-fn install_repo_from_url(url: &str, location: &str) -> Result<()> {
+pub fn install_repo_from_url(url: &str, location: &str) -> Result<()> {
     let repo_path = PathBuf::from(location).join(
         url.rsplit('/')
             .find(|segment| !segment.is_empty())
@@ -240,6 +251,8 @@ fn install_repo_from_url(url: &str, location: &str) -> Result<()> {
     fn clone_repo(url: &str, repo_path: &str) -> Result<()> {
         Command::new("git")
             .args(["clone", "--depth", "1", "--single-branch", "--jobs", "4", url, repo_path])
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
             .status()
             .with_context(|| format!("Failed to clone repository from URL: '{}'", url))?;
 
@@ -281,48 +294,4 @@ fn generate_headers(root_node: tree_sitter::Node, module: &str, contents: &str) 
     header_content.push_str(&format!("\n`endif // _{}H_\n", guard_name));
 
     Ok(header_content)
-}
-
-async fn generate_docs(dir: &str, module: &str) -> Result<()> {
-    println!("Generating Documentation for for {}, will be written to {}/README.md", module, dir);
-
-    let mut file = fs::File::open(format!("{}/{}", dir, module))?;
-    let mut contents = String::new();
-    file.read_to_string(&mut contents)?;
-
-    let client = Client::from_env()?;
-    let model = ClaudeModel::Claude35Sonnet20240620;
-    let messages = vec![Message::user(
-        format!(
-            "Create a comprehensive Markdown documentation for the following Verilog module. Include an overview, module description, port list, parameters, and any important implementation details: {}",
-            contents
-        ),
-    )];
-    let max_tokens = MaxTokens::new(2048, model)?;
-    let system_prompt = SystemPrompt::new("You are an expert Verilog engineer tasked with creating clear and detailed documentation.");
-    let request_body = MessagesRequestBody {
-        model,
-        messages,
-        max_tokens,
-        system: Some(system_prompt),
-        ..Default::default()
-    };
-
-    let response = client.create_a_message(request_body).await?;
-    let response_content = response.content;
-
-    let parsed_response: Value = serde_json::from_str(&response_content.to_string())?;
-    let generated_text = parsed_response[0]["text"].as_str().unwrap_or("");
-
-    let readme_path = PathBuf::from(dir).join("README.md");
-    let mut readme_file = fs::File::create(&readme_path)?;
-
-    writeln!(readme_file, "# {}", module)?;
-    writeln!(readme_file)?;
-
-    write!(readme_file, "{}", generated_text)?;
-
-    println!("Documentation for {} written to {}", module, readme_path.display());
-
-    Ok(())
 }

@@ -1,6 +1,7 @@
 mod cmd;
 mod install;
 mod uninstall;
+mod docs;
 
 use anyhow::Result;
 
@@ -15,6 +16,7 @@ impl Execute for Cmd {
         match self {
             Cmd::Install(cmd) => cmd.execute(),
             Cmd::Uninstall(cmd) => cmd.execute(),
+            Cmd::Docs(cmd) => cmd.execute(),
         }
     }
 }
