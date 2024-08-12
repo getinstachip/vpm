@@ -48,7 +48,6 @@ impl Execute for Install {
                 println!("Installing module '{}' (vers:{}) from standard library", name, version);
                 install_module_from_url(&name, STD_LIB_URL)?;
                 update_toml("modules", &name, STD_LIB_URL, version)?;
-                // update_lock("modules", &name, STD_LIB_URL, commit_code)?;
             }
         } else {
             println!("Command not found!");
@@ -138,11 +137,7 @@ fn get_commit_details(url: &str) -> Result<Vec<String>> {
 }
 
 fn install_module_from_url(module: &str, url: &str) -> Result<()> {
-    let package_name = url
-        .rsplit('/')
-        .find(|segment| !segment.is_empty())
-        .unwrap_or_default()
-        .to_string();
+    let package_name = name_from_url(url)?.to_string();
 
     let mut visited_modules = HashSet::new();
 
@@ -231,11 +226,7 @@ fn install_module_from_url(module: &str, url: &str) -> Result<()> {
 }
 
 fn install_repo_from_url(url: &str, location: &str) -> Result<()> {
-    let repo_path = PathBuf::from(location).join(
-        url.rsplit('/')
-            .find(|segment| !segment.is_empty())
-            .unwrap_or_default(),
-    );
+    let repo_path = PathBuf::from(location).join(name_from_url(url)?,);
 
     fn clone_repo(url: &str, repo_path: &str) -> Result<()> {
         Command::new("git")
