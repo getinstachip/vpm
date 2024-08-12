@@ -18,6 +18,7 @@ use super::install::install_module_from_url;
 impl Execute for Docs {
     fn execute(&self) -> Result<()> {
         if let (Some(url), Some(name)) = (&self.url, &self.package_name) {
+            println!("Parsing module information...");
             install_module_from_url(name, url, false)?;
 
             let rt = Runtime::new()?;
