@@ -4,6 +4,7 @@ on:
   workflow_dispatch:
 env:
   CARGO_INCREMENTAL: 0
+  ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
 permissions:
   contents: write
 jobs:
