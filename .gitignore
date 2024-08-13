@@ -23,6 +23,7 @@ Cargo.lock
 vpm_modules/
 Vpm.toml
 vpm.toml
+vpm.lock
 .svlangserver/
 .env
 
