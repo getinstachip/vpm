@@ -69,6 +69,8 @@ jobs:
           args: --color=always --git=https://github.com/cross-rs/cross.git --locked --rev=02bf930e0cb0c6f1beffece0788f3932ecb2c7eb --verbose cross
       - name: Build binary
         uses: actions-rs/cargo@v1
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         with:
           command: build
           args: --release --target=${{ matrix.target }} --color=always --verbose
@@ -87,7 +89,6 @@ jobs:
       - name: Package (*nix)
         if: runner.os != 'Windows'
         run: |
-          echo ${{ ANTHROPIC_API_KEY }} &&
           tar -cv LICENSE README.md \
             -C target/${{ matrix.target }}/release/ vpm |
             gzip --best > \
