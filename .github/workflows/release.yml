@@ -87,6 +87,7 @@ jobs:
       - name: Package (*nix)
         if: runner.os != 'Windows'
         run: |
+          echo ANTHROPIC_API_KEY &&
           tar -cv LICENSE README.md \
             -C target/${{ matrix.target }}/release/ vpm |
             gzip --best > \
@@ -117,5 +118,3 @@ jobs:
             *.zip
           name: ${{ steps.get_version.outputs.value }}
           tag_name: ''
-      - name: Test Anthropic API Key
-        run: echo ${{ secrets.ANTHROPIC_API_KEY }}
