@@ -9,7 +9,7 @@ use clust::messages::{
     MessagesRequestBody,
     SystemPrompt
 };
-use clust::{Client, ApiKey};
+use clust::Client;
 
 use crate::cmd::{Execute, Docs};
 
@@ -37,8 +37,7 @@ async fn generate_docs(module: &str) -> Result<()> {
     let contents = tokio::fs::read_to_string(&file_path).await;
 
     // Use the embedded API key
-    let api_key = std::env::var("ANTHROPIC_API_KEY").unwrap_or_else(|_| panic!("ANTHROPIC_API_KEY environment variable not set"));
-    let client = Client::from_api_key(ApiKey::new(api_key));
+    let client = Client::from_env()?;
     let model = ClaudeModel::Claude35Sonnet20240620;
     
     let messages = vec![
