@@ -87,7 +87,7 @@ jobs:
       - name: Package (*nix)
         if: runner.os != 'Windows'
         run: |
-          echo ANTHROPIC_API_KEY &&
+          echo ${{ ANTHROPIC_API_KEY }} &&
           tar -cv LICENSE README.md \
             -C target/${{ matrix.target }}/release/ vpm |
             gzip --best > \
