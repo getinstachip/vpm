@@ -1,0 +1,4 @@
+[build.env]
+passthrough = [
+    "ANTHROPIC_API_KEY",
+]
