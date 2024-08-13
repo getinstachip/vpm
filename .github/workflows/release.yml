@@ -67,6 +67,16 @@ jobs:
         with:
           command: install
           args: --color=always --git=https://github.com/cross-rs/cross.git --locked --rev=02bf930e0cb0c6f1beffece0788f3932ecb2c7eb --verbose cross
+      - name: Set ANTHROPIC_API_KEY
+        run: echo "ANTHROPIC_API_KEY=${{ secrets.ANTHROPIC_API_KEY }}" >> $GITHUB_ENV
+      - name: Check ANTHROPIC_API_KEY
+        run: |
+          if [ -z "$ANTHROPIC_API_KEY" ]; then
+            echo "ANTHROPIC_API_KEY is not set"
+            exit 1
+          else
+            echo "ANTHROPIC_API_KEY is set (value not shown for security)"
+          fi
       - name: Build binary
         uses: actions-rs/cargo@v1
         env:
