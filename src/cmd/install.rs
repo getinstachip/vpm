@@ -30,9 +30,9 @@ impl Execute for Install {
         if let (Some(url), Some(name)) = (&self.url, &self.package_name) {
             println!("Installing module '{}' (vers:{}) from URL: '{}'", name, version, url);
             install_module_from_url(name, url)?;
-            update_toml("modules", name, url, version)?;
-            update_toml("repositories", name, url, version)?;
-            update_lock("repositories", name, url, &get_commit_details(url)?[0], None)?;
+            update_toml( name, url, version)?;
+            update_toml(name, url, version)?;
+            update_lock( name, url, &get_commit_details(url)?[0], None)?;
         } else if let Some(arg) = &self.url.as_ref().or(self.package_name.as_ref()) {
             if Regex::new(r"^(https?://|git://|ftp://|file://|www\.)[\w\-\.]+\.\w+(/[\w\-\.]*)*/?$")
                 .unwrap()
@@ -41,13 +41,13 @@ impl Execute for Install {
                 let url = arg.to_string();
                 println!("Installing repository from URL: '{}' (vers:{})", url, version);
                 install_repo_from_url(&url, "./vpm_modules/")?;
-                update_toml("repositories", "", &url, version)?;
-                update_lock("repositories", "", &url, &get_commit_details(&url)?[0], None)?;
+                update_toml( "", &url, version)?;
+                update_lock( "", &url, &get_commit_details(&url)?[0], None)?;
             } else {
                 let name = arg.to_string();
                 println!("Installing module '{}' (vers:{}) from standard library", name, version);
                 install_module_from_url(&name, STD_LIB_URL)?;
-                update_toml("modules", &name, STD_LIB_URL, version)?;
+                update_toml( &name, STD_LIB_URL, version)?;
             }
         } else {
             println!("Command not found!");
@@ -57,13 +57,14 @@ impl Execute for Install {
     }
 }
 
-fn update_toml(section_name: &str, module_name: &str, uri: &str, version: &str) -> Result<()> {
+fn update_toml(module_name: &str, uri: &str, version: &str) -> Result<()> {
     if !PathBuf::from(VPM_TOML).exists() {
         fs::OpenOptions::new()
             .create_new(true)
             .write(true)
             .open(PathBuf::from(VPM_TOML))?;
     }
+    
     let mut toml_value: Value = fs::read_to_string(VPM_TOML)?.parse()?;
     let toml_table = toml_value.as_table_mut().unwrap();
     let toml_section_map = toml_table.entry(section_name.to_string())
@@ -87,7 +88,7 @@ fn update_toml(section_name: &str, module_name: &str, uri: &str, version: &str) 
     Ok(())
 }
 
-fn update_lock(section_name: &str, root_module: &str, repo_uri: &str, commit_code: &str, dependecies: Option<&Vec<&str>>) -> Result<()> {
+fn update_lock(root_module: &str, repo_uri: &str, commit_code: &str, dependecies: Option<&Vec<&str>>) -> Result<()> {
     if !PathBuf::from(VPM_LOCK).exists() {
         fs::OpenOptions::new().create_new(true).write(true).open(PathBuf::from(VPM_LOCK))?;
     }
@@ -211,7 +212,7 @@ fn install_module_from_url(module: &str, url: &str) -> Result<()> {
                 find_module_instantiations(child, package_name, contents, visited_modules, root_mod_name, uri)?;
             }
             
-            update_lock("modules", root_mod_name, uri, &get_commit_details(uri)?[0], Some(&dependencies))?;
+            update_lock( root_mod_name, uri, &get_commit_details(uri)?[0], Some(&dependencies))?;
             Ok(())
         }
 
