@@ -16,28 +16,28 @@ const STD_LIB_URL: &str = "https://github.com/getinstachip/openchips";
 
 impl Execute for Install {
     fn execute(&self) -> Result<()> {
-        let version = &self.version.clone().unwrap_or("0.1.0".to_string());
+        let vers = &self.vers.clone().unwrap_or("0.1.0".to_string());
         if let (Some(url), Some(name)) = (&self.url, &self.package_name) {
-            println!("Installing module '{}' (vers:{}) from URL: '{}'", name, version, url);
+            println!("Installing module '{}' (vers:{}) from URL: '{}'", name, vers, url);
             install_module_from_url(name, url, true)?;
-            update_toml("modules", name, url, version)?;
-            update_toml("repositories", name, url, version)?;
-            update_lock("repositories", name, url, &get_commit_details(url)?[0], None)?;
+            // update_toml("modules", name, url, vers)?;
+            // update_toml("repositories", name, url, vers)?;
+            // update_lock("repositories", name, url, &get_commit_details(url)?[0], None)?;
         } else if let Some(arg) = &self.url.as_ref().or(self.package_name.as_ref()) {
             if Regex::new(r"^(https?://|git://|ftp://|file://|www\.)[\w\-\.]+\.\w+(/[\w\-\.]*)*/?$")
                 .unwrap()
                 .is_match(arg)
             {
                 let url = arg.to_string();
-                println!("Installing repository from URL: '{}' (vers:{})", url, version);
+                println!("Installing repository from URL: '{}' (vers:{})", url, vers);
                 install_repo_from_url(&url, "./vpm_modules/")?;
-                update_toml("repositories", "", &url, version)?;
-                update_lock("repositories", "", &url, &get_commit_details(&url)?[0], None)?;
+                // update_toml("repositories", "", &url, vers)?;
+                // update_lock("repositories", "", &url, &get_commit_details(&url)?[0], None)?;
             } else {
                 let name = arg.to_string();
-                println!("Installing module '{}' (vers:{}) from standard library", name, version);
+                println!("Installing module '{}' (vers:{}) from standard library", name, vers);
                 install_module_from_url(&name, STD_LIB_URL, true)?;
-                update_toml("modules", &name, STD_LIB_URL, version)?;
+                // update_toml("modules", &name, STD_LIB_URL, vers)?;
                 // update_lock("modules", &name, STD_LIB_URL, commit_code)?;
             }
         } else {
@@ -229,7 +229,7 @@ pub fn install_module_from_url(module: &str, url: &str, sub: bool) -> Result<()>
                 }
             }
             
-            update_lock("modules", root_mod_name, uri, &get_commit_details(uri)?[0], Some(&dependencies))?;
+            // update_lock("modules", root_mod_name, uri, &get_commit_details(uri)?[0], Some(&dependencies))?;
             Ok(())
         }
 
