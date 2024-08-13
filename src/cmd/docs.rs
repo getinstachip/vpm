@@ -9,11 +9,13 @@ use clust::messages::{
     MessagesRequestBody,
     SystemPrompt
 };
-use clust::Client;
+use clust::{ApiKey, Client};
 
 use crate::cmd::{Execute, Docs};
 
 use super::install::install_module_from_url;
+
+const ANTHROPIC_API_KEY: &str = env!("ANTHROPIC_API_KEY");
 
 impl Execute for Docs {
     fn execute(&self) -> Result<()> {
@@ -37,7 +39,7 @@ async fn generate_docs(module: &str) -> Result<()> {
     let contents = tokio::fs::read_to_string(&file_path).await;
 
     // Use the embedded API key
-    let client = Client::from_env()?;
+    let client = Client::from_api_key(ApiKey::new(ANTHROPIC_API_KEY));
     let model = ClaudeModel::Claude35Sonnet20240620;
     
     let messages = vec![
