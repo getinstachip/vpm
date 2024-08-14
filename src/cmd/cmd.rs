@@ -5,7 +5,7 @@ pub enum Cmd {
     Install(Install),
     Uninstall(Uninstall),
     Init(Init),
-    Docs(Docs),
+    // Docs(Docs),
 }
 
 /// Install a package
@@ -61,17 +61,17 @@ pub struct Init {
     #[arg(help = "License of project (<license>: <location>, comma + space separated)")]
     pub license: Option<String>,
 }
-#[derive(Debug, Parser)]
-#[clap(
-    about,
-    author,
-    disable_help_subcommand = true,
-    propagate_version = true,
-    version
-)]
-pub struct Docs {
-    #[arg(help = "Name of package to fetch documentation for")]
-    pub package_name: Option<String>,
-    #[arg(help = "URL of repository to fetch documentation for")]
-    pub url: Option<String>,
-}
+// #[derive(Debug, Parser)]
+// #[clap(
+//     about,
+//     author,
+//     disable_help_subcommand = true,
+//     propagate_version = true,
+//     version
+// )]
+// pub struct Docs {
+//     #[arg(help = "Name of package to fetch documentation for")]
+//     pub package_name: Option<String>,
+//     #[arg(help = "URL of repository to fetch documentation for")]
+//     pub url: Option<String>,
+// }
