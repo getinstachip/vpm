@@ -111,12 +111,14 @@ pub mod versions {
                             ) -> Result<()> {
 
         let docs = doc.entry(section_name).or_insert(Item::Table(Table::new())).as_table_mut().unwrap();
-        if docs.contains_key(variable_name) {
-            let mut _item = docs.get_mut(variable_name).unwrap();
-            _item = & mut Item::Value(variable_value);
-        } else {
-            docs.insert(variable_name, Item::Value(variable_value));
-        }
+        // if docs.contains_key(variable_name) {
+        //     let mut _item = docs.get_mut(variable_name).unwrap();
+        //     _item = & mut Item::Value(variable_value);
+        //     docs.insert(variable_name, Item::Value(variable_value));
+        // } else {
+        //     docs.insert(variable_name, Item::Value(variable_value));
+        // }
+        docs.insert(variable_name, Item::Value(variable_value));
 
         Ok(())
 
@@ -134,29 +136,35 @@ pub mod versions {
         
         let deps = doc.entry(section_name).or_insert(Item::Table(Table::new())).as_table_mut().unwrap();
         if deps.contains_key(uri) {
-            let table = deps.get_mut(uri).unwrap().as_table_mut().unwrap();
+            // let table = deps.get_mut(uri).unwrap().as_table_mut().unwrap();
+            let table = deps.entry(uri).or_insert(Item::Table(Table::new())).as_table_mut().unwrap();
             if version.unwrap_or("") != "" {
-                let mut _version = table.get_mut("version").unwrap();
-                _version = & mut Item::Value(Value::from(version.unwrap()));
+                // let mut _version = table.get_mut("version").unwrap();
+                // _version = & mut Item::Value(Value::from(version.unwrap()));
+                table.insert("version", Item::Value(Value::from(version.unwrap())));
             }
             if alias.unwrap_or("") != "" {
-                let mut _alias = table.get_mut("alias").unwrap();
-                _alias = & mut Item::Value(Value::from(alias.unwrap()));
+                // let mut _alias = table.get_mut("alias").unwrap();
+                // _alias = & mut Item::Value(Value::from(alias.unwrap()));
+                table.insert("alias", Item::Value(Value::from(alias.unwrap())));
             }
             if modules.clone().unwrap_or(vec![]).len() > 0 {
-                let current_modules = table.get_mut("modules").unwrap().as_array_mut().unwrap();
+                // let current_modules = table.get_mut("modules").unwrap().as_array_mut().unwrap();
+                let current_modules = table.entry("modules").or_insert(Item::Value(Value::Array(Array::new()))).as_array_mut().unwrap();
                 for module in modules.unwrap() {
                     if module == "" || current_modules.clone().into_iter().any(|m| m.as_str().unwrap() == module) { continue; }
                     current_modules.push(Value::from(module));
                 }
             }
             if branch.unwrap_or("") != "" {
-                let mut _branch = table.get_mut("branch").unwrap();
-                _branch = & mut Item::Value(Value::from(branch.unwrap()));
+                // let mut _branch = table.get_mut("branch").unwrap();
+                // _branch = & mut Item::Value(Value::from(branch.unwrap()));
+                table.insert("branch", Item::Value(Value::from(branch.unwrap())));
             }
             if commit.unwrap_or("") != "" {
-                let mut _commit = table.get_mut("commit").unwrap();
-                _commit = & mut Item::Value(Value::from(commit.unwrap()));
+                // let mut _commit = table.get_mut("commit").unwrap();
+                // _commit = & mut Item::Value(Value::from(commit.unwrap()));
+                table.insert("commit", Item::Value(Value::from(commit.unwrap())));
             }
         } else {
             let mut table = InlineTable::new();
