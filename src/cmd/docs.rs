@@ -10,12 +10,13 @@ use clust::messages::{
     SystemPrompt
 };
 use clust::{ApiKey, Client};
+use serde_json::Value;
+
+use aws_config::{self, BehaviorVersion, Region};
 
 use crate::cmd::{Execute, Docs};
 
 use super::install::install_module_from_url;
-
-const ANTHROPIC_API_KEY: &str = env!("ANTHROPIC_API_KEY");
 
 impl Execute for Docs {
     fn execute(&self) -> Result<()> {
@@ -24,14 +25,37 @@ impl Execute for Docs {
             install_module_from_url(name, url, false)?;
 
             let rt = Runtime::new()?;
-            rt.block_on(generate_docs(name))?;
+            let api_key: Value = serde_json::from_str(&rt.block_on(get_api_key())?)?;
+            rt.block_on(generate_docs(name, api_key["Value"].as_str().unwrap()))?;
         }
 
         Ok(())
     }
 }
 
-async fn generate_docs(module: &str) -> Result<()> {
+async fn get_api_key() -> Result<String, aws_sdk_secretsmanager::Error> {
+    let secret_name = "ANTHROPIC_API_KEY";
+    let region = Region::new("us-east-1");
+
+    let config = aws_config::defaults(BehaviorVersion::v2024_03_28())
+        .region(region)
+        .load()
+        .await;
+
+    let asm = aws_sdk_secretsmanager::Client::new(&config);
+
+    let response = asm
+        .get_secret_value()
+        .secret_id(secret_name)
+        .send()
+        .await?;
+
+    let secret = response.secret_string().unwrap();
+
+    Ok(secret.to_string())
+}
+
+async fn generate_docs(module: &str, api_key: &str) -> Result<()> {
     println!("Generating documentation...");
 
     let dir = format!("./vpm_modules/{}", module);
@@ -39,7 +63,7 @@ async fn generate_docs(module: &str) -> Result<()> {
     let contents = tokio::fs::read_to_string(&file_path).await;
 
     // Use the embedded API key
-    let client = Client::from_api_key(ApiKey::new(ANTHROPIC_API_KEY));
+    let client = Client::from_api_key(ApiKey::new(api_key));
     let model = ClaudeModel::Claude35Sonnet20240620;
     
     let messages = vec![
