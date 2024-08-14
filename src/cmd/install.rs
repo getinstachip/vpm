@@ -4,7 +4,6 @@ use std::collections::HashSet;
 use std::io::{Read, Write};
 use std::path::PathBuf;
 use std::{fs, process::Command};
-use toml::{map::Map, Value};
 use tree_sitter::Parser;
 use std::fmt::Write as FmtWrite;
 use tokio::runtime::Runtime;
@@ -19,6 +18,8 @@ use clust::messages::{
 use clust::Client;
 
 use crate::cmd::{Execute, Install};
+#[path = "../versions.rs"]
+mod versions;
 
 const VPM_TOML: &str = "vpm.toml";
 const VPM_LOCK: &str = "vpm.lock";
@@ -64,7 +65,7 @@ fn update_toml(module_name: &str, uri: &str, version: &str) -> Result<()> {
             .write(true)
             .open(PathBuf::from(VPM_TOML))?;
     }
-    
+
     let mut toml_value: Value = fs::read_to_string(VPM_TOML)?.parse()?;
     let toml_table = toml_value.as_table_mut().unwrap();
     let toml_section_map = toml_table.entry(section_name.to_string())
