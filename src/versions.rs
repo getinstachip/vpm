@@ -1,8 +1,8 @@
 pub mod versions {
 
     use anyhow::Result;
-    use std::fs::File;
     use std::io::Write;
+    use std::fs::{OpenOptions, read_to_string};
     use toml_edit::{Array, DocumentMut, InlineTable, Item, Table, Value};
 
     const DEFAULT_LIB_NAME: &str = "default_library";
@@ -14,7 +14,7 @@ pub mod versions {
     const VPM_TOML: &str = "vpm.toml";
     const VPM_LOCK: &str = "vpm.lock";
 
-    pub fn create_toml(is_lock: bool) -> Result<DocumentMut> {
+    pub fn create_toml(is_lock: bool) -> Result<()> {
         let mut doc = DocumentMut::new();
         let mut lib = Table::new();
         lib.insert("name", Item::Value(Value::from(DEFAULT_LIB_NAME)));
@@ -34,35 +34,32 @@ pub mod versions {
             doc.insert("dev-dependencies", Item::Table(Table::new()));
         }
 
-        Ok(doc)
+        write_file(doc, is_lock)?;
+
+        Ok(())
     }
 
-    pub fn update_library_entry(doc: &mut DocumentMut,
-                            lib_name: Option<&str>,
-                            lib_version: Option<&str>,
-                            lib_description: Option<&str>,
-                            lib_authors: Option<&str>,
-                            lib_license: Option<&str>,
-                            lib_include: Option<&str>
-                            ) -> Result<()> {
-
+    pub fn update_library_entry(is_lock: bool,
+                                lib_name: Option<&str>,
+                                lib_version: Option<&str>,
+                                lib_description: Option<&str>,
+                                lib_authors: Option<&str>,
+                                lib_license: Option<&str>,
+                                lib_include: Option<&str>
+                                ) -> Result<()> {
+        
+        let mut doc = read_file(is_lock)?;
         let lib = doc.entry("library").or_insert(Item::Table(Table::new())).as_table_mut().unwrap();
         
         if lib_name.unwrap_or("") != "" {
-            // let mut _name_entry = lib.get_mut("name").unwrap();
-            // _name_entry = & mut Item::Value(Value::from(lib_name.unwrap()));
             lib.insert("name", Item::Value(Value::from(lib_name.unwrap())));
         }
 
         if lib_version.unwrap_or("") != "" {
-            // let mut _version_entry = lib.get_mut("version").unwrap();
-            // _version_entry = & mut Item::Value(Value::from(lib_version.unwrap()));
             lib.insert("version", Item::Value(Value::from(lib_version.unwrap())));
         }
 
         if lib_description.unwrap_or("") != "" {
-            // let mut _description_entry = lib.get_mut("description").unwrap();
-            // _description_entry = & mut Item::Value(Value::from(lib_description.unwrap()));
             lib.insert("description", Item::Value(Value::from(lib_description.unwrap())));
         }
 
@@ -71,8 +68,6 @@ pub mod versions {
             for author in lib_authors.unwrap().split(", ").collect::<Vec<&str>>() {
                 authors.push(Value::from(author));
             }
-            // let mut _authors_entry = lib.get_mut("authors").unwrap();
-            // _authors_entry = & mut Item::Value(Value::Array(authors));
             lib.insert("authors", Item::Value(Value::Array(authors)));
         }
 
@@ -85,8 +80,6 @@ pub mod versions {
                 table.get_or_insert("source", Value::from(pair[1]));
                 license.push(table);
             }
-            // let mut _license_entry = lib.get_mut("license").unwrap();
-            // _license_entry = & mut Item::Value(Value::Array(license));
             lib.insert("license", Item::Value(Value::Array(license)));
         }
 
@@ -95,61 +88,52 @@ pub mod versions {
             for include_path in lib_include.unwrap().split(", ").collect::<Vec<&str>>() {
                 include.push(Value::from(include_path));
             }
-            // let mut _include_entry = lib.get_mut("include").unwrap();
-            // _include_entry = & mut Item::Value(Value::Array(include));
             lib.insert("include", Item::Value(Value::Array(include)));
         }
 
+        write_file(doc, is_lock)?;
+
         Ok(())
 
     }
 
-    pub fn update_config_entry(doc: &mut DocumentMut,
-                            section_name: &str,
-                            variable_name: &str,
-                            variable_value: Value
-                            ) -> Result<()> {
+    pub fn update_config_entry(is_lock: bool,
+                               section_name: &str,
+                               variable_name: &str,
+                               variable_value: Value
+                               ) -> Result<()> {
 
+        let mut doc = read_file(is_lock)?;
         let docs = doc.entry(section_name).or_insert(Item::Table(Table::new())).as_table_mut().unwrap();
-        // if docs.contains_key(variable_name) {
-        //     let mut _item = docs.get_mut(variable_name).unwrap();
-        //     _item = & mut Item::Value(variable_value);
-        //     docs.insert(variable_name, Item::Value(variable_value));
-        // } else {
-        //     docs.insert(variable_name, Item::Value(variable_value));
-        // }
         docs.insert(variable_name, Item::Value(variable_value));
 
+        write_file(doc, is_lock)?;
+
         Ok(())
 
     }
 
-    pub fn update_dependencies_entry(doc: &mut DocumentMut,
-                                    section_name: &str,
-                                    uri: &str,
-                                    version: Option<&str>,
-                                    alias: Option<&str>,
-                                    modules: Option<Vec<String>>,
-                                    branch: Option<&str>,
-                                    commit: Option<&str>
-                                    ) -> Result<()> {
+    pub fn update_dependencies_entry(is_lock: bool,
+                                     section_name: &str,
+                                     uri: &str,
+                                     version: Option<&str>,
+                                     alias: Option<&str>,
+                                     modules: Option<Vec<String>>,
+                                     branch: Option<&str>,
+                                     commit: Option<&str>
+                                     ) -> Result<()> {
         
+        let mut doc = read_file(is_lock)?;
         let deps = doc.entry(section_name).or_insert(Item::Table(Table::new())).as_table_mut().unwrap();
         if deps.contains_key(uri) {
-            // let table = deps.get_mut(uri).unwrap().as_table_mut().unwrap();
             let table = deps.entry(uri).or_insert(Item::Table(Table::new())).as_table_mut().unwrap();
             if version.unwrap_or("") != "" {
-                // let mut _version = table.get_mut("version").unwrap();
-                // _version = & mut Item::Value(Value::from(version.unwrap()));
                 table.insert("version", Item::Value(Value::from(version.unwrap())));
             }
             if alias.unwrap_or("") != "" {
-                // let mut _alias = table.get_mut("alias").unwrap();
-                // _alias = & mut Item::Value(Value::from(alias.unwrap()));
                 table.insert("alias", Item::Value(Value::from(alias.unwrap())));
             }
             if modules.clone().unwrap_or(vec![]).len() > 0 {
-                // let current_modules = table.get_mut("modules").unwrap().as_array_mut().unwrap();
                 let current_modules = table.entry("modules").or_insert(Item::Value(Value::Array(Array::new()))).as_array_mut().unwrap();
                 for module in modules.unwrap() {
                     if module == "" || current_modules.clone().into_iter().any(|m| m.as_str().unwrap() == module) { continue; }
@@ -157,13 +141,9 @@ pub mod versions {
                 }
             }
             if branch.unwrap_or("") != "" {
-                // let mut _branch = table.get_mut("branch").unwrap();
-                // _branch = & mut Item::Value(Value::from(branch.unwrap()));
                 table.insert("branch", Item::Value(Value::from(branch.unwrap())));
             }
             if commit.unwrap_or("") != "" {
-                // let mut _commit = table.get_mut("commit").unwrap();
-                // _commit = & mut Item::Value(Value::from(commit.unwrap()));
                 table.insert("commit", Item::Value(Value::from(commit.unwrap())));
             }
         } else {
@@ -184,21 +164,27 @@ pub mod versions {
             deps.insert(uri, Item::Value(Value::InlineTable(table)));
         }
 
+        write_file(doc, is_lock)?;
+
         Ok(())
 
     }
 
-    pub fn write_file(doc: DocumentMut, is_lock: bool) -> Result<()> {
+    fn write_file(doc: DocumentMut, is_lock: bool) -> Result<()> {
         let toml_str = doc.to_string();
         let file_ext = if is_lock {"lock"} else {"toml"};
-        let mut toml_file = File::create(if is_lock {VPM_LOCK} else {VPM_TOML}).expect(&format!("Failed to create vpm.{file_ext}"));
-        toml_file.write_all(toml_str.as_bytes()).expect(&format!("Failed to write to vpm.{file_ext}"));
+        let mut file = OpenOptions::new().write(true)
+                                                    .create(true)
+                                                    .truncate(true)
+                                                    .open(if is_lock {VPM_LOCK} else {VPM_TOML})
+                                                    .expect(&format!("Failed to open vpm.{file_ext}"));
+        file.write_all(toml_str.as_bytes()).expect(&format!("Failed to write to vpm.{file_ext}"));
         Ok(())
     }
 
-    pub fn read_file(is_lock: bool) -> Result<DocumentMut> {
+    fn read_file(is_lock: bool) -> Result<DocumentMut> {
         let file_ext = if is_lock {"lock"} else {"toml"};
-        let toml_str = std::fs::read_to_string(if is_lock {VPM_TOML} else {VPM_LOCK}).expect(&format!("Failed to read vpm.{file_ext}. Try running `vpm init` first."));
+        let toml_str = read_to_string(if is_lock {VPM_LOCK} else {VPM_TOML}).expect(&format!("Failed to read vpm.{file_ext}. Try running `vpm init` first."));
         let doc = toml_str.parse::<DocumentMut>().expect(&format!("Failed to parse vpm.{file_ext}"));
         Ok(doc)
     }

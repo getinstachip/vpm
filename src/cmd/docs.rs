@@ -19,7 +19,7 @@ impl Execute for Docs {
     fn execute(&self) -> Result<()> {
         if let (Some(url), Some(name)) = (&self.url, &self.package_name) {
             println!("Parsing module information...");
-            install_module_from_url(name, url, false, None, &mut None, &mut None)?;
+            install_module_from_url(name, url, false, None, false)?;
 
             let rt = Runtime::new()?;
             rt.block_on(generate_docs(name))?;
