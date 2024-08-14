@@ -16,12 +16,12 @@ const STD_LIB_URL: &str = "https://github.com/getinstachip/openchips";
 impl Execute for Install {
     fn execute(&self) -> Result<()> {
         let version = &self.version.clone();
-        let mut toml_doc = read_file(false)?;
-        let mut lock_doc = read_file(true)?;
+        let toml_doc = read_file(false)?;
+        let lock_doc = read_file(true)?;
 
         if let (Some(url), Some(name)) = (&self.url, &self.package_name) {
             println!("Installing module '{}' (vers:{}) from URL: '{}'", name, version.clone().unwrap_or("".to_string()), url);
-            install_module_from_url(name, url, true, version.as_deref(), &mut toml_doc, &mut lock_doc)?;
+            install_module_from_url(name, url, true, version.as_deref(), &mut Some(toml_doc), &mut Some(lock_doc))?;
         } else if let Some(arg) = &self.url.as_ref().or(self.package_name.as_ref()) {
             if Regex::new(r"^(https?://|git://|ftp://|file://|www\.)[\w\-\.]+\.\w+(/[\w\-\.]*)*/?$")
                 .unwrap()
@@ -29,11 +29,11 @@ impl Execute for Install {
             {
                 let url = arg.to_string();
                 println!("Installing repository from URL: '{}' (vers:{})", url, version.clone().unwrap_or("".to_string()));
-                install_repo_from_url(&url, "./vpm_modules/", &mut toml_doc, &mut lock_doc)?;
+                install_repo_from_url(&url, "./vpm_modules/",&mut Some(toml_doc), &mut Some(lock_doc))?;
             } else {
                 let name = arg.to_string();
                 println!("Installing module '{}' (vers:{}) from standard library", name, version.clone().unwrap_or("".to_string()));
-                install_module_from_url(&name, STD_LIB_URL, true, version.as_deref(), &mut toml_doc, &mut lock_doc)?;
+                install_module_from_url(&name, STD_LIB_URL, true, version.as_deref(), &mut Some(toml_doc), &mut Some(lock_doc))?;
             }
         } else {
             println!("Command not found!");
@@ -67,10 +67,9 @@ fn get_commit_details(url: &str) -> Result<(Option<String>, Option<String>)> {
     Ok((Some(commit_code), Some(branch)))
 }
 
-fn install_module_from_url(module: &str, url: &str, sub: bool, version: Option<&str>, toml_doc: &mut DocumentMut, lock_doc: &mut DocumentMut) -> Result<()> {
+pub fn install_module_from_url(module: &str, url: &str, sub: bool, version: Option<&str>, toml_doc: &mut Option<DocumentMut>, lock_doc: &mut Option<DocumentMut>) -> Result<()> {
     
     let package_name = name_from_url(url)?.to_string();
-
     let mut visited_modules = HashSet::new();
 
     install_repo_from_url(url, "/tmp/", toml_doc, lock_doc)?;
@@ -94,8 +93,8 @@ fn install_module_from_url(module: &str, url: &str, sub: bool, version: Option<&
                        version: Option<&str>,
                        visited_modules: &mut HashSet<String>,
                        sub: bool,
-                       toml_doc: &mut DocumentMut,
-                       lock_doc: &mut DocumentMut) -> Result<()> {
+                       toml_doc: &mut Option<DocumentMut>,
+                       lock_doc: &mut Option<DocumentMut>) -> Result<()> {
         
         for entry in fs::read_dir(dir)? {
             let entry = entry?;
@@ -169,8 +168,8 @@ fn install_module_from_url(module: &str, url: &str, sub: bool, version: Option<&
                                       uri: &str,
                                       version: Option<&str>,
                                       depends: Vec<String>,
-                                      toml_doc: &mut DocumentMut,
-                                      lock_doc: &mut DocumentMut) -> Result<Vec<String>> {
+                                      toml_doc: &mut Option<DocumentMut>,
+                                      lock_doc: &mut Option<DocumentMut>) -> Result<Vec<String>> {
 
             let mut cursor = root_node.walk();
             let mut dependencies: Vec<String> = if depends.contains(&root_mod_name.to_string()) { vec![] } else { vec![root_mod_name.to_string()] };
@@ -210,22 +209,26 @@ fn install_module_from_url(module: &str, url: &str, sub: bool, version: Option<&
             }
             
             let (branch, commit) = if version != Some("") {get_commit_details(uri)?} else {(Some("".to_string()), Some("".to_string()))};
-            update_dependencies_entry(toml_doc,
-                                      "dependencies",
-                                      uri,
-                                      version,
-                                      Some(package_name),
-                                      Some(dependencies.clone()),
-                                      branch.as_deref(),
-                                      commit.as_deref())?;
-            update_dependencies_entry(lock_doc,
-                                      "lock-dependencies",
-                                      uri,
-                                      version,
-                                      Some(package_name),
-                                      Some(dependencies.clone()),
-                                      branch.as_deref(),
-                                      commit.as_deref())?;
+            if toml_doc.is_some() {
+                update_dependencies_entry(&mut toml_doc.clone().unwrap(),
+                                        "dependencies",
+                                        uri,
+                                        version,
+                                        Some(package_name),
+                                        Some(dependencies.clone()),
+                                        branch.as_deref(),
+                                        commit.as_deref())?;
+            }
+            if lock_doc.is_some() {
+                update_dependencies_entry(&mut lock_doc.clone().unwrap(),
+                                        "lock-dependencies",
+                                        uri,
+                                        version,
+                                        Some(package_name),
+                                        Some(dependencies.clone()),
+                                        branch.as_deref(),
+                                        commit.as_deref())?;
+            }
             Ok(dependencies.clone())
         }
 
@@ -237,7 +240,7 @@ fn install_module_from_url(module: &str, url: &str, sub: bool, version: Option<&
     Ok(())
 }
 
-fn install_repo_from_url(url: &str, location: &str, toml_doc: &mut DocumentMut, lock_doc: &mut DocumentMut) -> Result<()> {
+fn install_repo_from_url(url: &str, location: &str, toml_doc: &mut Option<DocumentMut>, lock_doc: &mut Option<DocumentMut>) -> Result<()> {
     let repo_path = PathBuf::from(location).join(name_from_url(url)?,);
 
     fn clone_repo(url: &str, repo_path: &str) -> Result<()> {
@@ -254,20 +257,24 @@ fn install_repo_from_url(url: &str, location: &str, toml_doc: &mut DocumentMut, 
     clone_repo(url, repo_path.to_str().unwrap_or_default())?;
 
     let (branch, commit) = get_commit_details(url)?;
-    update_dependencies_entry(toml_doc,
-                              "dependencies",
-                              url, Some(""),
-                              Some(""),
-                              vec![].into(),
-                              branch.as_deref(),
-                              commit.as_deref())?;
-    update_dependencies_entry(lock_doc,
+    if toml_doc.is_some() {
+        update_dependencies_entry(&mut toml_doc.clone().unwrap(),
+                                "dependencies",
+                                url, Some(""),
+                                Some(""),
+                                vec![].into(),
+                                branch.as_deref(),
+                                commit.as_deref())?;
+    }
+    if lock_doc.is_some() {
+        update_dependencies_entry(&mut lock_doc.clone().unwrap(),
                               "lock-dependencies",
                               url, Some(""),
                               Some(""),
                               vec![].into(),
                               branch.as_deref(),
                               commit.as_deref())?;
+    }
 
     Ok(())
 }
