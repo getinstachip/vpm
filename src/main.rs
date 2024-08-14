@@ -1,6 +1,5 @@
 mod cmd;
 mod error;
-mod build;
 
 use std::env;
 use std::io::{self, Write};
