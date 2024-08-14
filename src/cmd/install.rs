@@ -21,8 +21,6 @@ use crate::cmd::{Execute, Install};
 #[path = "../versions.rs"]
 mod versions;
 
-const VPM_TOML: &str = "vpm.toml";
-const VPM_LOCK: &str = "vpm.lock";
 const STD_LIB_URL: &str = "https://github.com/getinstachip/openchips";
 
 impl Execute for Install {
@@ -59,14 +57,14 @@ impl Execute for Install {
 }
 
 fn update_toml(module_name: &str, uri: &str, version: &str) -> Result<()> {
-    if !PathBuf::from(VPM_TOML).exists() {
+    if !PathBuf::from(versions::VPM_TOML).exists() {
         fs::OpenOptions::new()
             .create_new(true)
             .write(true)
-            .open(PathBuf::from(VPM_TOML))?;
+            .open(PathBuf::from(versions::VPM_TOML))?;
     }
 
-    let mut toml_value: Value = fs::read_to_string(VPM_TOML)?.parse()?;
+    let mut toml_value: Value = fs::read_to_string(versions::VPM_TOML)?.parse()?;
     let toml_table = toml_value.as_table_mut().unwrap();
     let toml_section_map = toml_table.entry(section_name.to_string())
         .or_insert_with(|| Value::Table(Map::new()))
@@ -84,16 +82,16 @@ fn update_toml(module_name: &str, uri: &str, version: &str) -> Result<()> {
     }
 
     let new_toml_content = toml::to_string(&toml_value)?;
-    fs::write(VPM_TOML, new_toml_content)?;
+    fs::write(versions::VPM_TOML, new_toml_content)?;
 
     Ok(())
 }
 
 fn update_lock(root_module: &str, repo_uri: &str, commit_code: &str, dependecies: Option<&Vec<&str>>) -> Result<()> {
-    if !PathBuf::from(VPM_LOCK).exists() {
-        fs::OpenOptions::new().create_new(true).write(true).open(PathBuf::from(VPM_LOCK))?;
+    if !PathBuf::from(versions::VPM_LOCK).exists() {
+        fs::OpenOptions::new().create_new(true).write(true).open(PathBuf::from(versions::VPM_LOCK))?;
     }
-    let mut lock_value: Value = fs::read_to_string(VPM_LOCK)?.parse()?;
+    let mut lock_value: Value = fs::read_to_string(versions::VPM_LOCK)?.parse()?;
     let lock_table = lock_value.as_table_mut().unwrap();
     let lock_section_map = lock_table.entry(section_name.to_string())
         .or_insert_with(|| Value::Table(Map::new()))
@@ -109,7 +107,7 @@ fn update_lock(root_module: &str, repo_uri: &str, commit_code: &str, dependecies
     }
 
     let new_lock_content = toml::to_string(&lock_value)?;
-    fs::write(VPM_LOCK, new_lock_content)?;
+    fs::write(versions::VPM_LOCK, new_lock_content)?;
 
     Ok(())
 }

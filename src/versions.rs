@@ -7,6 +7,9 @@ const DEFAULT_LIB_DESCRIPTION: &str = "A default library";
 const DEFAULT_VERSION: &str = "0.1.0";
 const DEFAULT_BRANCH: &str = "main";
 
+pub const VPM_TOML: &str = "vpm.toml";
+pub const VPM_LOCK: &str = "vpm.lock";
+
 pub fn create_toml(is_lock: bool) -> Result<DocumentMut> {
     let mut doc = DocumentMut::new();
     let mut lib = Table::new();
