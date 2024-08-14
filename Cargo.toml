@@ -1,6 +1,6 @@
 [package]
 name = "vpm"
-version = "0.1.4"
+version = "0.1.5"
 edition = "2021"
 license = "MIT"
 copyright = "Copyright (c) 2024 Instachip"
