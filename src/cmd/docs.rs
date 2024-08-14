@@ -12,7 +12,8 @@ use clust::messages::{
 use clust::{ApiKey, Client};
 use serde_json::Value;
 
-use aws_config::{self, BehaviorVersion, Region};
+use aws_sdk_secretsmanager::config::{Credentials, Region};
+use aws_config::BehaviorVersion;
 
 use crate::cmd::{Execute, Docs};
 
@@ -34,11 +35,24 @@ impl Execute for Docs {
 }
 
 async fn get_api_key() -> Result<String, aws_sdk_secretsmanager::Error> {
+    let region = std::env::var("AWS_DEFAULT_REGION").unwrap_or_else(|_| "us-east-1".to_string());
+    let access_key_id = std::env::var("AWS_ACCESS_KEY_ID").unwrap();
+    let secret_access_key = std::env::var("AWS_SECRET_ACCESS_KEY").unwrap();
+
     let secret_name = "ANTHROPIC_API_KEY";
-    let region = Region::new("us-east-1");
+
+    // Create credentials
+    let credentials = Credentials::new(
+        access_key_id,
+        secret_access_key,
+        None,
+        None,
+        "env_credentials",
+    );
 
     let config = aws_config::defaults(BehaviorVersion::v2024_03_28())
-        .region(region)
+        .region(Region::new(region))
+        .credentials_provider(credentials)
         .load()
         .await;
 
