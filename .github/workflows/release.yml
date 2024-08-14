@@ -4,7 +4,6 @@ on:
   workflow_dispatch:
 env:
   CARGO_INCREMENTAL: 0
-  ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
 permissions:
   contents: write
 jobs:
@@ -87,8 +86,6 @@ jobs:
           args: --color=always --git=https://github.com/cross-rs/cross.git --locked --rev=02bf930e0cb0c6f1beffece0788f3932ecb2c7eb --verbose cross
 
       - name: Build binary
-        env:
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         uses: actions-rs/cargo@v1
         with:
           command: build
