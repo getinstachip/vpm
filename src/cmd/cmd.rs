@@ -24,7 +24,7 @@ pub struct Install {
     #[arg(help = "URL of repository to install from")]
     pub url: Option<String>,
     #[arg(help="Version of package to install")]
-    pub vers: Option<String>,
+    pub version: Option<String>,
 }
 
 #[derive(Debug, Parser)]
