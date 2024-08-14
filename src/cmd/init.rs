@@ -10,20 +10,20 @@ impl Execute for Init {
         
         // .toml
         update_library_entry(&mut toml_doc,
-                                       Some(&self.project_name),
-                                       self.version.as_deref(),
-                                       self.description.as_deref(),
-                                       self.authors.as_deref(),
-                                       self.license.as_deref(),
-                                       None)?;
+                             Some(&self.project_name),
+                             self.version.as_deref(),
+                             self.description.as_deref(),
+                             self.authors.as_deref(),
+                             self.license.as_deref(),
+                             None)?;
         // .lock
         update_library_entry(&mut lock_doc,
-                                       Some(&self.project_name),
-                                       self.version.as_deref(),
-                                       self.description.as_deref(),
-                                       self.authors.as_deref(),
-                                       self.license.as_deref(),
-                                       None)?;
+                             Some(&self.project_name),
+                             self.version.as_deref(),
+                             self.description.as_deref(),
+                             self.authors.as_deref(),
+                             self.license.as_deref(),
+                             None)?;
 
         // docs
         update_config_entry(&mut toml_doc, "docs", "override_docs_path", toml_edit::Value::from(""))?;

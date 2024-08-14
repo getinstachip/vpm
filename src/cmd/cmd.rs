@@ -14,6 +14,7 @@ pub enum Cmd {
     about,
     author,
     disable_help_subcommand = true,
+    disable_version_flag = true,
     propagate_version = true,
     version
 )]
@@ -44,6 +45,7 @@ pub struct Uninstall {
     about,
     author,
     disable_help_subcommand = true,
+    disable_version_flag = true,
     propagate_version = true,
     version
 )]

@@ -47,33 +47,36 @@ pub mod versions {
                             ) -> Result<()> {
 
         let lib = doc.entry("library").or_insert(Item::Table(Table::new())).as_table_mut().unwrap();
-
+        
         if lib_name.unwrap_or("") != "" {
-            let mut _name_entry = lib.get_mut("name").unwrap();
-            _name_entry = & mut Item::Value(Value::from(lib_name.unwrap()));
+            // let mut _name_entry = lib.get_mut("name").unwrap();
+            // _name_entry = & mut Item::Value(Value::from(lib_name.unwrap()));
+            lib.insert("name", Item::Value(Value::from(lib_name.unwrap())));
         }
 
         if lib_version.unwrap_or("") != "" {
-            let mut _version_entry = lib.get_mut("version").unwrap();
-            _version_entry = & mut Item::Value(Value::from(lib_version.unwrap()));
+            // let mut _version_entry = lib.get_mut("version").unwrap();
+            // _version_entry = & mut Item::Value(Value::from(lib_version.unwrap()));
+            lib.insert("version", Item::Value(Value::from(lib_version.unwrap())));
         }
 
         if lib_description.unwrap_or("") != "" {
-            let mut _description_entry = lib.get_mut("description").unwrap();
-            _description_entry = & mut Item::Value(Value::from(lib_description.unwrap()));
+            // let mut _description_entry = lib.get_mut("description").unwrap();
+            // _description_entry = & mut Item::Value(Value::from(lib_description.unwrap()));
+            lib.insert("description", Item::Value(Value::from(lib_description.unwrap())));
         }
 
         if lib_authors.unwrap_or("") != "" {
-            let mut _authors_entry = lib.get_mut("authors").unwrap();
             let mut authors = Array::new();
             for author in lib_authors.unwrap().split(", ").collect::<Vec<&str>>() {
                 authors.push(Value::from(author));
             }
-            _authors_entry = & mut Item::Value(Value::Array(authors));
+            // let mut _authors_entry = lib.get_mut("authors").unwrap();
+            // _authors_entry = & mut Item::Value(Value::Array(authors));
+            lib.insert("authors", Item::Value(Value::Array(authors)));
         }
 
         if lib_license.unwrap_or("") != "" {
-            let mut _license_entry = lib.get_mut("license").unwrap();
             let mut license = Array::new();
             for license_pair in lib_license.unwrap().split(", ").collect::<Vec<&str>>() {
                 let pair = license_pair.split(": ").collect::<Vec<&str>>();
@@ -82,16 +85,19 @@ pub mod versions {
                 table.get_or_insert("source", Value::from(pair[1]));
                 license.push(table);
             }
-            _license_entry = & mut Item::Value(Value::Array(license));
+            // let mut _license_entry = lib.get_mut("license").unwrap();
+            // _license_entry = & mut Item::Value(Value::Array(license));
+            lib.insert("license", Item::Value(Value::Array(license)));
         }
 
         if lib_include.unwrap_or("") != "" {
-            let mut _include_entry = lib.get_mut("include").unwrap();
             let mut include = Array::new();
             for include_path in lib_include.unwrap().split(", ").collect::<Vec<&str>>() {
                 include.push(Value::from(include_path));
             }
-            _include_entry = & mut Item::Value(Value::Array(include));
+            // let mut _include_entry = lib.get_mut("include").unwrap();
+            // _include_entry = & mut Item::Value(Value::Array(include));
+            lib.insert("include", Item::Value(Value::Array(include)));
         }
 
         Ok(())
