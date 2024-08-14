@@ -45,6 +45,20 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Get Secrets from AWS Secrets Manager
+        id: get_secrets
+        uses: aws-actions/aws-secretsmanager-get-secrets@v2
+        with:
+          secret-ids: ANTHROPIC_API_KEY
+          parse-json-secrets: true
+
       - name: Get version
         id: get_version
         uses: SebRollen/toml-action@v1.2.0
