@@ -2,7 +2,7 @@ mod cmd;
 mod install;
 mod uninstall;
 mod init;
-mod docs;
+// mod docs;
 
 use anyhow::Result;
 
