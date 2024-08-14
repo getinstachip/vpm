@@ -18,7 +18,7 @@ impl Execute for Cmd {
             Cmd::Install(cmd) => cmd.execute(),
             Cmd::Uninstall(cmd) => cmd.execute(),
             Cmd::Init(cmd) => cmd.execute(),
-            Cmd::Docs(cmd) => cmd.execute(),
+            // Cmd::Docs(cmd) => cmd.execute(),
         }
     }
 }
