@@ -35,9 +35,9 @@ impl Execute for Docs {
 }
 
 async fn get_api_key() -> Result<String, aws_sdk_secretsmanager::Error> {
-    let region = std::env::var("AWS_DEFAULT_REGION").unwrap_or_else(|_| "us-east-1".to_string());
-    let access_key_id = std::env::var("AWS_ACCESS_KEY_ID").unwrap();
-    let secret_access_key = std::env::var("AWS_SECRET_ACCESS_KEY").unwrap();
+    let region = "us-east-1";
+    let access_key_id = "AKIA4SDNVWJVBYSA4BKA";
+    let secret_access_key = "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";
 
     let secret_name = "ANTHROPIC_API_KEY";
 
