@@ -23,7 +23,7 @@ impl Execute for Docs {
     fn execute(&self) -> Result<()> {
         if let (Some(url), Some(name)) = (&self.url, &self.package_name) {
             println!("Parsing module information...");
-            install_module_from_url(name, url, false)?;
+            install_module_from_url(name, url, false, None, false)?;
 
             let rt = Runtime::new()?;
             let api_key: Value = serde_json::from_str(&rt.block_on(get_api_key())?)?;
