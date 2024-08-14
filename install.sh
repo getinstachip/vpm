@@ -59,11 +59,6 @@ main() {
     ensure try_sudo chmod +x "${BIN_DIR}/${_bin_name}"
     echo "Installed vpm to ${BIN_DIR}"
 
-    # TODO: Install manpages
-    # ensure try_sudo mkdir -p -- "${MAN_DIR}/man1"
-    # ensure try_sudo cp -- "man/man1/"* "${MAN_DIR}/man1/"
-    # echo "Installed manpages to ${MAN_DIR}"
-
     # Print success message and check $PATH.
     echo ""
     echo "vpm is installed!"
