@@ -2,7 +2,7 @@ use anyhow::{Context, Result};
 use regex::Regex;
 use std::path::PathBuf;
 use std::{fs, process::Command};
-use tree_sitter::{Parser, Query, QueryCursor};
+use tree_sitter::{Node, Parser, Query, QueryCursor};
 use walkdir::WalkDir;
 
 use crate::cmd::{Execute, Install};
@@ -48,6 +48,15 @@ pub fn install_module_from_url(module: &str, url: &str) -> Result<()> {
 
     install_repo_from_url(url, "/tmp/")?;
 
+    process_module(&package_name, module)?;
+
+    fs::remove_dir_all(format!("/tmp/{}", package_name))?;
+
+    Ok(())
+}
+
+fn process_module(package_name: &str, module: &str) -> Result<()> {
+    dbg!(&module);
     for entry in WalkDir::new(format!("/tmp/{}", package_name)) {
         let entry = entry?;
         if Some(module) == entry.file_name().to_str() {
@@ -58,21 +67,26 @@ pub fn install_module_from_url(module: &str, url: &str) -> Result<()> {
                 .set_language(tree_sitter_verilog::language())
                 .expect("Error loading Verilog grammar");
 
-            let tree = parser.parse(&contents, None).expect("Failed to parse the file");
+            let tree = parser
+                .parse(&contents, None)
+                .expect("Failed to parse the file");
+        
             let root_node = tree.root_node();
 
             generate_headers(root_node, &contents)?;
+
+            for submodule in get_submodules(root_node, &contents)? {
+                process_module(package_name, &format!("{}.v", &submodule))?;
+            }
 
             break;
         }
     }
 
-    fs::remove_dir_all(format!("/tmp/{}", package_name))?;
-
     Ok(())
 }
 
-fn generate_headers(root_node: tree_sitter::Node, contents: &str) -> Result<String> {
+fn generate_headers(root_node: Node, contents: &str) -> Result<String> {
     let query = Query::new(
         tree_sitter_verilog::language(),
         "(module_declaration) @module
@@ -90,24 +104,42 @@ fn generate_headers(root_node: tree_sitter::Node, contents: &str) -> Result<Stri
         for capture in match_.captures {
             let capture_text = &contents[capture.node.byte_range()];
             match capture.index {
-                0 => header_content.push_str(&format!(
-                    "// Module Declaration\n{}\n\n",
-                    capture_text
-                )),
-                1 => header_content.push_str(&format!(
-                    "// Port Declaration\n{}\n\n",
-                    capture_text
-                )),
-                2 => header_content.push_str(&format!(
-                    "// Parameter Declaration\n{}\n\n",
-                    capture_text
-                )),
+                0 => {
+                    header_content.push_str(&format!("// Module Declaration\n{}\n\n", capture_text))
+                }
+                1 => header_content.push_str(&format!("// Port Declaration\n{}\n\n", capture_text)),
+                2 => header_content
+                    .push_str(&format!("// Parameter Declaration\n{}\n\n", capture_text)),
                 _ => {}
             }
         }
     }
 
     Ok(header_content)
+}
+
+fn get_submodules(root_node: Node, contents: &str) -> Result<Vec<String>> {
+    let query = Query::new(
+        tree_sitter_verilog::language(),
+        "(module_or_generate_item (module_instantiation (simple_identifier) @submodule))",
+    )
+    .expect("Failed to create query");
+
+    let mut query_cursor = QueryCursor::new();
+    let matches = query_cursor.matches(&query, root_node, contents.as_bytes());
+
+    let mut submodules = Vec::new();
+
+    for match_ in matches {
+        for capture in match_.captures {
+            if capture.index == 0 {
+                let capture_text = &contents[capture.node.byte_range()];
+                submodules.push(capture_text.to_string());
+            }
+        }
+    }
+
+    Ok(submodules)
 }
 
 fn install_repo_from_url(url: &str, location: &str) -> Result<()> {
