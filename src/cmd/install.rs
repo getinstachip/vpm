@@ -6,19 +6,25 @@ use std::vec;
 use std::{fs, process::Command, process::Stdio};
 use tree_sitter::{Parser, Node};
 use std::fmt::Write as FmtWrite;
+use std::io::BufReader;
+use std::io::BufRead;
+use std::path::Path;
+
+
 
 use crate::cmd::{Execute, Install};
-use crate::versions::versions::update_dependencies_entry;
+// use crate::versions::versions::update_dependencies_entry;
 
 const STD_LIB_URL: &str = "https://github.com/getinstachip/openchips";
 
 impl Execute for Install {
     fn execute(&self) -> Result<()> {
         let version = &self.version.clone();
-        if let (Some(url), Some(name)) = (&self.url, &self.package_name) {
+        if let (Some(url), Some(name)) = (&self.url, &self.top_module_path) {
             println!("Installing module '{}' (vers:{}) from URL: '{}'", name, version.clone().unwrap_or("".to_string()), url);
             install_module_from_url(name, url, true, version.as_deref(), true)?;
-        } else if let Some(arg) = &self.url.as_ref().or(self.package_name.as_ref()) {
+            let path = Path::new(name);
+        } else if let Some(arg) = &self.url.as_ref().or(self.top_module_path.as_ref()) {
             if Regex::new(r"^(https?://|git://|ftp://|file://|www\.)[\w\-\.]+\.\w+(/[\w\-\.]*)*/?$")
                 .unwrap()
                 .is_match(arg)
@@ -26,6 +32,7 @@ impl Execute for Install {
                 let url = arg.to_string();
                 println!("Installing repository from URL: '{}' (vers:{})", url, version.clone().unwrap_or("".to_string()));
                 install_repo_from_url(&url, "./vpm_modules/", true)?;
+                
             } else {
                 let name = arg.to_string();
                 println!("Installing module '{}' (vers:{}) from standard library", name, version.clone().unwrap_or("".to_string()));
@@ -96,7 +103,7 @@ pub fn install_module_from_url(module: &str, url: &str, sub: bool, version: Opti
             if path.is_file() && path.file_name().map_or(false, |name| name == module) {
                 let mut file = fs::File::open(&path)?;
                 if !sub {
-                    let destination_dir = format!("./vpm_modules/{}", top_module);
+                    let destination_dir = format!("./vpm_modules/{}", top_module.trim_end_matches(".sv").trim_end_matches(".v"));
                     fs::create_dir_all(&destination_dir)?;
                     let destination_path = format!("{}/{}", destination_dir, module);
                     fs::copy(&path, destination_path)?;
@@ -126,14 +133,15 @@ pub fn install_module_from_url(module: &str, url: &str, sub: bool, version: Opti
                         sub,
                         update_toml)?;
                   
-                    let destination_dir = format!("./vpm_modules/{}", module);
+                    let destination_dir = format!("./vpm_modules/{}", module.trim_end_matches(".sv").trim_end_matches(".v"));
                     fs::create_dir_all(&destination_dir)?;
                     let destination_path = format!("{}/{}", destination_dir, module);
                     fs::copy(&path, destination_path)?;
                     fs::remove_file(&path)?;
 
                     println!("Generating header files for {}", module);
-                    fs::File::create(PathBuf::from(destination_dir).join(format!("{}h", module)))?.write_all(generate_headers(root_node, module, &contents)?.as_bytes())?;
+                    let header_extension = if module.ends_with(".sv") { "svh" } else { "vh" };
+                    fs::File::create(PathBuf::from(&destination_dir).join(format!("{}.{}", module.trim_end_matches(".sv").trim_end_matches(".v"), header_extension)))?.write_all(generate_headers(root_node, module, &contents)?.as_bytes())?;
                 }
 
                 return Ok(());
@@ -167,11 +175,22 @@ pub fn install_module_from_url(module: &str, url: &str, sub: bool, version: Opti
                 if child.kind().contains("instantiation") {
                     if let Some(first_child) = child.child(0) {
                         if let Ok(module) = first_child.utf8_text(contents.as_bytes()) {
-                            let module_name: String = format!("{}.v", module);
-                            if !visited_modules.contains(&module_name) {
-                                visited_modules.push(module_name.clone());
+                            let module_name_v = format!("{}.v", module);
+                            let module_name_sv = format!("{}.sv", module);
+                            if !visited_modules.contains(&module_name_v) && !visited_modules.contains(&module_name_sv) {
+                                visited_modules.push(module_name_v.clone());
+                                visited_modules.push(module_name_sv.clone());
                                 download_module(&format!("/tmp/{}", package_name),
-                                                &module_name,
+                                                &module_name_v,
+                                                top_module,
+                                                package_name,
+                                                uri,
+                                                version,
+                                                visited_modules,
+                                                sub,
+                                                update_toml)?;
+                                download_module(&format!("/tmp/{}", package_name),
+                                                &module_name_sv,
                                                 top_module,
                                                 package_name,
                                                 uri,
@@ -204,26 +223,26 @@ pub fn install_module_from_url(module: &str, url: &str, sub: bool, version: Opti
 
     fs::remove_dir_all(format!("/tmp/{}", package_name))?;
     
-    let (commit, branch) = get_commit_details(url)?;
-    if update_toml {
-        update_dependencies_entry(false,
-                                  "dependencies",
-                                  url,
-                                  version,
-                                  Some(&package_name),
-                                  visited_modules.clone().into(),
-                                  commit.as_deref(),
-                                  branch.as_deref())?;
+    // let (commit, branch) = get_commit_details(url)?;
+    // if update_toml {
+    //     update_dependencies_entry(false,
+    //                               "dependencies",
+    //                               url,
+    //                               version,
+    //                               Some(&package_name),
+    //                               visited_modules.clone().into(),
+    //                               commit.as_deref(),
+    //                               branch.as_deref())?;
 
-        update_dependencies_entry(true,
-                                  "lock-dependencies",
-                                  url,
-                                  version,
-                                  Some(&package_name),
-                                  visited_modules.clone().into(),
-                                  commit.as_deref(),
-                                  branch.as_deref())?;
-    }
+    //     update_dependencies_entry(true,
+    //                               "lock-dependencies",
+    //                               url,
+    //                               version,
+    //                               Some(&package_name),
+    //                               visited_modules.clone().into(),
+    //                               commit.as_deref(),
+    //                               branch.as_deref())?;
+    // }
 
     Ok(())
 }
@@ -244,24 +263,24 @@ fn install_repo_from_url(url: &str, location: &str, update_toml: bool) -> Result
 
     clone_repo(url, repo_path.to_str().unwrap_or_default())?;
 
-    let (branch, commit) = get_commit_details(url)?;
-    if update_toml {
-        update_dependencies_entry(false,
-                                  "dependencies",
-                                  url, Some(""),
-                                  Some(""),
-                                  vec![].into(),
-                                  branch.as_deref(),
-                                  commit.as_deref())?;
+    // let (branch, commit) = get_commit_details(url)?;
+    // if update_toml {
+    //     update_dependencies_entry(false,
+    //                               "dependencies",
+    //                               url, Some(""),
+    //                               Some(""),
+    //                               vec![].into(),
+    //                               branch.as_deref(),
+    //                               commit.as_deref())?;
 
-        update_dependencies_entry(true,
-                                  "lock-dependencies",
-                                  url, Some(""),
-                                  Some(""),
-                                  vec![].into(),
-                                  branch.as_deref(),
-                                  commit.as_deref())?;
-    }
+    //     update_dependencies_entry(true,
+    //                               "lock-dependencies",
+    //                               url, Some(""),
+    //                               Some(""),
+    //                               vec![].into(),
+    //                               branch.as_deref(),
+    //                               commit.as_deref())?;
+    // }
 
     Ok(())
 }
@@ -297,3 +316,4 @@ fn generate_headers(root_node: Node, module: &str, contents: &str) -> Result<Str
 
     Ok(header_content)
 }
+

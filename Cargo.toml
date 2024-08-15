@@ -21,6 +21,7 @@ aws-config = "1.5.5"
 serde_json = "1.0.124"
 aws-sdk-secretsmanager = "1.41.0"
 toml_edit = "0.22.20"
+walkdir = "2.5.0"
 
 [build-dependencies]
 cc="*"
