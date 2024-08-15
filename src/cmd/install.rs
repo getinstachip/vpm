@@ -13,9 +13,8 @@ const STD_LIB_URL: &str = "https://github.com/getinstachip/openchips";
 
 impl Execute for Install {
     fn execute(&self) -> Result<()> {
-        let version = &self.version.clone().unwrap_or("0.1.0".to_string());
         if let (Some(url), Some(name)) = (&self.url, &self.package_name) {
-            println!("Installing module '{}' (vers:{}) from URL: '{}'", name, version, url);
+            println!("Installing module '{}' from URL: '{}'", name, url);
             install_module_from_url(name, url)?;
         } else if let Some(arg) = &self.url.as_ref().or(self.package_name.as_ref()) {
             if Regex::new(r"^(https?://|git://|ftp://|file://|www\.)[\w\-\.]+\.\w+(/[\w\-\.]*)*/?$")
@@ -23,11 +22,11 @@ impl Execute for Install {
                 .is_match(arg)
             {
                 let url = arg.to_string();
-                println!("Installing repository from URL: '{}' (vers:{})", url, version);
+                println!("Installing repository from URL: '{}'", url);
                 install_repo_from_url(&url, "./vpm_modules/")?;
             } else {
                 let name = arg.to_string();
-                println!("Installing module '{}' (vers:{}) from standard library", name, version);
+                println!("Installing module '{}' from standard library", name);
                 install_module_from_url(&name, STD_LIB_URL)?;
             }
         } else {
@@ -161,9 +160,7 @@ fn generate_headers(root_node: tree_sitter::Node, module: &str, contents: &str) 
                     }
                     header_content.push('\n');
                 }
-                _ => {
-                    process_node(child, contents, header_content)?;
-                }
+                _ => process_node(child, contents, header_content)?,
             }
         }
         Ok(())
