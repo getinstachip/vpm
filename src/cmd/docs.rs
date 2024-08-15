@@ -33,7 +33,6 @@ async fn generate_docs(module: &str) -> Result<()> {
     let dir = format!("./vpm_modules/{}", module);
     let file_path = format!("{}/{}", dir, module);
     let contents = tokio::fs::read_to_string(&file_path).await?;
-    dbg!(&contents);
 
     let api_url = "https://bmniatl2bh.execute-api.us-east-1.amazonaws.com/dev/getApiKey";
     let client = Client::new();

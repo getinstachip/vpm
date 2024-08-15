@@ -2,8 +2,6 @@ mod cmd;
 mod docs;
 mod install;
 mod uninstall;
-mod init;
-mod docs;
 
 use anyhow::Result;
 
