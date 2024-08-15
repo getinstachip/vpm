@@ -10,6 +10,7 @@ VPM is a package manager for Verilog projects being piloted at Stanford and UC B
 - Automatically handle synthesis collateral including what's needed for build (COMING SOON!)
 - Module version control with a .lock file and customizability with a .toml file
 - Automated comprehensive documentation generation for modules
+- Integration with open source EDA (verilator
 
 ## Installation
 
