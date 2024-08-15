@@ -1,8 +1,7 @@
 use anyhow::Result;
 use std::fs;
 use std::path::{Path, PathBuf};
-use std::io::{BufRead, BufReader, Write};
-use anyhow::Context;
+use std::io::Write;
 
 use crate::cmd::{Execute, Dotf};
 
@@ -17,7 +16,7 @@ impl Execute for Dotf {
         if filelist_path.exists() {
             fs::write(&filelist_path, "")?;
         }
-        append_modules_to_filelist(&self.path_to_top_module, true);
+        let _ = append_modules_to_filelist(&self.path_to_top_module, true);
         Ok(())
     }
 }

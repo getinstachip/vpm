@@ -2,14 +2,9 @@ use anyhow::{Context, Result};
 use regex::Regex;
 use std::io::{Read, Write};
 use std::path::PathBuf;
-use std::vec;
 use std::{fs, process::Command, process::Stdio};
 use tree_sitter::{Parser, Node};
 use std::fmt::Write as FmtWrite;
-use std::io::BufReader;
-use std::io::BufRead;
-use std::path::Path;
-
 
 
 use crate::cmd::{Execute, Install};
@@ -23,7 +18,6 @@ impl Execute for Install {
         if let (Some(url), Some(name)) = (&self.url, &self.top_module_path) {
             println!("Installing module '{}' (vers:{}) from URL: '{}'", name, version.clone().unwrap_or("".to_string()), url);
             install_module_from_url(name, url, true, version.as_deref(), true)?;
-            let path = Path::new(name);
         } else if let Some(arg) = &self.url.as_ref().or(self.top_module_path.as_ref()) {
             if Regex::new(r"^(https?://|git://|ftp://|file://|www\.)[\w\-\.]+\.\w+(/[\w\-\.]*)*/?$")
                 .unwrap()
@@ -52,34 +46,37 @@ fn name_from_url(url: &str) -> Result<String> {
         .unwrap_or_default().to_string())
 }
 
-fn get_commit_details(url: &str) -> Result<(Option<String>, Option<String>)> {
-    let commit_code = Command::new("git")
-        .args(["ls-remote", "--refs", url])
-        .output()
-        .with_context(|| format!("Failed to get commit code from URL: '{}'", url))?;
-    let commit_code = String::from_utf8(commit_code.stdout)?;
-    let commit_code = commit_code.split_whitespace().nth(1).unwrap_or_default().to_string();
+// fn get_commit_details(url: &str) -> Result<(Option<String>, Option<String>)> {
+//     let commit_code = Command::new("git")
+//         .args(["ls-remote", "--refs", url])
+//         .output()
+//         .with_context(|| format!("Failed to get commit code from URL: '{}'", url))?;
+//     let commit_code = String::from_utf8(commit_code.stdout)?;
+//     let commit_code = commit_code.split_whitespace().nth(1).unwrap_or_default().to_string();
 
-    let branch = Command::new("git")
-        .args(["ls-remote", "--refs", url])
-        .output()
-        .with_context(|| format!("Failed to get branch from URL: '{}'", url))?;
-    let branch = String::from_utf8(branch.stdout)?;
-    let branch = branch.split_whitespace().next().unwrap_or_default().to_string();
+//     let branch = Command::new("git")
+//         .args(["ls-remote", "--refs", url])
+//         .output()
+//         .with_context(|| format!("Failed to get branch from URL: '{}'", url))?;
+//     let branch = String::from_utf8(branch.stdout)?;
+//     let branch = branch.split_whitespace().next().unwrap_or_default().to_string();
 
-    Ok((Some(commit_code), Some(branch)))
-}
+//     Ok((Some(commit_code), Some(branch)))
+// }
 
 pub fn install_module_from_url(module: &str, url: &str, sub: bool, version: Option<&str>, update_toml: bool) -> Result<()> {
-    
     let package_name = name_from_url(url)?.to_string();
     let mut visited_modules: Vec<String> = Vec::new();
 
     install_repo_from_url(url, "/tmp/", true)?;
 
+    let top_module_name = module.trim_end_matches(".sv").trim_end_matches(".v");
+    let parent_dir = format!("./vpm_modules/{}", top_module_name);
+    fs::create_dir_all(&parent_dir)?;
+
     download_module(&format!("/tmp/{}", package_name),
                     module,
-                    module,
+                    top_module_name,
                     &package_name,
                     url,
                     version,
@@ -102,8 +99,7 @@ pub fn install_module_from_url(module: &str, url: &str, sub: bool, version: Opti
             let path = entry.path();
             if path.is_file() && path.file_name().map_or(false, |name| name == module) {
                 let mut file = fs::File::open(&path)?;
-                let destination_dir = format!("./vpm_modules/{}", top_module.trim_end_matches(".sv").trim_end_matches(".v"));
-                fs::create_dir_all(&destination_dir)?;
+                let destination_dir = format!("./vpm_modules/{}", top_module);
                 let destination_path = format!("{}/{}", destination_dir, module);
                 fs::copy(&path, &destination_path)?;
                 
@@ -127,7 +123,7 @@ pub fn install_module_from_url(module: &str, url: &str, sub: bool, version: Opti
                         root_node,
                         package_name,
                         top_module,
-                        &contents,
+                        &mut contents,
                         visited_modules,
                         module,
                         uri,
@@ -135,6 +131,9 @@ pub fn install_module_from_url(module: &str, url: &str, sub: bool, version: Opti
                         sub,
                         update_toml)?;
                   
+                    // Write the updated contents back to the file
+                    fs::write(&destination_path, contents.clone())?;
+
                     fs::remove_file(&path)?;
 
                     println!("Generating header files for {}", module);
@@ -160,7 +159,7 @@ pub fn install_module_from_url(module: &str, url: &str, sub: bool, version: Opti
         fn find_module_instantiations(root_node: tree_sitter::Node,
                                       package_name: &str,
                                       top_module: &str,
-                                      contents: &str,
+                                      contents: &mut String,
                                       visited_modules: &mut Vec<String>,
                                       root_mod_name: &str,
                                       uri: &str,
@@ -178,7 +177,12 @@ pub fn install_module_from_url(module: &str, url: &str, sub: bool, version: Opti
                             if !visited_modules.contains(&module_name_v) && !visited_modules.contains(&module_name_sv) {
                                 visited_modules.push(module_name_v.clone());
                                 visited_modules.push(module_name_sv.clone());
-                                download_module(&format!("/tmp/{}", package_name),
+                                // Add `include directive for the module
+                                // println!("Adding `include directive for {}", module);
+                                // let include_directive = format!("`include \"{}\"\n", module_name_v);
+                                // contents.insert_str(0, &include_directive);
+                                let submodule_dir = format!("/tmp/{}", package_name);
+                                download_module(&submodule_dir,
                                                 &module_name_v,
                                                 top_module,
                                                 package_name,
@@ -187,7 +191,7 @@ pub fn install_module_from_url(module: &str, url: &str, sub: bool, version: Opti
                                                 visited_modules,
                                                 sub,
                                                 update_toml)?;
-                                download_module(&format!("/tmp/{}", package_name),
+                                download_module(&submodule_dir,
                                                 &module_name_sv,
                                                 top_module,
                                                 package_name,
@@ -245,7 +249,7 @@ pub fn install_module_from_url(module: &str, url: &str, sub: bool, version: Opti
     Ok(())
 }
 
-fn install_repo_from_url(url: &str, location: &str, update_toml: bool) -> Result<()> {
+fn install_repo_from_url(url: &str, location: &str, _update_toml: bool) -> Result<()> {
     let repo_path = PathBuf::from(location).join(name_from_url(url)?,);
 
     fn clone_repo(url: &str, repo_path: &str) -> Result<()> {
