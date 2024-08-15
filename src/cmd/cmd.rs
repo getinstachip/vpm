@@ -4,8 +4,7 @@ use clap::Parser;
 pub enum Cmd {
     Install(Install),
     Uninstall(Uninstall),
-    Init(Init),
-    // Docs(Docs),
+    Docs(Docs),
 }
 
 /// Install a package
@@ -45,33 +44,12 @@ pub struct Uninstall {
     about,
     author,
     disable_help_subcommand = true,
-    disable_version_flag = true,
     propagate_version = true,
     version
 )]
-pub struct Init {
-    #[arg(help = "Name of project to initialize")]
-    pub project_name: String,
-    #[arg(help = "SemVer version of project")]
-    pub version: Option<String>,
-    #[arg(help = "Description of project")]
-    pub description: Option<String>,
-    #[arg(help = "Authors of project (comma + space separated)")]
-    pub authors: Option<String>,
-    #[arg(help = "License of project (<license>: <location>, comma + space separated)")]
-    pub license: Option<String>,
+pub struct Docs{
+    #[arg(help = "Name of module to generate documentation for")]
+    pub module: Option<String>,
+    #[arg(help = "Url of repository to generate documentation for")]
+    pub url: Option<String>,
 }
-// #[derive(Debug, Parser)]
-// #[clap(
-//     about,
-//     author,
-//     disable_help_subcommand = true,
-//     propagate_version = true,
-//     version
-// )]
-// pub struct Docs {
-//     #[arg(help = "Name of package to fetch documentation for")]
-//     pub package_name: Option<String>,
-//     #[arg(help = "URL of repository to fetch documentation for")]
-//     pub url: Option<String>,
-// }

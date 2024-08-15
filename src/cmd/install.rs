@@ -1,35 +1,34 @@
 use anyhow::{Context, Result};
 use regex::Regex;
+use std::collections::HashSet;
 use std::io::{Read, Write};
 use std::path::PathBuf;
-use std::vec;
-use std::{fs, process::Command, process::Stdio};
-use tree_sitter::{Parser, Node};
+use std::{fs, process::Command};
+use tree_sitter::Parser;
 use std::fmt::Write as FmtWrite;
 
 use crate::cmd::{Execute, Install};
-use crate::versions::versions::update_dependencies_entry;
 
 const STD_LIB_URL: &str = "https://github.com/getinstachip/openchips";
 
 impl Execute for Install {
     fn execute(&self) -> Result<()> {
-        let version = &self.version.clone();
+        let version = &self.version.clone().unwrap_or("0.1.0".to_string());
         if let (Some(url), Some(name)) = (&self.url, &self.package_name) {
-            println!("Installing module '{}' (vers:{}) from URL: '{}'", name, version.clone().unwrap_or("".to_string()), url);
-            install_module_from_url(name, url, true, version.as_deref(), true)?;
+            println!("Installing module '{}' (vers:{}) from URL: '{}'", name, version, url);
+            install_module_from_url(name, url)?;
         } else if let Some(arg) = &self.url.as_ref().or(self.package_name.as_ref()) {
             if Regex::new(r"^(https?://|git://|ftp://|file://|www\.)[\w\-\.]+\.\w+(/[\w\-\.]*)*/?$")
                 .unwrap()
                 .is_match(arg)
             {
                 let url = arg.to_string();
-                println!("Installing repository from URL: '{}' (vers:{})", url, version.clone().unwrap_or("".to_string()));
-                install_repo_from_url(&url, "./vpm_modules/", true)?;
+                println!("Installing repository from URL: '{}' (vers:{})", url, version);
+                install_repo_from_url(&url, "./vpm_modules/")?;
             } else {
                 let name = arg.to_string();
-                println!("Installing module '{}' (vers:{}) from standard library", name, version.clone().unwrap_or("".to_string()));
-                install_module_from_url(&name, STD_LIB_URL, true, version.as_deref(), true)?;
+                println!("Installing module '{}' (vers:{}) from standard library", name, version);
+                install_module_from_url(&name, STD_LIB_URL)?;
             }
         } else {
             println!("Command not found!");
@@ -45,64 +44,21 @@ fn name_from_url(url: &str) -> Result<String> {
         .unwrap_or_default().to_string())
 }
 
-fn get_commit_details(url: &str) -> Result<(Option<String>, Option<String>)> {
-    let commit_code = Command::new("git")
-        .args(["ls-remote", "--refs", url])
-        .output()
-        .with_context(|| format!("Failed to get commit code from URL: '{}'", url))?;
-    let commit_code = String::from_utf8(commit_code.stdout)?;
-    let commit_code = commit_code.split_whitespace().nth(1).unwrap_or_default().to_string();
-
-    let branch = Command::new("git")
-        .args(["ls-remote", "--refs", url])
-        .output()
-        .with_context(|| format!("Failed to get branch from URL: '{}'", url))?;
-    let branch = String::from_utf8(branch.stdout)?;
-    let branch = branch.split_whitespace().next().unwrap_or_default().to_string();
-
-    Ok((Some(commit_code), Some(branch)))
-}
-
-pub fn install_module_from_url(module: &str, url: &str, sub: bool, version: Option<&str>, update_toml: bool) -> Result<()> {
-    
+pub fn install_module_from_url(module: &str, url: &str) -> Result<()> {
     let package_name = name_from_url(url)?.to_string();
-    let mut visited_modules: Vec<String> = Vec::new();
 
-    install_repo_from_url(url, "/tmp/", true)?;
+    let mut visited_modules = HashSet::new();
 
-    download_module(&format!("/tmp/{}", package_name),
-                    module,
-                    module,
-                    &package_name,
-                    url,
-                    version,
-                    &mut visited_modules,
-                    sub,
-                    update_toml)?;
+    install_repo_from_url(url, "/tmp/")?;
 
-    fn download_module(dir: &str,
-                       module: &str,
-                       top_module: &str,
-                       package_name: &str,
-                       uri: &str,
-                       version: Option<&str>,
-                       visited_modules: &mut Vec<String>,
-                       sub: bool,
-                       update_toml: bool) -> Result<()> {
-        
+    download_module(&format!("/tmp/{}", package_name), module, &package_name, &mut visited_modules)?;
+
+    fn download_module(dir: &str, module: &str, package_name: &str, visited_modules: &mut HashSet<String>) -> Result<()> {
         for entry in fs::read_dir(dir)? {
             let entry = entry?;
             let path = entry.path();
             if path.is_file() && path.file_name().map_or(false, |name| name == module) {
                 let mut file = fs::File::open(&path)?;
-                if !sub {
-                    let destination_dir = format!("./vpm_modules/{}", top_module);
-                    fs::create_dir_all(&destination_dir)?;
-                    let destination_path = format!("{}/{}", destination_dir, module);
-                    fs::copy(&path, destination_path)?;
-                    fs::remove_file(&path)?;
-                    return Ok(());
-                }
                 let mut contents = String::new();
                 file.read_to_string(&mut contents)?;
 
@@ -117,14 +73,8 @@ pub fn install_module_from_url(module: &str, url: &str, sub: bool, version: Opti
                     find_module_instantiations(
                         root_node,
                         package_name,
-                        top_module,
                         &contents,
-                        visited_modules,
-                        module,
-                        uri,
-                        version,
-                        sub,
-                        update_toml)?;
+                        visited_modules)?;
                   
                     let destination_dir = format!("./vpm_modules/{}", module);
                     fs::create_dir_all(&destination_dir)?;
@@ -141,59 +91,29 @@ pub fn install_module_from_url(module: &str, url: &str, sub: bool, version: Opti
                 download_module(
                     path.to_str().unwrap_or_default(),
                     module,
-                    top_module,
                     package_name,
-                    uri,
-                    version,
                     visited_modules,
-                    sub,
-                    update_toml)?;
+                )?;
             }
         }
 
-        fn find_module_instantiations(root_node: tree_sitter::Node,
-                                      package_name: &str,
-                                      top_module: &str,
-                                      contents: &str,
-                                      visited_modules: &mut Vec<String>,
-                                      root_mod_name: &str,
-                                      uri: &str,
-                                      version: Option<&str>,
-                                      sub: bool,
-                                      update_toml: bool) -> Result<()> {
-
+        fn find_module_instantiations(root_node: tree_sitter::Node, package_name: &str, contents: &str, visited_modules: &mut HashSet<String>) -> Result<()> {
             let mut cursor = root_node.walk();
+            let mut dependencies: Vec<&str> = Vec::new();
             for child in root_node.children(&mut cursor) {
                 if child.kind().contains("instantiation") {
                     if let Some(first_child) = child.child(0) {
                         if let Ok(module) = first_child.utf8_text(contents.as_bytes()) {
                             let module_name: String = format!("{}.v", module);
                             if !visited_modules.contains(&module_name) {
-                                visited_modules.push(module_name.clone());
-                                download_module(&format!("/tmp/{}", package_name),
-                                                &module_name,
-                                                top_module,
-                                                package_name,
-                                                uri,
-                                                version,
-                                                visited_modules,
-                                                sub,
-                                                update_toml)?;
+                                dependencies.push(module);
+                                visited_modules.insert(module_name.clone());
+                                download_module(&format!("/tmp/{}", package_name), &module_name, package_name, visited_modules)?;
                             }
                         }
                     }
                 }
-
-                find_module_instantiations(child,
-                                           package_name,
-                                           top_module,
-                                           contents,
-                                           visited_modules,
-                                           root_mod_name,
-                                           uri,
-                                           version,
-                                           sub,
-                                           update_toml)?;
+                find_module_instantiations(child, package_name, contents, visited_modules)?;
             }
             
             Ok(())
@@ -203,39 +123,16 @@ pub fn install_module_from_url(module: &str, url: &str, sub: bool, version: Opti
     }
 
     fs::remove_dir_all(format!("/tmp/{}", package_name))?;
-    
-    let (commit, branch) = get_commit_details(url)?;
-    if update_toml {
-        update_dependencies_entry(false,
-                                  "dependencies",
-                                  url,
-                                  version,
-                                  Some(&package_name),
-                                  visited_modules.clone().into(),
-                                  commit.as_deref(),
-                                  branch.as_deref())?;
-
-        update_dependencies_entry(true,
-                                  "lock-dependencies",
-                                  url,
-                                  version,
-                                  Some(&package_name),
-                                  visited_modules.clone().into(),
-                                  commit.as_deref(),
-                                  branch.as_deref())?;
-    }
 
     Ok(())
 }
 
-fn install_repo_from_url(url: &str, location: &str, update_toml: bool) -> Result<()> {
+fn install_repo_from_url(url: &str, location: &str) -> Result<()> {
     let repo_path = PathBuf::from(location).join(name_from_url(url)?,);
 
     fn clone_repo(url: &str, repo_path: &str) -> Result<()> {
         Command::new("git")
             .args(["clone", "--depth", "1", "--single-branch", "--jobs", "4", url, repo_path])
-            .stdout(Stdio::null())
-            .stderr(Stdio::null())
             .status()
             .with_context(|| format!("Failed to clone repository from URL: '{}'", url))?;
 
@@ -244,35 +141,16 @@ fn install_repo_from_url(url: &str, location: &str, update_toml: bool) -> Result
 
     clone_repo(url, repo_path.to_str().unwrap_or_default())?;
 
-    let (branch, commit) = get_commit_details(url)?;
-    if update_toml {
-        update_dependencies_entry(false,
-                                  "dependencies",
-                                  url, Some(""),
-                                  Some(""),
-                                  vec![].into(),
-                                  branch.as_deref(),
-                                  commit.as_deref())?;
-
-        update_dependencies_entry(true,
-                                  "lock-dependencies",
-                                  url, Some(""),
-                                  Some(""),
-                                  vec![].into(),
-                                  branch.as_deref(),
-                                  commit.as_deref())?;
-    }
-
     Ok(())
 }
 
-fn generate_headers(root_node: Node, module: &str, contents: &str) -> Result<String> {
+fn generate_headers(root_node: tree_sitter::Node, module: &str, contents: &str) -> Result<String> {
     let mut header_content = format!("// Header for module {}\n\n", module);
     let guard_name = module.replace('.', "_").to_uppercase();
 
     header_content.push_str(&format!("`ifndef _{0}H_\n`define _{0}H_\n\n", guard_name));
 
-    fn process_node(node: Node, contents: &str, header_content: &mut String) -> Result<()> {
+    fn process_node(node: tree_sitter::Node, contents: &str, header_content: &mut String) -> Result<()> {
         let mut cursor = node.walk();
         for child in node.children(&mut cursor) {
             match child.kind() {
