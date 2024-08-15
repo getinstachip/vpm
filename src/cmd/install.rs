@@ -102,14 +102,16 @@ pub fn install_module_from_url(module: &str, url: &str, sub: bool, version: Opti
             let path = entry.path();
             if path.is_file() && path.file_name().map_or(false, |name| name == module) {
                 let mut file = fs::File::open(&path)?;
+                let destination_dir = format!("./vpm_modules/{}", top_module.trim_end_matches(".sv").trim_end_matches(".v"));
+                fs::create_dir_all(&destination_dir)?;
+                let destination_path = format!("{}/{}", destination_dir, module);
+                fs::copy(&path, &destination_path)?;
+                
                 if !sub {
-                    let destination_dir = format!("./vpm_modules/{}", top_module.trim_end_matches(".sv").trim_end_matches(".v"));
-                    fs::create_dir_all(&destination_dir)?;
-                    let destination_path = format!("{}/{}", destination_dir, module);
-                    fs::copy(&path, destination_path)?;
                     fs::remove_file(&path)?;
                     return Ok(());
                 }
+                
                 let mut contents = String::new();
                 file.read_to_string(&mut contents)?;
 
@@ -133,10 +135,6 @@ pub fn install_module_from_url(module: &str, url: &str, sub: bool, version: Opti
                         sub,
                         update_toml)?;
                   
-                    let destination_dir = format!("./vpm_modules/{}", module.trim_end_matches(".sv").trim_end_matches(".v"));
-                    fs::create_dir_all(&destination_dir)?;
-                    let destination_path = format!("{}/{}", destination_dir, module);
-                    fs::copy(&path, destination_path)?;
                     fs::remove_file(&path)?;
 
                     println!("Generating header files for {}", module);
