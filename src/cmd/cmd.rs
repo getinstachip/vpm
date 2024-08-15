@@ -4,6 +4,7 @@ use clap::Parser;
 pub enum Cmd {
     Install(Install),
     Uninstall(Uninstall),
+    Docs(Docs),
 }
 
 /// Install a package
@@ -36,3 +37,19 @@ pub struct Uninstall {
     #[arg(help = "Name of package to Uninstall")]
     pub package_name: String,
 }
+
+#[derive(Debug, Parser)]
+#[clap(
+    about,
+    author,
+    disable_help_subcommand = true,
+    propagate_version = true,
+    version
+)]
+pub struct Docs{
+    #[arg(help = "Name of module to generate documentation for")]
+    pub module: Option<String>,
+    #[arg(help = "Url of repository to generate documentation for")]
+    pub url: Option<String>,
+}
+

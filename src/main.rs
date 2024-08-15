@@ -11,7 +11,6 @@ use crate::cmd::{Cmd, Execute};
 use crate::error::SilentExit;
 
 pub fn main() -> ExitCode {
-    dotenv::dotenv().ok();
     // Forcibly disable backtraces.
     env::remove_var("RUST_LIB_BACKTRACE");
     env::remove_var("RUST_BACKTRACE");
