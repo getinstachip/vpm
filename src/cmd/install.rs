@@ -70,6 +70,13 @@ fn process_module(package_name: &str, top_module: &str, module: &str, visited: &
     let tmp_path = PathBuf::from("/tmp").join(package_name);
     for entry in WalkDir::new(&tmp_path).into_iter().filter_map(Result::ok) {
         if entry.file_name() == module {
+            let target_path = PathBuf::from("./vpm_modules").join(format!("{}/{}", top_module, module));
+
+            fs::copy(
+                entry.path(),
+                target_path.with_extension("v"),
+            )?;
+
             let contents = fs::read_to_string(entry.path())?;
             let mut parser = Parser::new();
             parser.set_language(tree_sitter_verilog::language())?;
@@ -79,7 +86,7 @@ fn process_module(package_name: &str, top_module: &str, module: &str, visited: &
 
             let header_content = generate_headers(root_node, &contents)?;
             fs::write(
-                PathBuf::from("./vpm_modules").join(format!("{}/{}h", top_module, module)),
+                target_path.with_extension("vh"),
                 header_content,
             )?;
 
