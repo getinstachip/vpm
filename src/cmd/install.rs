@@ -4,6 +4,7 @@ use std::path::PathBuf;
 use std::{fs, process::Command};
 use tree_sitter::{Node, Parser, Query, QueryCursor};
 use walkdir::WalkDir;
+use std::collections::HashSet;
 
 use crate::cmd::{Execute, Install};
 
@@ -11,6 +12,9 @@ const STD_LIB_URL: &str = "https://github.com/getinstachip/openchips";
 
 impl Execute for Install {
     fn execute(&self) -> Result<()> {
+        if !PathBuf::from("./vpm_modules").exists() {
+            fs::create_dir("./vpm_modules")?;
+        }
         if let (Some(url), Some(name)) = (&self.url, &self.package_name) {
             println!("Installing module '{}' from URL: '{}'", name, url);
             install_module_from_url(name, url)?;
@@ -48,15 +52,17 @@ pub fn install_module_from_url(module: &str, url: &str) -> Result<()> {
 
     install_repo_from_url(url, "/tmp/")?;
 
-    process_module(&package_name, module)?;
+    let mut visited = HashSet::new();
+    process_module(&package_name, module, &mut visited)?;
 
     fs::remove_dir_all(format!("/tmp/{}", package_name))?;
 
     Ok(())
 }
 
-fn process_module(package_name: &str, module: &str) -> Result<()> {
+fn process_module(package_name: &str, module: &str, visited: &mut HashSet<String>) -> Result<()> {
     dbg!(&module);
+    visited.insert(module.replace(".v", ""));
     for entry in WalkDir::new(format!("/tmp/{}", package_name)) {
         let entry = entry?;
         if Some(module) == entry.file_name().to_str() {
@@ -73,10 +79,13 @@ fn process_module(package_name: &str, module: &str) -> Result<()> {
         
             let root_node = tree.root_node();
 
-            generate_headers(root_node, &contents)?;
+            let header_content = generate_headers(root_node, &contents)?;
+            fs::write(PathBuf::from("./vpm_modules").join(format!("{}h", module)), header_content)?;
 
-            for submodule in get_submodules(root_node, &contents)? {
-                process_module(package_name, &format!("{}.v", &submodule))?;
+            for submodule in get_submodules(root_node, &contents, visited)? {
+                if !visited.contains(&submodule) {
+                    process_module(package_name, &format!("{}.v", &submodule), visited)?;
+                }
             }
 
             break;
@@ -118,10 +127,19 @@ fn generate_headers(root_node: Node, contents: &str) -> Result<String> {
     Ok(header_content)
 }
 
-fn get_submodules(root_node: Node, contents: &str) -> Result<Vec<String>> {
+fn get_submodules(root_node: Node, contents: &str, visited: &mut HashSet<String>) -> Result<Vec<String>> {
     let query = Query::new(
         tree_sitter_verilog::language(),
-        "(module_or_generate_item (module_instantiation (simple_identifier) @submodule))",
+        "(module_or_generate_item 
+            (module_instantiation 
+                (simple_identifier) @module_submodule
+            )
+        )
+        (module_or_generate_item 
+            (udp_instantiation 
+                (simple_identifier) @module_submodule
+            )
+        )"
     )
     .expect("Failed to create query");
 
@@ -134,7 +152,9 @@ fn get_submodules(root_node: Node, contents: &str) -> Result<Vec<String>> {
         for capture in match_.captures {
             if capture.index == 0 {
                 let capture_text = &contents[capture.node.byte_range()];
-                submodules.push(capture_text.to_string());
+                if !visited.contains(capture_text) {
+                    submodules.push(capture_text.to_string());
+                }
             }
         }
     }
