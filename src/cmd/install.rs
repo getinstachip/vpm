@@ -201,6 +201,9 @@ fn install_repo_from_url(url: &str, location: &str) -> Result<()> {
 }
 
 fn add_dependency(package_name: Option<&str>, modules: Option<HashSet<String>>, url: Option<&str>) -> Result<()> {
+    if !PathBuf::from("./vpm.toml").exists() {
+        fs::write("./vpm.toml", initial_vpm_toml())?;
+    }
     let contents = fs::read_to_string("./vpm.toml")?;
     let mut document: DocumentMut = contents.parse()?;
 
@@ -226,4 +229,15 @@ fn add_dependency(package_name: Option<&str>, modules: Option<HashSet<String>>, 
 
     fs::write("./vpm.toml", document.to_string())?;
     Ok(())
+}
+
+fn initial_vpm_toml() -> String {
+    "[package]\n\
+    name = \"my-vpm-package\"\n\
+    version = \"0.1.0\"\n\
+    authors = [\"author-name <author-email>\"]\n\
+    description = \"My VPM package\"\n\
+    license = \"My License\"\n\
+    repository = \"https://github.com/<username>/<repository>\"\n\n\
+    ".to_string()
 }
