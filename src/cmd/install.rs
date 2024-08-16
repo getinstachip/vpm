@@ -24,17 +24,15 @@ impl Execute for Install {
             (Some(url), Some(name)) => {
                 println!("Installing module '{}' from URL: '{}'", name, url);
                 install_module_from_url(name, url)
-                // TODO: Update dependencies section (module w/ git) in vpm.toml
             }
             (Some(url), None) | (None, Some(url)) if URL_REGEX.is_match(url) => {
                 println!("Installing repository from URL: '{}'", url);
-                install_repo_from_url(url, "./vpm_modules/")
-                // TODO: Update dependencies section (git) in vpm.toml
+                install_repo_from_url(url, "./vpm_modules/")?;
+                add_dependency(None, None, Some(url))
             }
             (None, Some(name)) => {
                 println!("Installing module '{}' from standard library", name);
                 install_module_from_url(name, STD_LIB_URL)
-                // TODO: Update dependencies section (package w/ SemVer version) in vpm.toml
             }
             _ => {
                 println!("Command not found!");
@@ -206,22 +204,14 @@ fn add_dependency(package_name: Option<&str>, modules: Option<HashSet<String>>, 
     let contents = fs::read_to_string("./vpm.toml")?;
     let mut document: DocumentMut = contents.parse()?;
 
-    if !document.contains_key("dependencies") {
-        document["dependencies"] = Item::Table(toml_edit::Table::new());
-    }
-
-    let dependencies = &mut document["dependencies"].as_table_mut().unwrap();
+    let dependencies = document["dependencies"].or_insert(Item::Table(toml_edit::Table::new())).as_table_mut().unwrap();
 
     if let Some(package_name) = package_name {
-        if !dependencies.contains_key(package_name) {
-            dependencies.insert(package_name, Item::Table(toml_edit::Table::new()));
-        }
+        let package = dependencies.entry(package_name).or_insert(Item::Table(toml_edit::Table::new())).as_table_mut().unwrap();
 
-        let package = dependencies[package_name].as_table_mut().unwrap();
         if let Some(url) = url {
             package.insert("git", value(url));
-        }
-        else {
+        } else {
             package.insert("version", value("v0.1.0"));
         }
 
