@@ -6,6 +6,7 @@ pub enum Cmd {
     Uninstall(Uninstall),
     Docs(Docs),
     Dotf(Dotf),
+    List(List),
 }
 
 #[derive(Debug, Parser)]
@@ -66,3 +67,13 @@ pub struct Dotf {
     #[arg(help = "Path to top module to generate filelist for")]
     pub path_to_top_module: String,
 }
+
+#[derive(Debug, Parser)]
+#[clap(
+    about,
+    author,
+    disable_help_subcommand = true,
+    propagate_version = true,
+    version
+)]
+pub struct List {}

@@ -3,6 +3,7 @@ mod docs;
 mod install;
 mod uninstall;
 mod dotf;
+mod list;
 
 use anyhow::Result;
 
@@ -19,6 +20,7 @@ impl Execute for Cmd {
             Cmd::Uninstall(cmd) => cmd.execute(),
             Cmd::Docs(cmd) => cmd.execute(),
             Cmd::Dotf(cmd) => cmd.execute(),
+            Cmd::List(cmd) => cmd.execute(),
         }
     }
 }

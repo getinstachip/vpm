@@ -1333,6 +1333,7 @@ dependencies = [
  "regex",
  "reqwest",
  "serde_json",
+ "tempfile",
  "tokio",
  "tree-sitter",
  "tree-sitter-verilog",
