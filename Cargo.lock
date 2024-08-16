@@ -1328,6 +1328,7 @@ dependencies = [
  "anyhow",
  "cc",
  "clap",
+ "once_cell",
  "openssl",
  "regex",
  "reqwest",
