@@ -1,10 +1,10 @@
 use anyhow::{Context, Result};
 use regex::Regex;
+use std::collections::HashSet;
 use std::path::PathBuf;
 use std::{fs, process::Command};
 use tree_sitter::{Node, Parser, Query, QueryCursor};
 use walkdir::WalkDir;
-use std::collections::HashSet;
 
 use crate::cmd::{Execute, Install};
 
@@ -76,11 +76,14 @@ fn process_module(package_name: &str, module: &str, visited: &mut HashSet<String
             let tree = parser
                 .parse(&contents, None)
                 .expect("Failed to parse the file");
-        
+
             let root_node = tree.root_node();
 
             let header_content = generate_headers(root_node, &contents)?;
-            fs::write(PathBuf::from("./vpm_modules").join(format!("{}h", module)), header_content)?;
+            fs::write(
+                PathBuf::from("./vpm_modules").join(format!("{}h", module)),
+                header_content,
+            )?;
 
             for submodule in get_submodules(root_node, &contents, visited)? {
                 if !visited.contains(&submodule) {
@@ -98,9 +101,22 @@ fn process_module(package_name: &str, module: &str, visited: &mut HashSet<String
 fn generate_headers(root_node: Node, contents: &str) -> Result<String> {
     let query = Query::new(
         tree_sitter_verilog::language(),
-        "(module_declaration) @module
-         (port_declaration) @port
-         (parameter_declaration) @param",
+        "(module_declaration
+            (module_header
+                (module_keyword)
+                (simple_identifier) @module_name)
+            (module_nonansi_header
+                (parameter_port_list)? @params
+                (list_of_ports) @ports)
+        )
+        (module_declaration
+            (module_header
+                (module_keyword)
+                (simple_identifier) @module_name)
+            (module_ansi_header
+                (parameter_port_list)? @params
+                (list_of_port_declarations)? @ports)
+        )",
     )
     .expect("Failed to create query");
 
@@ -110,24 +126,43 @@ fn generate_headers(root_node: Node, contents: &str) -> Result<String> {
     let mut header_content = String::new();
 
     for match_ in matches {
+        let mut module_name = "";
+        let mut params = "";
+        let mut ports = "";
+
         for capture in match_.captures {
             let capture_text = &contents[capture.node.byte_range()];
             match capture.index {
-                0 => {
-                    header_content.push_str(&format!("// Module Declaration\n{}\n\n", capture_text))
-                }
-                1 => header_content.push_str(&format!("// Port Declaration\n{}\n\n", capture_text)),
-                2 => header_content
-                    .push_str(&format!("// Parameter Declaration\n{}\n\n", capture_text)),
+                0 => module_name = capture_text,
+                1 => params = capture_text,
+                2 => ports = capture_text,
                 _ => {}
             }
         }
+        header_content.push_str(&format!("module {} ", module_name));
+
+        if !params.is_empty() {
+            header_content.push_str("#(\n");
+            header_content.push_str(params);
+            header_content.push_str(") ");
+        }
+
+        header_content.push_str("(\n");
+        header_content.push_str(ports);
+        header_content.push_str(");\n\n");
+
+        header_content.push_str("// TODO: Add module implementation\n\n");
+        header_content.push_str(&format!("endmodule // {}\n\n", module_name));
     }
 
     Ok(header_content)
 }
 
-fn get_submodules(root_node: Node, contents: &str, visited: &mut HashSet<String>) -> Result<Vec<String>> {
+fn get_submodules(
+    root_node: Node,
+    contents: &str,
+    visited: &mut HashSet<String>,
+) -> Result<Vec<String>> {
     let query = Query::new(
         tree_sitter_verilog::language(),
         "(module_or_generate_item 
@@ -139,7 +174,7 @@ fn get_submodules(root_node: Node, contents: &str, visited: &mut HashSet<String>
             (udp_instantiation 
                 (simple_identifier) @module_submodule
             )
-        )"
+        )",
     )
     .expect("Failed to create query");
 
