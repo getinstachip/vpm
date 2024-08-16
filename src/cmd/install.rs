@@ -1,12 +1,13 @@
-use anyhow::{Context, Result};
-use once_cell::sync::Lazy;
-use regex::Regex;
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 use std::{fs, process::Command};
+use anyhow::{Context, Result};
+use once_cell::sync::Lazy;
+use regex::Regex;
 use tree_sitter::{Node, Parser, Query, QueryCursor};
 use walkdir::WalkDir;
 
+use toml_edit::{DocumentMut, Item, value, Array};
 
 use crate::cmd::{Execute, Install};
 
@@ -23,14 +24,17 @@ impl Execute for Install {
             (Some(url), Some(name)) => {
                 println!("Installing module '{}' from URL: '{}'", name, url);
                 install_module_from_url(name, url)
+                // TODO: Update dependencies section (module w/ git) in vpm.toml
             }
             (Some(url), None) | (None, Some(url)) if URL_REGEX.is_match(url) => {
                 println!("Installing repository from URL: '{}'", url);
                 install_repo_from_url(url, "./vpm_modules/")
+                // TODO: Update dependencies section (git) in vpm.toml
             }
             (None, Some(name)) => {
                 println!("Installing module '{}' from standard library", name);
                 install_module_from_url(name, STD_LIB_URL)
+                // TODO: Update dependencies section (package w/ SemVer version) in vpm.toml
             }
             _ => {
                 println!("Command not found!");
@@ -50,18 +54,18 @@ pub fn install_module_from_url(module: &str, url: &str) -> Result<()> {
 
     install_repo_from_url(url, "/tmp/")?;
 
-    let mut visited = HashSet::new();
-    process_module(package_name, module, &mut visited)?;
+    let module_list = process_module(package_name, module, &mut HashSet::new())?;
+    add_dependency(Some(package_name), Some(module_list), Some(url))?;
 
     fs::remove_dir_all(tmp_path)?;
 
     Ok(())
 }
 
-fn process_module(package_name: &str, module: &str, visited: &mut HashSet<String>) -> Result<()> {
+fn process_module(package_name: &str, module: &str, visited: &mut HashSet<String>) -> Result<HashSet<String>> {
     let module_name = module.strip_suffix(".v").unwrap_or(module);
     if !visited.insert(module_name.to_string()) {
-        return Ok(());
+        return Ok(HashSet::new());
     }
     println!("Processing module '{}'", module_name);
     let tmp_path = PathBuf::from("/tmp").join(package_name);
@@ -90,7 +94,7 @@ fn process_module(package_name: &str, module: &str, visited: &mut HashSet<String
         }
     }
 
-    Ok(())
+    Ok(visited.clone())
 }
 
 fn generate_headers(root_node: Node, contents: &str) -> Result<String> {
@@ -189,18 +193,47 @@ fn install_repo_from_url(url: &str, location: &str) -> Result<()> {
     let repo_path = Path::new(location).join(name_from_url(url));
 
     Command::new("git")
-        .args([
-            "clone",
-            "--depth",
-            "1",
-            "--single-branch",
-            "--jobs",
-            "4",
-            url,
-            repo_path.to_str().unwrap_or_default(),
+        .args([ "clone", "--depth", "1", "--single-branch", "--jobs", "4",
+            url, repo_path.to_str().unwrap_or_default(),
         ])
         .status()
         .with_context(|| format!("Failed to clone repository from URL: '{}'", url))?;
 
+    Ok(())
+}
+
+fn add_dependency(package_name: Option<&str>, modules: Option<HashSet<String>>, url: Option<&str>) -> Result<()> {
+    let contents = fs::read_to_string("./vpm.toml")?;
+    let mut document: DocumentMut = contents.parse()?;
+
+    if !document.contains_key("dependencies") {
+        document["dependencies"] = Item::Table(toml_edit::Table::new());
+    }
+
+    let dependencies = &mut document["dependencies"].as_table_mut().unwrap();
+
+    if let Some(package_name) = package_name {
+        if !dependencies.contains_key(package_name) {
+            dependencies.insert(package_name, Item::Table(toml_edit::Table::new()));
+        }
+
+        let package = dependencies[package_name].as_table_mut().unwrap();
+        if let Some(url) = url {
+            package.insert("git", value(url));
+        }
+        else {
+            package.insert("version", value("v0.1.0"));
+        }
+
+        if let Some(modules) = modules {
+            let mut modules_array = Array::new();
+            for module in modules {
+                modules_array.push(module);
+            }
+            package.insert("modules", value(modules_array));
+        }
+    }
+
+    fs::write("./vpm.toml", document.to_string())?;
     Ok(())
 }
