@@ -51,9 +51,10 @@ pub fn install_module_from_url(module: &str, url: &str) -> Result<()> {
     let tmp_path = PathBuf::from("/tmp").join(package_name);
 
     install_repo_from_url(url, "/tmp/")?;
+    let destination = format!("./vpm_modules/{}", module);
+    fs::create_dir_all(&destination)?;
 
-    fs::create_dir_all(format!("./vpm_modules/{}", module))?;
-    let module_list = process_module(package_name, module, module, &mut HashSet::new())?;
+    let module_list = process_module(package_name, module, destination.to_owned(), &mut HashSet::new())?;
     add_dependency(Some(package_name), Some(module_list), Some(url))?;
 
     fs::remove_dir_all(tmp_path)?;
@@ -61,7 +62,7 @@ pub fn install_module_from_url(module: &str, url: &str) -> Result<()> {
     Ok(())
 }
 
-fn process_module(package_name: &str, top_module: &str, module: &str, visited: &mut HashSet<String>) -> Result<HashSet<String>> {
+fn process_module(package_name: &str, module: &str, destination: String, visited: &mut HashSet<String>) -> Result<HashSet<String>> {
     let module_name = module.strip_suffix(".v").unwrap_or(module);
     if !visited.insert(module_name.to_string()) {
         return Ok(HashSet::new());
@@ -70,7 +71,7 @@ fn process_module(package_name: &str, top_module: &str, module: &str, visited: &
     let tmp_path = PathBuf::from("/tmp").join(package_name);
     for entry in WalkDir::new(&tmp_path).into_iter().filter_map(Result::ok) {
         if entry.file_name() == module {
-            let target_path = PathBuf::from("./vpm_modules").join(format!("{}/{}", top_module, module));
+            let target_path = PathBuf::from(&destination).join(module_name);
 
             fs::copy(
                 entry.path(),
@@ -92,7 +93,7 @@ fn process_module(package_name: &str, top_module: &str, module: &str, visited: &
 
             for submodule in get_submodules(root_node, &contents)? {
                 if !visited.contains(&submodule) {
-                    process_module(package_name, top_module, &format!("{}.v", submodule), visited)?;
+                    process_module(package_name, &format!("{}.v", submodule), destination.to_owned(), visited)?;
                 }
             }
 
