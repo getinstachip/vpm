@@ -52,7 +52,8 @@ pub fn install_module_from_url(module: &str, url: &str) -> Result<()> {
 
     install_repo_from_url(url, "/tmp/")?;
 
-    let module_list = process_module(package_name, module, &mut HashSet::new())?;
+    fs::create_dir_all(format!("./vpm_modules/{}", module))?;
+    let module_list = process_module(package_name, module, module, &mut HashSet::new())?;
     add_dependency(Some(package_name), Some(module_list), Some(url))?;
 
     fs::remove_dir_all(tmp_path)?;
@@ -60,7 +61,7 @@ pub fn install_module_from_url(module: &str, url: &str) -> Result<()> {
     Ok(())
 }
 
-fn process_module(package_name: &str, module: &str, visited: &mut HashSet<String>) -> Result<HashSet<String>> {
+fn process_module(package_name: &str, top_module: &str, module: &str, visited: &mut HashSet<String>) -> Result<HashSet<String>> {
     let module_name = module.strip_suffix(".v").unwrap_or(module);
     if !visited.insert(module_name.to_string()) {
         return Ok(HashSet::new());
@@ -78,13 +79,13 @@ fn process_module(package_name: &str, module: &str, visited: &mut HashSet<String
 
             let header_content = generate_headers(root_node, &contents)?;
             fs::write(
-                PathBuf::from("./vpm_modules").join(format!("{}h", module)),
+                PathBuf::from("./vpm_modules").join(format!("{}/{}h", top_module, module)),
                 header_content,
             )?;
 
             for submodule in get_submodules(root_node, &contents)? {
                 if !visited.contains(&submodule) {
-                    process_module(package_name, &format!("{}.v", submodule), visited)?;
+                    process_module(package_name, top_module, &format!("{}.v", submodule), visited)?;
                 }
             }
 
@@ -238,6 +239,6 @@ fn initial_vpm_toml() -> String {
     authors = [\"author-name <author-email>\"]\n\
     description = \"My VPM package\"\n\
     license = \"My License\"\n\
-    repository = \"https://github.com/<username>/<repository>\"\n\n\
+    repository = \"https://github.com/<username>/<repository>\"\n\
     ".to_string()
 }
