@@ -27,7 +27,7 @@ pub fn append_modules_to_filelist(top_module_path: &str, sub: bool) -> Result<()
     let top_module_file = Path::new(top_module_path).file_name().and_then(|f| f.to_str()).unwrap_or("");
     let top_module_dir = Path::new(top_module_path).with_extension("").to_str().unwrap_or("").to_string();
     let filelist_name = format!("{}.f", top_module_file.trim_end_matches(".sv").trim_end_matches(".v"));
-    let filelist_path = PathBuf::from("vpm_modules").join(top_module_dir).join(filelist_name);
+    let filelist_path = PathBuf::from("vpm_modules").join(&top_module_dir).join(&filelist_name);
 
     let mut filepaths = Vec::new();
     let mut f_statements = Vec::new();
@@ -40,6 +40,9 @@ pub fn append_modules_to_filelist(top_module_path: &str, sub: bool) -> Result<()
         .append(true)
         .create(true)
         .open(&filelist_path)?;
+
+    // Add +incdir+ statement
+    file.write_all(format!("+incdir+{}\n\n", vpm_modules_dir.join(&top_module_dir).display()).as_bytes())?;
 
     for filepath in filepaths {
         file.write_all(format!("{}\n", filepath).as_bytes())?;
@@ -86,9 +89,6 @@ fn append_module(
             let include_dir = path.parent().unwrap_or(Path::new("")).to_str().unwrap_or("");
 
             filepaths.push(module_path.to_string());
-            if contents.contains("`include") {
-                filepaths.push(format!("+incdir+{}", include_dir));
-            }
 
             // Check for `define macros and module boundaries
             let mut in_ifdef_block = false;
