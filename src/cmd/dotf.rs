@@ -86,7 +86,6 @@ fn append_module(
         if path.is_file() && path.file_name().map_or(false, |name| name == module) {
             let module_path = path.to_str().unwrap_or_default();
             let contents = fs::read_to_string(&path)?;
-            let include_dir = path.parent().unwrap_or(Path::new("")).to_str().unwrap_or("");
 
             filepaths.push(module_path.to_string());
 

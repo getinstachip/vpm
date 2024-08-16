@@ -1,7 +1,4 @@
 use anyhow::Result;
-use std::fs;
-use std::path::{Path, PathBuf};
-use std::io::Write;
 use std::collections::HashSet;
 use anyhow::Context;
 use std::process::Command;
@@ -9,7 +6,6 @@ use crate::cmd::{Execute, List};
 use tempfile::tempdir;
 
 const STD_LIB_URL: &str = "https://github.com/getinstachip/openchips";
-
 
 impl Execute for List {
     fn execute(&self) -> Result<()> {
@@ -43,13 +39,15 @@ fn list_verilog_files() -> Result<Vec<String>> {
 
     let mut verilog_files = HashSet::new();
 
-    // Walk through the repository
     for entry in walkdir::WalkDir::new(repo_path).into_iter().filter_map(|e| e.ok()) {
         if let Some(extension) = entry.path().extension() {
-            if extension == "v" || extension == "sv" {
-                if let Some(file_name) = entry.path().file_stem() {
-                    verilog_files.insert(file_name.to_string_lossy().into_owned());
-                }
+            match extension.to_str() {
+                Some("v") | Some("sv") => {
+                    if let Some(file_name) = entry.path().file_stem() {
+                        verilog_files.insert(file_name.to_string_lossy().into_owned());
+                    }
+                },
+                _ => {}
             }
         }
     }
