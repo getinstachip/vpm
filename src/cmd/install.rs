@@ -7,6 +7,7 @@ use std::{fs, process::Command};
 use tree_sitter::{Node, Parser, Query, QueryCursor};
 use walkdir::WalkDir;
 
+
 use crate::cmd::{Execute, Install};
 
 const STD_LIB_URL: &str = "https://github.com/getinstachip/openchips";
@@ -18,7 +19,6 @@ static URL_REGEX: Lazy<Regex> = Lazy::new(|| {
 impl Execute for Install {
     fn execute(&self) -> Result<()> {
         fs::create_dir_all("./vpm_modules")?;
-
         match (&self.url, &self.package_name) {
             (Some(url), Some(name)) => {
                 println!("Installing module '{}' from URL: '{}'", name, url);
