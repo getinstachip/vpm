@@ -1,5 +1,6 @@
 mod cmd;
 mod error;
+mod toml;
 
 use std::env;
 use std::io::{self, Write};
