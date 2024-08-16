@@ -53,8 +53,8 @@ pub fn install_module_from_url(module: &str, url: &str) -> Result<()> {
     let destination = format!("./vpm_modules/{}", module);
     fs::create_dir_all(&destination)?;
 
-    let module_list = process_module(package_name, module, destination.to_owned(), &mut HashSet::new())?;
-    add_dependency(package_name, Some(url), None, Some(module_list))?;
+    process_module(package_name, module, destination.to_owned(), &mut HashSet::new())?;
+    add_dependency(package_name, Some(url), None, Some(module))?;
 
     fs::remove_dir_all(tmp_path)?;
 
