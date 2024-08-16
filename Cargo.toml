@@ -21,6 +21,7 @@ once_cell = "1.19.0"
 tempfile = "3.12.0"
 toml_edit = { version = "0.22.20", features = ["serde"] }
 toml = "0.8.19"
+serde = { version = "1.0.208", features = ["derive"] }
 
 [build-dependencies]
 cc="*"

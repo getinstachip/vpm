@@ -7,9 +7,8 @@ use regex::Regex;
 use tree_sitter::{Node, Parser, Query, QueryCursor};
 use walkdir::WalkDir;
 
-use toml_edit::{DocumentMut, Item, value, Array};
-
 use crate::cmd::{Execute, Install};
+use crate::toml::add_dependency;
 
 const STD_LIB_URL: &str = "https://github.com/getinstachip/openchips";
 
@@ -28,7 +27,7 @@ impl Execute for Install {
             (Some(url), None) | (None, Some(url)) if URL_REGEX.is_match(url) => {
                 println!("Installing repository from URL: '{}'", url);
                 install_repo_from_url(url, "./vpm_modules/")?;
-                add_dependency(None, None, Some(url))
+                add_dependency(name_from_url(url), Some(url), None, None)
             }
             (None, Some(name)) => {
                 println!("Installing module '{}' from standard library", name);
@@ -55,7 +54,7 @@ pub fn install_module_from_url(module: &str, url: &str) -> Result<()> {
     fs::create_dir_all(&destination)?;
 
     let module_list = process_module(package_name, module, destination.to_owned(), &mut HashSet::new())?;
-    add_dependency(Some(package_name), Some(module_list), Some(url))?;
+    add_dependency(package_name, Some(url), None, Some(module_list))?;
 
     fs::remove_dir_all(tmp_path)?;
 
@@ -207,46 +206,4 @@ fn install_repo_from_url(url: &str, location: &str) -> Result<()> {
         .with_context(|| format!("Failed to clone repository from URL: '{}'", url))?;
 
     Ok(())
-}
-
-fn add_dependency(package_name: Option<&str>, modules: Option<HashSet<String>>, url: Option<&str>) -> Result<()> {
-    if !PathBuf::from("./vpm.toml").exists() {
-        fs::write("./vpm.toml", initial_vpm_toml())?;
-    }
-    let contents = fs::read_to_string("./vpm.toml")?;
-    let mut document: DocumentMut = contents.parse()?;
-
-    let dependencies = document["dependencies"].or_insert(Item::Table(toml_edit::Table::new())).as_table_mut().unwrap();
-
-    if let Some(package_name) = package_name {
-        let package = dependencies.entry(package_name).or_insert(Item::Table(toml_edit::Table::new())).as_table_mut().unwrap();
-
-        if let Some(url) = url {
-            package.insert("git", value(url));
-        } else {
-            package.insert("version", value("v0.1.0"));
-        }
-
-        if let Some(modules) = modules {
-            let mut modules_array = Array::new();
-            for module in modules {
-                modules_array.push(module);
-            }
-            package.insert("modules", value(modules_array));
-        }
-    }
-
-    fs::write("./vpm.toml", document.to_string())?;
-    Ok(())
-}
-
-fn initial_vpm_toml() -> String {
-    "[package]\n\
-    name = \"my-vpm-package\"\n\
-    version = \"0.1.0\"\n\
-    authors = [\"author-name <author-email>\"]\n\
-    description = \"My VPM package\"\n\
-    license = \"My License\"\n\
-    repository = \"https://github.com/<username>/<repository>\"\n\
-    ".to_string()
 }
