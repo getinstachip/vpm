@@ -32,7 +32,7 @@ fn format_text(text: &str) -> String {
 async fn generate_docs(module: &str) -> Result<()> {
     let dir = format!("./vpm_modules/{0}/{0}", module);
     let file_path = format!("{}/{}", dir, module);
-    let contents = tokio::fs::read_to_string(&file_path).await?;
+    let contents = std::fs::read_to_string(&file_path)?;
 
     let api_url = "https://bmniatl2bh.execute-api.us-east-1.amazonaws.com/dev/getApiKey";
     let client = Client::new();
@@ -44,7 +44,7 @@ async fn generate_docs(module: &str) -> Result<()> {
     let documentation = format_text(&response.text().await?);
 
     let readme_path = PathBuf::from(&dir).join("README.md");
-    tokio::fs::write(&readme_path, documentation).await?;
+    std::fs::write(&readme_path, documentation)?;
 
     println!("Documentation for {} written to {}", module, readme_path.display());
 
