@@ -7,6 +7,7 @@ pub enum Cmd {
     Docs(Docs),
     Dotf(Dotf),
     List(List),
+    Run(Run),
 }
 
 #[derive(Debug, Parser)]
@@ -23,8 +24,6 @@ pub struct Install {
     pub package_name: Option<String>,
     #[arg(help = "URL of repository to install from")]
     pub url: Option<String>,
-    #[arg(help="Version of package to install")]
-    pub version: Option<String>,
 }
 
 #[derive(Debug, Parser)]
@@ -48,7 +47,7 @@ pub struct Uninstall {
     propagate_version = true,
     version
 )]
-pub struct Docs{
+pub struct Docs {
     #[arg(help = "Name of module to generate documentation for")]
     pub module: Option<String>,
     #[arg(help = "Url of repository to generate documentation for")]
@@ -77,3 +76,13 @@ pub struct Dotf {
     version
 )]
 pub struct List {}
+
+#[derive(Debug, Parser)]
+#[clap(
+    about,
+    author,
+    disable_help_subcommand = true,
+    propagate_version = true,
+    version
+)]
+pub struct Run {}
