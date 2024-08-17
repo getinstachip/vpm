@@ -14,7 +14,7 @@ struct Package {
 }
 
 #[derive(Serialize, Deserialize, Debug, Default)]
-struct Dependency {
+pub struct Dependency {
     git: Option<String>,
     version: Option<String>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
@@ -41,6 +41,30 @@ impl Default for Package {
     }
 }
 
+impl Dependency {
+    fn new() -> Self {
+        Dependency {
+            git: None,
+            version: None,
+            modules: Vec::new(),
+        }
+    }
+
+    pub fn get_url(&self) -> Option<&str> {
+        self.git.as_deref()
+    }
+}
+
+impl Clone for Dependency {
+    fn clone(&self) -> Self {
+        Dependency {
+            git: self.git.clone(),
+            version: self.version.clone(),
+            modules: self.modules.clone(),
+        }
+    }
+}
+
 impl VpmToml {
     fn add_dependency(&mut self, name: &str, git: Option<&str>, version: Option<&str>, module: Option<&str>) {
         let dependency = self.dependencies.entry(name.to_string()).or_default();
@@ -55,6 +79,35 @@ impl VpmToml {
             dependency.modules.push(mod_name.to_string());
         }
     }
+
+    fn get_dependency(&self, package_name: &str) -> Option<&Dependency> {
+        self.dependencies.iter().for_each(|(name, dependency)| {
+            println!("Package: {}", name);
+            if let Some(git) = &dependency.git {
+                println!("  Git: {}", git);
+            }
+            if let Some(version) = &dependency.version {
+                println!("  Version: {}", version);
+            }
+            if !dependency.modules.is_empty() {
+                println!("  Modules:");
+                for module in &dependency.modules {
+                    println!("    - {}", module);
+                }
+            }
+            println!(); // Add a blank line between dependencies
+        });
+        self.dependencies.get(package_name)
+    }
+
+    fn remove_dependency(&mut self, package_name: &str) {
+        self.dependencies.remove(package_name);
+    }
+
+    fn update_dependency(&mut self, package_name: &str, git: Option<&str>, version: Option<&str>, module: Option<&str>) {
+        self.remove_dependency(package_name);
+        self.add_dependency(package_name, git, version, module);
+    }
 }
 
 pub fn add_dependency(package_name: &str, git: Option<&str>, version: Option<&str>, module: Option<&str>) -> Result<()> {
@@ -63,6 +116,37 @@ pub fn add_dependency(package_name: &str, git: Option<&str>, version: Option<&st
         .unwrap_or_else(|_| Ok(VpmToml::default()))?;
 
     vpm_toml.add_dependency(package_name, git, version, module);
+
+    fs::write("vpm.toml", toml::to_string(&vpm_toml)?)?;
+    Ok(())
+}
+
+pub fn get_dependency(package_name: &str) -> Option<Dependency> {
+    let vpm_toml = fs::read_to_string("vpm.toml")
+        .ok()
+        .and_then(|contents| toml::from_str::<VpmToml>(&contents).ok())
+        .unwrap_or_default();
+
+    vpm_toml.get_dependency(package_name).cloned()
+}
+
+pub fn remove_dependency(package_name: &str) -> Result<()> {
+    let mut vpm_toml = fs::read_to_string("vpm.toml")
+        .map(|contents| toml::from_str(&contents))
+        .unwrap_or_else(|_| Ok(VpmToml::default()))?;
+
+    vpm_toml.remove_dependency(package_name);
+
+    fs::write("vpm.toml", toml::to_string(&vpm_toml)?)?;
+    Ok(())
+}
+
+pub fn update_dependency(package_name: &str, git: Option<&str>, version: Option<&str>, module: Option<&str>) -> Result<()> {
+    let mut vpm_toml = fs::read_to_string("vpm.toml")
+        .map(|contents| toml::from_str(&contents))
+        .unwrap_or_else(|_| Ok(VpmToml::default()))?;
+
+    vpm_toml.update_dependency(package_name, git, version, module);
 
     fs::write("vpm.toml", toml::to_string(&vpm_toml)?)?;
     Ok(())

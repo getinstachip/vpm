@@ -7,7 +7,7 @@ use regex::Regex;
 use tree_sitter::{Node, Parser, Query, QueryCursor};
 use walkdir::WalkDir;
 
-use crate::cmd::{Execute, Install};
+use crate::cmd::{Execute, Include};
 use crate::toml::add_dependency;
 
 const STD_LIB_URL: &str = "https://github.com/getinstachip/openchips";
@@ -16,22 +16,22 @@ static URL_REGEX: Lazy<Regex> = Lazy::new(|| {
     Regex::new(r"^(https?://|git://|ftp://|file://|www\.)[\w\-\.]+\.\w+(/[\w\-\.]*)*/?$").unwrap()
 });
 
-impl Execute for Install {
+impl Execute for Include {
     fn execute(&self) -> Result<()> {
         fs::create_dir_all("./vpm_modules")?;
         match (&self.url, &self.package_name) {
             (Some(url), Some(name)) => {
-                println!("Installing module '{}' from URL: '{}'", name, url);
-                install_module_from_url(name, url)
+                println!("Including module '{}' from URL: '{}'", name, url);
+                include_module_from_url(name, url)
             }
             (Some(url), None) | (None, Some(url)) if URL_REGEX.is_match(url) => {
-                println!("Installing repository from URL: '{}'", url);
-                install_repo_from_url(url, "./vpm_modules/")?;
+                println!("Including repository from URL: '{}'", url);
+                include_repo_from_url(url, "./vpm_modules/")?;
                 add_dependency(name_from_url(url), Some(url), None, None)
             }
             (None, Some(name)) => {
-                println!("Installing module '{}' from standard library", name);
-                install_module_from_url(name, STD_LIB_URL)
+                println!("Including module '{}' from standard library", name);
+                include_module_from_url(name, STD_LIB_URL)
             }
             _ => {
                 println!("Command not found!");
@@ -45,11 +45,11 @@ fn name_from_url(url: &str) -> &str {
     url.rsplit('/').find(|&s| !s.is_empty()).unwrap_or_default()
 }
 
-pub fn install_module_from_url(module: &str, url: &str) -> Result<()> {
+pub fn include_module_from_url(module: &str, url: &str) -> Result<()> {
     let package_name = name_from_url(url);
     let tmp_path = PathBuf::from("/tmp").join(package_name);
 
-    install_repo_from_url(url, "/tmp/")?;
+    include_repo_from_url(url, "/tmp/")?;
     let destination = format!("./vpm_modules/{}", module);
     fs::create_dir_all(&destination)?;
 
@@ -61,7 +61,7 @@ pub fn install_module_from_url(module: &str, url: &str) -> Result<()> {
     Ok(())
 }
 
-fn process_module(package_name: &str, module: &str, destination: String, visited: &mut HashSet<String>) -> Result<HashSet<String>> {
+pub fn process_module(package_name: &str, module: &str, destination: String, visited: &mut HashSet<String>) -> Result<HashSet<String>> {
     let module_name = module.strip_suffix(".v").or_else(|| module.strip_suffix(".sv")).unwrap_or(module);
     if !visited.insert(module_name.to_string()) {
         return Ok(HashSet::new());
@@ -109,7 +109,7 @@ fn process_module(package_name: &str, module: &str, destination: String, visited
     Ok(visited.clone())
 }
 
-fn generate_headers(root_node: Node, contents: &str) -> Result<String> {
+pub fn generate_headers(root_node: Node, contents: &str) -> Result<String> {
     static QUERY: Lazy<Query> = Lazy::new(|| {
         Query::new(
             tree_sitter_verilog::language(),
@@ -166,7 +166,7 @@ fn generate_headers(root_node: Node, contents: &str) -> Result<String> {
     Ok(header_content)
 }
 
-fn get_submodules(root_node: Node, contents: &str) -> Result<HashSet<String>> {
+pub fn get_submodules(root_node: Node, contents: &str) -> Result<HashSet<String>> {
     static QUERY: Lazy<Query> = Lazy::new(|| {
         Query::new(
             tree_sitter_verilog::language(),
@@ -201,7 +201,7 @@ fn get_submodules(root_node: Node, contents: &str) -> Result<HashSet<String>> {
     Ok(submodules)
 }
 
-fn install_repo_from_url(url: &str, location: &str) -> Result<()> {
+pub fn include_repo_from_url(url: &str, location: &str) -> Result<()> {
     let repo_path = Path::new(location).join(name_from_url(url));
 
     Command::new("git")
