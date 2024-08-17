@@ -1,7 +1,7 @@
 mod cmd;
 mod docs;
 mod dotf;
-mod install;
+pub mod install;
 mod list;
 mod run;
 mod uninstall;

@@ -30,7 +30,7 @@ fn format_text(text: &str) -> String {
 }
 
 async fn generate_docs(module: &str) -> Result<()> {
-    let dir = format!("./vpm_modules/{0}/{0}", module);
+    let dir = format!("./vpm_modules/{}", module);
     let file_path = format!("{}/{}", dir, module);
     let contents = std::fs::read_to_string(&file_path)?;
 
