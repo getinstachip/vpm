@@ -50,7 +50,8 @@ pub fn include_module_from_url(module: &str, url: &str) -> Result<()> {
     let tmp_path = PathBuf::from("/tmp").join(package_name);
 
     include_repo_from_url(url, "/tmp/")?;
-    let destination = format!("./vpm_modules/{}", module);
+    let module_name = module.strip_suffix(".v").or_else(|| module.strip_suffix(".sv")).unwrap_or(module);
+    let destination = format!("./vpm_modules/{}", module_name);
     fs::create_dir_all(&destination)?;
 
     process_module(package_name, module, destination.to_owned(), &mut HashSet::new())?;
@@ -66,7 +67,7 @@ pub fn process_module(package_name: &str, module: &str, destination: String, vis
     if !visited.insert(module_name.to_string()) {
         return Ok(HashSet::new());
     }
-    println!("Processing module '{}'", module_name);
+    println!("Including module '{}'", module_name);
     let tmp_path = PathBuf::from("/tmp").join(package_name);
     for entry in WalkDir::new(&tmp_path).into_iter().filter_map(Result::ok) {
         if entry.file_name() == module || entry.file_name().to_str() == Some(&format!("{}.sv", module_name)) || entry.file_name().to_str() == Some(&format!("{}.v", module_name)) {
@@ -203,13 +204,18 @@ pub fn get_submodules(root_node: Node, contents: &str) -> Result<HashSet<String>
 
 pub fn include_repo_from_url(url: &str, location: &str) -> Result<()> {
     let repo_path = Path::new(location).join(name_from_url(url));
+    clone_repo(url, &repo_path)?;
+    Ok(())
+}
 
+pub fn clone_repo(url: &str, repo_path: &Path) -> Result<()> {
     Command::new("git")
         .args([ "clone", "--depth", "1", "--single-branch", "--jobs", "4",
             url, repo_path.to_str().unwrap_or_default(),
         ])
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null())
         .status()
         .with_context(|| format!("Failed to clone repository from URL: '{}'", url))?;
-
     Ok(())
 }

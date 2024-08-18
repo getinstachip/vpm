@@ -65,7 +65,7 @@ pub struct Uninstall {
 )]
 pub struct Docs{
     #[arg(help = "Name of module to generate documentation for")]
-    pub module: Option<String>,
+    pub module: String,
     #[arg(help = "Url of repository to generate documentation for")]
     pub url: Option<String>,
 }
