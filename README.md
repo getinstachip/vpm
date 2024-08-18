@@ -73,7 +73,7 @@ version = "0.3.5"
 description = "Most important library in the world"
 authors = ["First Last"]
 license = [
-    {type="BSD-3-Clause", source=["folder_with_artifacts/*.whatever"]},
+    {type="GPLv3", source=["folder_with_artifacts/*.whatever"]},
     {type="CC-4", source=["folder_with_artifacts/*.whatever"]},
     {type="Copyright@RandomStuffyCompany", source=["whatever"]},
 ]
