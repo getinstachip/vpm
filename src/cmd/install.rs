@@ -1,215 +1,116 @@
-use std::collections::HashSet;
-use std::path::{Path, PathBuf};
-use std::{fs, process::Command};
 use anyhow::{Context, Result};
-use once_cell::sync::Lazy;
-use regex::Regex;
-use tree_sitter::{Node, Parser, Query, QueryCursor};
-use walkdir::WalkDir;
+use std::process::Command;
+use std::path::Path;
+use std::fs;
 
 use crate::cmd::{Execute, Install};
-use crate::toml::add_dependency;
-
-const STD_LIB_URL: &str = "https://github.com/getinstachip/openchips";
-
-static URL_REGEX: Lazy<Regex> = Lazy::new(|| {
-    Regex::new(r"^(https?://|git://|ftp://|file://|www\.)[\w\-\.]+\.\w+(/[\w\-\.]*)*/?$").unwrap()
-});
 
 impl Execute for Install {
     fn execute(&self) -> Result<()> {
-        fs::create_dir_all("./vpm_modules")?;
-        match (&self.url, &self.package_name) {
-            (Some(url), Some(name)) => {
-                println!("Installing module '{}' from URL: '{}'", name, url);
-                install_module_from_url(name, url)
-            }
-            (Some(url), None) | (None, Some(url)) if URL_REGEX.is_match(url) => {
-                println!("Installing repository from URL: '{}'", url);
-                install_repo_from_url(url, "./vpm_modules/")?;
-                add_dependency(name_from_url(url), Some(url), None, None)
-            }
-            (None, Some(name)) => {
-                println!("Installing module '{}' from standard library", name);
-                install_module_from_url(name, STD_LIB_URL)
-            }
+        match self.tool_name.as_str() {
+            "verilator" => {
+                println!("Installing Verilator...");
+                install_verilator()?;
+            },
+            "chipyard" => {
+                println!("Installing Chipyard...");
+                install_chipyard()?;
+            },
             _ => {
-                println!("Command not found!");
-                Ok(())
+                println!("Tool '{}' is not recognized for installation.", self.tool_name);
             }
         }
+
+        Ok(())
     }
 }
 
-fn name_from_url(url: &str) -> &str {
-    url.rsplit('/').find(|&s| !s.is_empty()).unwrap_or_default()
-}
+fn install_verilator() -> Result<()> {
+    println!("Installing Verilator...");
 
-pub fn install_module_from_url(module: &str, url: &str) -> Result<()> {
-    let package_name = name_from_url(url);
-    let tmp_path = PathBuf::from("/tmp").join(package_name);
+    #[cfg(target_os = "macos")]
+    {
+        println!("Running on macOS...");
+        // Install Verilator using Homebrew on macOS
+        let status = Command::new("brew")
+            .arg("install")
+            .arg("verilator")
+            .status()
+            .context("Failed to install Verilator using Homebrew")?;
 
-    install_repo_from_url(url, "/tmp/")?;
-    let destination = format!("./vpm_modules/{}", module);
-    fs::create_dir_all(&destination)?;
+        if !status.success() {
+            println!("Failed to install Verilator on macOS.");
+            return Ok(());
+        }
+    }
 
-    process_module(package_name, module, destination.to_owned(), &mut HashSet::new())?;
-    add_dependency(package_name, Some(url), None, Some(module))?;
+    #[cfg(target_os = "linux")]
+    {
+        println!("Running on Linux...");
+        // Install Verilator using apt-get on Linux
+        let status = Command::new("sudo")
+            .arg("apt-get")
+            .arg("update")
+            .status()
+            .context("Failed to update package lists")?;
 
-    fs::remove_dir_all(tmp_path)?;
+        if !status.success() {
+            println!("Failed to update package lists on Linux.");
+            return Ok(());
+        }
 
+        let status = Command::new("sudo")
+            .arg("apt-get")
+            .arg("install")
+            .arg("-y")
+            .arg("verilator")
+            .status()
+            .context("Failed to install Verilator using apt-get")?;
+
+        if !status.success() {
+            println!("Failed to install Verilator on Linux.");
+            return Ok(());
+        }
+    }
+
+    #[cfg(not(any(target_os = "macos", target_os = "linux")))]
+    {
+        println!("Unsupported operating system. Please install Verilator manually.");
+        return Ok(());
+    }
+
+    println!("Verilator installed successfully.");
     Ok(())
 }
 
-fn process_module(package_name: &str, module: &str, destination: String, visited: &mut HashSet<String>) -> Result<HashSet<String>> {
-    let module_name = module.strip_suffix(".v").or_else(|| module.strip_suffix(".sv")).unwrap_or(module);
-    if !visited.insert(module_name.to_string()) {
-        return Ok(HashSet::new());
-    }
-    println!("Processing module '{}'", module_name);
-    let tmp_path = PathBuf::from("/tmp").join(package_name);
-    for entry in WalkDir::new(&tmp_path).into_iter().filter_map(Result::ok) {
-        if entry.file_name() == module || entry.file_name().to_str() == Some(&format!("{}.sv", module_name)) || entry.file_name().to_str() == Some(&format!("{}.v", module_name)) {
-            let target_path = PathBuf::from(&destination).join(module_name);
+fn install_chipyard() -> Result<()> {
+    println!("Installing Chipyard...");
 
-            let extension = if entry.path().extension().and_then(|s| s.to_str()) == Some("sv") {
-                "sv"
-            } else {
-                "v"
-            };
+    // Define the installation directory
+    let install_dir = Path::new("/usr/local/bin");
 
-            fs::copy(
-                entry.path(),
-                target_path.with_extension(extension),
-            )?;
-
-            let contents = fs::read_to_string(entry.path())?;
-            let mut parser = Parser::new();
-            parser.set_language(tree_sitter_verilog::language())?;
-
-            let tree = parser.parse(&contents, None).context("Failed to parse file")?;
-            let root_node = tree.root_node();
-
-            let header_content = generate_headers(root_node, &contents)?;
-            fs::write(
-                target_path.with_extension(if extension == "sv" { "svh" } else { "vh" }),
-                header_content,
-            )?;
-
-            for submodule in get_submodules(root_node, &contents)? {
-                if !visited.contains(&submodule) {
-                    process_module(package_name, &format!("{}.{}", submodule, extension), destination.to_owned(), visited)?;
-                }
-            }
-
-            break;
-        }
-    }
-
-    Ok(visited.clone())
-}
-
-fn generate_headers(root_node: Node, contents: &str) -> Result<String> {
-    static QUERY: Lazy<Query> = Lazy::new(|| {
-        Query::new(
-            tree_sitter_verilog::language(),
-            "(module_declaration
-                (module_header
-                    (module_keyword)
-                    (simple_identifier) @module_name)
-                (module_nonansi_header
-                    (parameter_port_list)? @params
-                    (list_of_ports) @ports)
-            )
-            (module_declaration
-                (module_header
-                    (module_keyword)
-                    (simple_identifier) @module_name)
-                (module_ansi_header
-                    (parameter_port_list)? @params
-                    (list_of_port_declarations)? @ports)
-            )",
-        )
-        .expect("Failed to create query")
-    });
-
-    let mut query_cursor = QueryCursor::new();
-    let matches = query_cursor.matches(&QUERY, root_node, contents.as_bytes());
-
-    let mut header_content = String::new();
-
-    for match_ in matches {
-        let mut module_name = "";
-        let mut params = "";
-        let mut ports = "";
-
-        for capture in match_.captures {
-            let capture_text = &contents[capture.node.byte_range()];
-            match capture.index {
-                0 => module_name = capture_text,
-                1 => params = capture_text,
-                2 => ports = capture_text,
-                _ => {}
-            }
-        }
-        
-        header_content.push_str(&format!(
-            "module {} {}(\n{}\n{});\n\n// TODO: Add module implementation\n\nendmodule // {}\n\n",
-            module_name,
-            if params.is_empty() { "" } else { "#(\n" },
-            params,
-            ports,
-            module_name
-        ));
-    }
-
-    Ok(header_content)
-}
-
-fn get_submodules(root_node: Node, contents: &str) -> Result<HashSet<String>> {
-    static QUERY: Lazy<Query> = Lazy::new(|| {
-        Query::new(
-            tree_sitter_verilog::language(),
-            "(module_or_generate_item 
-                (module_instantiation 
-                    (simple_identifier) @module_submodule
-                )
-            )
-            (module_or_generate_item 
-                (udp_instantiation 
-                    (simple_identifier) @module_submodule
-                )
-            )",
-        )
-        .expect("Failed to create query")
-    });
-
-    let mut query_cursor = QueryCursor::new();
-    let matches = query_cursor.matches(&QUERY, root_node, contents.as_bytes());
-
-    let mut submodules = HashSet::new();
-
-    for match_ in matches {
-        for capture in match_.captures {
-            if capture.index == 0 {
-                let capture_text = &contents[capture.node.byte_range()];
-                submodules.insert(capture_text.to_string());
-            }
-        }
-    }
-
-    Ok(submodules)
-}
-
-fn install_repo_from_url(url: &str, location: &str) -> Result<()> {
-    let repo_path = Path::new(location).join(name_from_url(url));
-
-    Command::new("git")
-        .args([ "clone", "--depth", "1", "--single-branch", "--jobs", "4",
-            url, repo_path.to_str().unwrap_or_default(),
-        ])
+    // Download Chipyard binary
+    let status = Command::new("curl")
+        .args(&["-L", "https://github.com/ucb-bar/chipyard/releases/latest/download/chipyard", "-o", install_dir.join("chipyard").to_str().unwrap()])
         .status()
-        .with_context(|| format!("Failed to clone repository from URL: '{}'", url))?;
+        .context("Failed to download Chipyard binary")?;
 
+    if !status.success() {
+        println!("Failed to download Chipyard binary.");
+        return Ok(());
+    }
+
+    // Make the binary executable
+    let status = Command::new("chmod")
+        .args(&["+x", install_dir.join("chipyard").to_str().unwrap()])
+        .status()
+        .context("Failed to make Chipyard binary executable")?;
+
+    if !status.success() {
+        println!("Failed to make Chipyard binary executable.");
+        return Ok(());
+    }
+
+    println!("Chipyard installed successfully.");
     Ok(())
 }

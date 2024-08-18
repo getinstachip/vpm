@@ -2,10 +2,12 @@ use clap::Parser;
 
 #[derive(Debug, Parser)]
 pub enum Cmd {
-    Install(Install),
+    Include(Include),
+    Update(Update),
     Uninstall(Uninstall),
     Docs(Docs),
     Dotf(Dotf),
+    Install(Install),
     List(List),
 }
 
@@ -18,13 +20,26 @@ pub enum Cmd {
     propagate_version = true,
     version
 )]
-pub struct Install {
-    #[arg(help = "Name of package to install")]
+pub struct Include {
+    #[arg(help = "Name of package to include")]
     pub package_name: Option<String>,
-    #[arg(help = "URL of repository to install from")]
+    #[arg(help = "URL of repository to include from")]
     pub url: Option<String>,
-    #[arg(help="Version of package to install")]
+    #[arg(help="Version of package to include")]
     pub version: Option<String>,
+}
+
+#[derive(Debug, Parser)]
+#[clap(
+    about,
+    author,
+    disable_help_subcommand = true,
+    propagate_version = true,
+    version
+)]
+pub struct Update {
+    #[arg(help = "Name of package to update")]
+    pub package_name: String,
 }
 
 #[derive(Debug, Parser)]
@@ -66,6 +81,20 @@ pub struct Docs{
 pub struct Dotf {
     #[arg(help = "Path to top module to generate filelist for")]
     pub path_to_top_module: String,
+}
+
+#[derive(Debug, Parser)]
+#[clap(
+    about,
+    author,
+    disable_help_subcommand = true,
+    propagate_version = true,
+    version
+)]
+
+pub struct Install {
+    #[arg(help = "Name of tool to install")]
+    pub tool_name: String,
 }
 
 #[derive(Debug, Parser)]

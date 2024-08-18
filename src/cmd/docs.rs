@@ -6,13 +6,13 @@ use serde_json::json;
 
 use crate::cmd::{Execute, Docs};
 
-use super::install::install_module_from_url;
+use super::include::include_module_from_url;
 
 impl Execute for Docs {
     fn execute(&self) -> Result<()> {
         if let (Some(url), Some(module)) = (&self.url, &self.module) {
             println!("Parsing module '{}' from URL: '{}'", module, url);
-            install_module_from_url(module, url)?;
+            include_module_from_url(module, url)?;
 
             println!("Generating documentation for module '{}' from URL: '{}'", module, url);
             let rt = Runtime::new()?;
