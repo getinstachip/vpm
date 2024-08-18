@@ -5,10 +5,9 @@
 VPM is a package manager for Verilog projects being piloted at Stanford and UC Berkeley. It's designed to simplify the management, reuse, and communication of IP cores and dependencies in hardware design workflows. Easily import modules for use, manage dependencies, and create documentation to acceperatebyour design process.
 
 You'll be able to:
-- Install modules using a single (with submodule dependencies/version control automatically resolved)
+- Include full module hierarchies using a single command
+- Generate documentation for any `.v` or `.sv` module
 - Automatically generate/handle `.f` files, `.svh`, `.xcd`, `.tcl`, etc.
-- Customize your user experience with an easy to use `.toml` file
-- Automated comprehensive documentation generation for modules
 
 ## Installation
 
