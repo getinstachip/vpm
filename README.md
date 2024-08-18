@@ -22,17 +22,7 @@ After installation, you can use the `vpm` command in any terminal.
 
 ### Basic Commands
 
-`vpm init <project_name> [version] [description] [authors] [license]`: initializes a new VPM project and create a `vpm.toml` file with the following fields
-- Options:
-  - `<project_name>`: Name of the project 
-  - `[version]`: User-specified version of the project
-  - `[description]`: Description of the project (can be enclosed by quotes)
-  - `[authors]`: List of authors (`", "` separated, e.g. `"John Doe, Jane Doe"`)
-  - `[license]`: License of the project (`", "` separated license-location pairs, e.g. `"MIT: <source repo #1>, Apache-2.0: <source repo #2>"`)
-
-*Example video coming soon!*
-
-`vpm install <module.v> <repo_url> [version]`: installs a Verilog (.v) file and all submodule dependencies from the given repoand updates the `vpm.toml` file with the new module's deatils
+`vpm include <module.v> <repo_url> [version]`: includes a Verilog (.v) file and all submodule dependencies from the given repoand updates the `vpm.toml` file with the new module's deatils
 - Options:
   - `<module.v>`: Verilog module to install
   - `<repo_url>`: Link to the repository where the module is stored
