@@ -16,6 +16,10 @@ impl Execute for Install {
                 println!("Installing Chipyard...");
                 install_chipyard()?;
             },
+            "openroad" => {
+                println!("Installing OpenROAD...");
+                install_openroad()?;
+            },
             _ => {
                 println!("Tool '{}' is not recognized for installation.", self.tool_name);
             }
@@ -112,5 +116,63 @@ fn install_chipyard() -> Result<()> {
     }
 
     println!("Chipyard installed successfully.");
+    Ok(())
+}
+
+fn install_openroad() -> Result<()> {
+    println!("Installing OpenROAD...");
+
+    #[cfg(target_os = "linux")]
+    {
+        println!("Running on Linux...");
+        // Install OpenROAD using apt on Linux
+        let status = Command::new("sudo")
+            .arg("apt")
+            .arg("update")
+            .status()
+            .context("Failed to update package lists")?;
+
+        if !status.success() {
+            println!("Failed to update package lists on Linux.");
+            return Ok(());
+        }
+
+        let status = Command::new("sudo")
+            .arg("apt")
+            .arg("install")
+            .arg("-y")
+            .arg("openroad")
+            .status()
+            .context("Failed to install OpenROAD using apt")?;
+
+        if !status.success() {
+            println!("Failed to install OpenROAD on Linux.");
+            return Ok(());
+        }
+    }
+
+    #[cfg(target_os = "macos")]
+    {
+        println!("Running on macOS...");
+        // Install OpenROAD using Homebrew on macOS
+        let status = Command::new("brew")
+            .arg("install")
+            .arg("openroad/openroad/openroad")
+            .status()
+            .context("Failed to install OpenROAD using Homebrew")?;
+
+        if !status.success() {
+            println!("Failed to install OpenROAD on macOS.");
+            return Ok(());
+        }
+    }
+
+    #[cfg(not(any(target_os = "macos", target_os = "linux")))]
+    {
+        println!("Unsupported operating system. Please install OpenROAD manually.");
+        return Ok(());
+    }
+
+    println!("OpenROAD installed successfully.");
     Ok(())
 }
