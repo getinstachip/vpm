@@ -21,17 +21,26 @@ After installation, you can use the `vpm` command in any terminal.
 
 ### Basic Commands
 
-`vpm include <module.v> <repo_url> [version]`: includes a Verilog (.v) file and all submodule dependencies from the given repoand updates the `vpm.toml` file with the new module's deatils
+## Full command list
+- `vpm include <module.sv> <repo_url>`: Include full module hierarchy
+- `vpm docs <module.sv>`: Generate documentation for any module (highlighting bugs and edge cases)
+- `vpm install <tool>`: Auto-integrate an open-source tool without manual setup
+- `vpm update <module.sv>`: Update module to latest version
+- `vpm uninstall <module.sv>`: Remove a module from your project
+- `vpm list`: List all modules in our standard library
+- `vpm dotf <module.sv>`:  Generate a .f filelist when exporting your project
+  
+## Detailed overview
+`vpm include <module.sv> <repo_url>`: includes a .v or .sv file and all submodule dependencies from the given repoand updates the `vpm.toml` file with the new module's deatils
 - Options:
-  - `<module.v>`: Verilog module to install
+  - `<module.sv>`: Module to install
   - `<repo_url>`: Link to the repository where the module is stored
-  - `[version]`: User-specified version of the module
 
 ![vpm_install](https://github.com/user-attachments/assets/481384eb-5b71-4284-b9e3-08ea807afa34)
 
-`vpm docs <module.v> <repo_url>`: generates a complete Markdown README documentation file for the given module 
+`vpm docs <module.sv> <repo_url>`: generates a complete Markdown README documentation file for the given module 
 - Options:
-  - `<module.v>`: Verilog module to generate documentation for
+  - `<module.sv>`: Verilog module to generate documentation for
   - `<repo_url>`: Link to the repository where the module is stored
 &nbsp;
 - Generation location can be overwritten in `vpm.toml`. All documentaion contains the following sections:
@@ -45,9 +54,9 @@ After installation, you can use the `vpm` command in any terminal.
 
 ![docs](https://github.com/user-attachments/assets/9f1b9cb4-05e1-4e69-9440-16d498277f0f)
 
-`vpm dotf <module.v>`: generates a ".f" file list for module.v and for all locally scoped defines for the submodules and links everything accordingly
+`vpm dotf <module.sv>`: generates a ".f" file list for module.sv and for all locally scoped defines for the submodules and links everything accordingly
 - Options:
-  - `<module.v>`: Local top Verilog module to generate the file list for
+  - `<module.sv>`: Local top Verilog module to generate the file list for
 
 *Example video coming soon!*
 
