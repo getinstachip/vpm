@@ -1,15 +1,24 @@
 use anyhow::{Context, Result};
 use std::process::Command;
 use std::path::Path;
+use std::fs;
+
 use crate::cmd::{Execute, Install};
 
 impl Execute for Install {
     fn execute(&self) -> Result<()> {
-        if self.tool_name == "verilator" {
-            println!("Including Verilator...");
-            install_verilator()?;
-        } else {
-            println!("Tool '{}' is not recognized for inclusion.", self.tool_name);
+        match self.tool_name.as_str() {
+            "verilator" => {
+                println!("Installing Verilator...");
+                install_verilator()?;
+            },
+            "chipyard" => {
+                println!("Installing Chipyard...");
+                install_chipyard()?;
+            },
+            _ => {
+                println!("Tool '{}' is not recognized for installation.", self.tool_name);
+            }
         }
 
         Ok(())
@@ -17,32 +26,20 @@ impl Execute for Install {
 }
 
 fn install_verilator() -> Result<()> {
-    // Clone the Verilator repository
-    let status = Command::new("git")
-        .arg("clone")
-        .arg("https://github.com/verilator/verilator.git")
-        .status()
-        .context("Failed to clone Verilator repository")?;
-
-    if !status.success() {
-        println!("Failed to clone Verilator repository.");
-        return Ok(());
-    }
+    println!("Installing Verilator...");
 
     #[cfg(target_os = "macos")]
     {
         println!("Running on macOS...");
-        // Install necessary tools using Homebrew on macOS
+        // Install Verilator using Homebrew on macOS
         let status = Command::new("brew")
             .arg("install")
-            .arg("autoconf")
-            .arg("automake")
-            .arg("libtool")
+            .arg("verilator")
             .status()
-            .context("Failed to install tools using Homebrew")?;
+            .context("Failed to install Verilator using Homebrew")?;
 
         if !status.success() {
-            println!("Failed to install necessary tools on macOS.");
+            println!("Failed to install Verilator on macOS.");
             return Ok(());
         }
     }
@@ -50,52 +47,70 @@ fn install_verilator() -> Result<()> {
     #[cfg(target_os = "linux")]
     {
         println!("Running on Linux...");
-        // Install necessary tools using apt-get on Linux
+        // Install Verilator using apt-get on Linux
+        let status = Command::new("sudo")
+            .arg("apt-get")
+            .arg("update")
+            .status()
+            .context("Failed to update package lists")?;
+
+        if !status.success() {
+            println!("Failed to update package lists on Linux.");
+            return Ok(());
+        }
+
         let status = Command::new("sudo")
             .arg("apt-get")
             .arg("install")
             .arg("-y")
-            .arg("autoconf")
-            .arg("automake")
-            .arg("libtool")
+            .arg("verilator")
             .status()
-            .context("Failed to install tools using apt-get")?;
+            .context("Failed to install Verilator using apt-get")?;
 
         if !status.success() {
-            println!("Failed to install necessary tools on Linux.");
+            println!("Failed to install Verilator on Linux.");
             return Ok(());
         }
     }
 
-    // Change into the Verilator directory
-    let verilator_dir = Path::new("verilator");
-    if !verilator_dir.exists() {
-        println!("Verilator directory does not exist.");
+    #[cfg(not(any(target_os = "macos", target_os = "linux")))]
+    {
+        println!("Unsupported operating system. Please install Verilator manually.");
         return Ok(());
     }
 
-    // Run autoconf
-    let status = Command::new("autoconf")
-        .current_dir(verilator_dir)
+    println!("Verilator installed successfully.");
+    Ok(())
+}
+
+fn install_chipyard() -> Result<()> {
+    println!("Installing Chipyard...");
+
+    // Define the installation directory
+    let install_dir = Path::new("/usr/local/bin");
+
+    // Download Chipyard binary
+    let status = Command::new("curl")
+        .args(&["-L", "https://github.com/ucb-bar/chipyard/releases/latest/download/chipyard", "-o", install_dir.join("chipyard").to_str().unwrap()])
         .status()
-        .context("Failed to run autoconf")?;
+        .context("Failed to download Chipyard binary")?;
 
     if !status.success() {
-        println!("Failed to run autoconf.");
+        println!("Failed to download Chipyard binary.");
         return Ok(());
     }
 
-    // Run ./configure
-    let status = Command::new("./configure")
-        .current_dir(verilator_dir)
+    // Make the binary executable
+    let status = Command::new("chmod")
+        .args(&["+x", install_dir.join("chipyard").to_str().unwrap()])
         .status()
-        .context("Failed to run ./configure")?;
+        .context("Failed to make Chipyard binary executable")?;
 
-    if status.success() {
-        println!("Verilator configured successfully.");
-    } else {
-        println!("Failed to configure Verilator.");
+    if !status.success() {
+        println!("Failed to make Chipyard binary executable.");
+        return Ok(());
     }
 
+    println!("Chipyard installed successfully.");
     Ok(())
 }

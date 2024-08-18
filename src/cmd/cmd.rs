@@ -7,6 +7,7 @@ pub enum Cmd {
     Uninstall(Uninstall),
     Docs(Docs),
     Dotf(Dotf),
+    Install(Install),
     List(List),
 }
 
@@ -80,6 +81,20 @@ pub struct Docs{
 pub struct Dotf {
     #[arg(help = "Path to top module to generate filelist for")]
     pub path_to_top_module: String,
+}
+
+#[derive(Debug, Parser)]
+#[clap(
+    about,
+    author,
+    disable_help_subcommand = true,
+    propagate_version = true,
+    version
+)]
+
+pub struct Install {
+    #[arg(help = "Name of tool to install")]
+    pub tool_name: String,
 }
 
 #[derive(Debug, Parser)]
