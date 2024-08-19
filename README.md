@@ -19,28 +19,27 @@ curl -f https://getinstachip.com/install.sh | sh
 
 After installation, you can use the `vpm` command in any terminal.
 
-### Basic Commands
-
 ## Full command list
 - `vpm include <module.sv> <repo_url>`: Include full module hierarchy
-- `vpm docs <module.sv>`: Generate documentation for any module (highlighting bugs and edge cases)
+- `vpm docs <module.sv> <repo_url>`: Generate documentation for any module (highlighting bugs and edge cases)
 - `vpm install <tool>`: Auto-integrate an open-source tool without manual setup
 - `vpm update <module.sv>`: Update module to latest version
 - `vpm uninstall <module.sv>`: Remove a module from your project
 - `vpm list`: List all modules in our standard library
 - `vpm dotf <module.sv>`:  Generate a .f filelist when exporting your project
   
-## Detailed overview
-`vpm include <module.sv> <repo_url>`: includes a .v or .sv file and all submodule dependencies from the given repoand updates the `vpm.toml` file with the new module's deatils
+### include
+`vpm include <module.sv> <repo_url>`: includes a `.v` or `.sv` file and all submodule dependencies from the given repoand updates the `vpm.toml` file with the new module's deatils
 - Options:
   - `<module.sv>`: Module to install
   - `<repo_url>`: Link to the repository where the module is stored
 
 ![vpm_install](https://github.com/user-attachments/assets/481384eb-5b71-4284-b9e3-08ea807afa34)
 
+### docs
 `vpm docs <module.sv> <repo_url>`: generates a complete Markdown README documentation file for the given module 
 - Options:
-  - `<module.sv>`: Verilog module to generate documentation for
+  - `<module.sv>`: Verilog or SystemVerilog module to generate documentation for
   - `<repo_url>`: Link to the repository where the module is stored
 &nbsp;
 - Generation location can be overwritten in `vpm.toml`. All documentaion contains the following sections:
@@ -54,7 +53,42 @@ After installation, you can use the `vpm` command in any terminal.
 
 ![docs](https://github.com/user-attachments/assets/9f1b9cb4-05e1-4e69-9440-16d498277f0f)
 
-`vpm dotf <module.sv>`: generates a ".f" file list for module.sv and for all locally scoped defines for the submodules and links everything accordingly
+### install
+`vpm install <tool>`: Automatically installs and sets up an open-source tool for integration into your project
+- Options:
+  - `<tool>`: Tool to install
+&nbsp;
+- Currently supported tools
+  - Verilator
+  - Chipyard
+  - OpenROAD
+
+*Example video coming soon!*
+
+### update
+`vpm update <module.sv>`: Updates an included Verilog or SystemVerilog module to latest version and updates verision control accordingly
+- Options:
+  - `<module.sv>`: Module to update
+
+*Example video coming soon!*
+
+### uninstall
+`vpm uninstall <module.sv>`: Removes an included Verilog or SystemVerilog module from your project and updates version control accordingly
+- Options:
+  - `<module.sv>`: Module to uninstall
+
+*Example video coming soon!*
+
+### list
+`vpm list`: Lists all modules in our [standard Verilog library](https://github.com/getinstachip/openchips)
+- Current module lists:
+  - Common modules
+  - RISC-V
+
+*Example video coming soon!*
+
+### dotf
+`vpm dotf <module.sv>`: generates a `.f` file list for module.sv and for all locally scoped defines for the submodules and links everything accordingly
 - Options:
   - `<module.sv>`: Local top Verilog module to generate the file list for
 
