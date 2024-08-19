@@ -21,7 +21,7 @@ impl Execute for Cmd {
             Cmd::Include(cmd) => cmd.execute(),
             Cmd::Update(cmd) => cmd.execute(),
             Cmd::Uninstall(cmd) => cmd.execute(),
-            Cmd::Docs(cmd) => cmd.execute(),
+            //Cmd::Docs(cmd) => cmd.execute(),
             Cmd::Dotf(cmd) => cmd.execute(),
             Cmd::Install(cmd) => cmd.execute(),
             Cmd::List(cmd) => cmd.execute(),
