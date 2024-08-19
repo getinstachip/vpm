@@ -55,20 +55,20 @@ pub struct Uninstall {
     pub package_name: String,
 }
 
-#[derive(Debug, Parser)]
-#[clap(
-    about,
-    author,
-    disable_help_subcommand = true,
-    propagate_version = true,
-    version
-)]
-pub struct Docs{
-    #[arg(help = "Name of module to generate documentation for")]
-    pub module: String,
-    #[arg(help = "Url of repository to generate documentation for")]
-    pub url: Option<String>,
-}
+// #[derive(Debug, Parser)]
+// #[clap(
+//     about,
+//     author,
+//     disable_help_subcommand = true,
+//     propagate_version = true,
+//     version
+// )]
+// pub struct Docs{
+//     #[arg(help = "Name of module to generate documentation for")]
+//     pub module: String,
+//     #[arg(help = "Url of repository to generate documentation for")]
+//     pub url: Option<String>,
+// }
 
 #[derive(Debug, Parser)]
 #[clap(
