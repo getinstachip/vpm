@@ -24,4 +24,4 @@ toml = "0.8.19"
 indicatif = "0.17.8"
 
 [build-dependencies]
-cc="*"
+cc="*".
