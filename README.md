@@ -2,7 +2,7 @@
 [![release](https://github.com/getinstachip/vpm/actions/workflows/release.yml/badge.svg)](https://github.com/getinstachip/vpm/actions/workflows/release.yml)
 ![downloads](https://img.shields.io/github/downloads/getinstachip/vpm/total?logo=github&logoColor=white&style=flat-square)
 
-VPM is a package manager for Verilog projects being piloted at Stanford and UC Berkeley. It's designed to simplify the management, reuse, and communication of IP cores and dependencies in hardware design workflows. Easily import modules for use, manage dependencies, and create documentation to acceperatebyour design process.
+VPM is a package manager for Verilog projects being piloted at Stanford and UC Berkeley. It's designed to simplify the management, reuse, and communication of IP cores and dependencies in hardware design workflows. Easily import modules for use, manage dependencies, and create documentation to accelerate your design process.
 
 You'll be able to:
 - `vpm include` full module hierarchies using a single command
@@ -23,18 +23,18 @@ After installation, you can use the `vpm` command in any terminal.
 - `vpm include <module.sv> <repo_url>`: Include full module hierarchy
 - `vpm docs <module.sv> <repo_url>`: Generate documentation for any module (highlighting bugs and edge cases)
 - `vpm install <tool>`: Auto-integrate an open-source tool without manual setup
-- `vpm update <module.sv>`: Update module to latest version
+- `vpm update <module.sv>`: Update module to the latest version
 - `vpm uninstall <module.sv>`: Remove a module from your project
 - `vpm list`: List all modules in our standard library
-- `vpm dotf <module.sv>`:  Generate a .f filelist when exporting your project
+- `vpm dotf <module.sv>`:  Generate a `.f` filelist when exporting your project
   
 ### include
-`vpm include <module.sv> <repo_url>`: includes a `.v` or `.sv` file and all submodule dependencies from the given repoand updates the `vpm.toml` file with the new module's deatils
+`vpm include <module.sv> <repo_url>`: includes a `.v` or `.sv` file and all submodule dependencies from the given repo and updates the `vpm.toml` file with the new module's details
 - Options:
   - `<module.sv>`: Module to install
   - `<repo_url>`: Link to the repository where the module is stored
 
-![vpm_install](https://github.com/user-attachments/assets/481384eb-5b71-4284-b9e3-08ea807afa34)
+![include](https://github.com/user-attachments/assets/481384eb-5b71-4284-b9e3-08ea807afa34)
 
 ### docs
 `vpm docs <module.sv> <repo_url>`: generates a complete Markdown README documentation file for the given module 
@@ -42,7 +42,7 @@ After installation, you can use the `vpm` command in any terminal.
   - `<module.sv>`: Verilog or SystemVerilog module to generate documentation for
   - `<repo_url>`: Link to the repository where the module is stored
 &nbsp;
-- Generation location can be overwritten in `vpm.toml`. All documentaion contains the following sections:
+- Generation location can be overwritten in `vpm.toml`. All documentation contains the following sections:
   1. Overview and module description
   2. Pinout diagram
   3. Table of ports
@@ -63,10 +63,10 @@ After installation, you can use the `vpm` command in any terminal.
   - Chipyard
   - OpenROAD
 
-*Example video coming soon!*
+![install](https://github.com/user-attachments/assets/78569e63-b2d7-41e2-9690-8f18f50516bc)
 
 ### update
-`vpm update <module.sv>`: Updates an included Verilog or SystemVerilog module to latest version and updates verision control accordingly
+`vpm update <module.sv>`: Updates an included Verilog or SystemVerilog module to the latest version and updates version control accordingly
 - Options:
   - `<module.sv>`: Module to update
 
@@ -85,10 +85,10 @@ After installation, you can use the `vpm` command in any terminal.
   - Common modules
   - RISC-V
 
-*Example video coming soon!*
+![list](https://github.com/user-attachments/assets/0e36a7cd-70bd-406d-9696-8a5550fff99b)
 
 ### dotf
-`vpm dotf <module.sv>`: generates a `.f` file list for module.sv and for all locally scoped defines for the submodules and links everything accordingly
+`vpm dotf <module.sv>`: generates a `.f` file list for a Verilog or SystemVerilog module and for all locally scoped defines for the submodules and links everything accordingly
 - Options:
   - `<module.sv>`: Local top Verilog module to generate the file list for
 
@@ -96,7 +96,7 @@ After installation, you can use the `vpm` command in any terminal.
 
 ## Configuration
 
-Close your eyes, relax. Submodule dependencies are taken care of with our parser. Use the appropriate fields in `vpm.toml` to adjust the properties of your project. We are working on handling synthesis collateral.
+Close your eyes and relax. Our parser takes care of submodule dependencies. Use the appropriate fields in `vpm.toml` to adjust your project's properties. We are working on handling synthesis collateral.
 
 Example `vpm.toml` file:
 
@@ -150,7 +150,7 @@ docsoption2=false
   - `version`: User-specified version of the dependency
   - `alias`: Alias for the dependency
   - `modules`: List of modules in the dependency, including submodule dependencies
-  - `branch`: Branch of repository the dependency is on
+  - `branch`: Branch of the repository the dependency is on
   - `commit`: Commit hash of the repository the dependency is on
 &nbsp;
 - `[dev-dependencies]`: Contains the development dependencies for the library/project
@@ -158,14 +158,14 @@ docsoption2=false
   - `version`: User-specified version of the dependency
   - `alias`: Alias for the dependency
   - `modules`: List of modules in the dependency, including submodule dependencies
-  - `branch`: Branch of repository the dependency is on
+  - `branch`: Branch of the repository the dependency is on
   - `commit`: Commit hash of the repository the dependency is on
 
 ## Enterprise version
 
 We are receiving overwhelming interest for an enterprise version with additional features and integrations to manage internal IP for ASIC/FPGA companies.
 
-[Join the waitlist if you're interested](https://www.waitlistr.com/lists/ce1719b7/vpm-enterprise-version-waitlist), we're launching an enterprise batch pilot soon.
+[Join the waitlist if you're interested](https://www.waitlistr.com/lists/ce1719b7/vpm-enterprise-version-waitlist). We're launching an enterprise batch pilot soon.
 
 ## Support
 
