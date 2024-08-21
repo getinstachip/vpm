@@ -5,7 +5,6 @@ pub enum Cmd {
     Include(Include),
     Update(Update),
     Uninstall(Uninstall),
-    Docs(Docs),
     Dotf(Dotf),
     Install(Install),
     List(List),

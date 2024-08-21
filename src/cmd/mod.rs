@@ -1,5 +1,4 @@
 mod cmd;
-mod docs;
 mod include;
 mod update;
 mod uninstall;
