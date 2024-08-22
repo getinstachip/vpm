@@ -32,17 +32,17 @@ impl Execute for Include {
             (Some(url), Some(name)) => {
                 println!("Including module '{}' from URL: '{}'", name, url);
                 include_module_from_url(name, url);
-                add_dependency(Some(url), None, None)
+                add_dependency(url, None)
             }
             (Some(url), None) | (None, Some(url)) if URL_REGEX.is_match(url) => {
                 println!("Including repository from URL: '{}'", url);
                 include_repo_from_url(url, "./vpm_modules/")?;
-                add_dependency(Some(url), None, None)
+                add_dependency(url, None)
             }
             (None, Some(name)) => {
                 println!("Including module '{}' from standard library", name);
                 include_module_from_url(name, STD_LIB_URL);
-                add_dependency(Some(STD_LIB_URL), None, None)
+                add_dependency(STD_LIB_URL, None)
             }
             _ => {
                 println!("Command not found!");

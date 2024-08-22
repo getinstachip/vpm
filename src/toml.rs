@@ -3,6 +3,10 @@ use std::collections::HashMap;
 use std::fs;
 use anyhow::Result;
 use std::collections::HashSet;
+use toml::value::Value;
+use toml::Table;
+use toml::map::Map;
+use std::collections::BTreeMap;
 
 #[derive(Serialize, Deserialize, Debug)]
 struct Package {
@@ -13,20 +17,9 @@ struct Package {
     license: String,
 }
 
-#[derive(Serialize, Deserialize, Debug, Default)]
-pub struct Dependency {
-    git: Option<String>,
-    version: Option<String>,
-    commit: Option<String>,
-    #[serde(default, skip_serializing_if = "HashSet::is_empty")]
-    modules: HashSet<String>,
-}
-
-#[derive(Serialize, Deserialize, Debug, Default)]
+#[derive(Serialize, Deserialize, Debug)]
 struct VpmToml {
-    package: Package,
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    dependencies: Vec<Dependency>,
+    dependencies: Table,
 }
 
 impl Default for Package {
@@ -41,59 +34,65 @@ impl Default for Package {
     }
 }
 
-impl Dependency {
-    fn new() -> Self {
-        Dependency {
-            git: None,
-            version: None,
-            commit: None,
-            modules: HashSet::new(),
-        }
-    }
-
-    pub fn get_url(&self) -> Option<&str> {
-        self.git.as_deref()
-    }
-}
-
-impl Clone for Dependency {
-    fn clone(&self) -> Self {
-        Dependency {
-            git: self.git.clone(),
-            version: self.version.clone(),
-            commit: self.commit.clone(),
-            modules: self.modules.clone(),
+impl Default for VpmToml {
+    fn default() -> Self {
+        VpmToml {
+            dependencies: Table::new(),
         }
     }
 }
 
-impl VpmToml {
-    fn add_dependency(&mut self, git: Option<&str>, version: Option<&str>, commit: Option<&str>) {
-        let mut dependency = Dependency::new();
-        dependency.git = git.map(String::from);
-        dependency.version = version.map(String::from);
-        dependency.commit = commit.map(String::from);
-        self.dependencies.push(dependency);
+impl VpmToml {    
+    pub fn add_dependency(&mut self, git: &str, commit: Option<&str>) {
+        let mut dependency = Table::new();
+        dependency.insert("modules".to_string(), Value::Array(vec![]));
+        dependency.insert("commit".to_string(), Value::String(commit.unwrap_or_default().to_string()));
+        self.dependencies.insert(git.to_string(), Value::Table(dependency));
     }
 
-    fn add_module_to_dependency(&mut self, module: &str) {
-        self.dependencies.last_mut().unwrap().modules.insert(module.to_string());
+    pub fn get_dependencies(&self) -> Table {
+        self.dependencies.clone()
     }
 }
 
 pub fn init() -> Result<()> {
     let vpm_toml = VpmToml::default();
-    fs::write("vpm.toml", toml::to_string(&vpm_toml)?)?;
+    let toml_string = toml::to_string(&vpm_toml)?;
+    fs::write("vpm.toml", toml_string)?;
     Ok(())
 }
 
-pub fn add_dependency(git: Option<&str>, version: Option<&str>, commit: Option<&str>) -> Result<()> {
-    let mut vpm_toml = fs::read_to_string("vpm.toml")
-        .map(|contents| toml::from_str(&contents))
-        .unwrap_or_else(|_| Ok(VpmToml::default()))?;
-
-    vpm_toml.add_dependency(git, version, commit);
-
-    fs::write("vpm.toml", toml::to_string(&vpm_toml)?)?;
+pub fn add_dependency(git: &str, commit: Option<&str>) -> Result<()> {
+    let toml_content = fs::read_to_string("vpm.toml")?;
+    let mut vpm_toml: VpmToml = toml::from_str(&toml_content)?;
+    vpm_toml.add_dependency(git, commit);
+    let mut root = Table::new();
+    root.insert("dependencies".to_string(), Value::Table(vpm_toml.get_dependencies()));
+    let toml_string = format_custom_toml(&root);
+    fs::write("vpm.toml", toml_string)?;
     Ok(())
+}
+
+fn format_custom_toml(root: &Map<String, Value>) -> String {
+    let deps = root.get("dependencies").and_then(|v| v.as_table()).unwrap();
+    let (key, value) = deps.iter().next().unwrap();
+    let table = value.as_table().unwrap();
+    
+    let formatted_table = table.iter()
+        .map(|(k, v)| format!("{}={}", k, format_value(v)))
+        .collect::<Vec<_>>()
+        .join(", ");
+
+    format!("[dependencies]\n\"{}\" = {{{}}}", key, formatted_table)
+}
+
+fn format_value(value: &Value) -> String {
+    match value {
+        Value::String(s) => format!("\"{}\"", s),
+        Value::Array(arr) => format!("[{}]", arr.iter()
+            .map(|v| format_value(v))
+            .collect::<Vec<_>>()
+            .join(", ")),
+        _ => value.to_string(),
+    }
 }
