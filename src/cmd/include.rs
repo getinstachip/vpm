@@ -19,14 +19,14 @@ static URL_REGEX: Lazy<Regex> = Lazy::new(|| {
 impl Execute for Include {
     fn execute(&self) -> Result<()> {
         // Check if vpm.toml exists and has [package] section
-        let vpm_toml_path = Path::new("vpm.toml");
-        if !vpm_toml_path.exists() || !fs::read_to_string(vpm_toml_path)
-            .map(|contents| contents.contains("[package]"))
-            .unwrap_or(false)
-        {
-            crate::toml::init()?;
-            println!("Initialized new vpm.toml file.");
-        }
+        // let vpm_toml_path = Path::new("vpm.toml");
+        // if !vpm_toml_path.exists() || !fs::read_to_string(vpm_toml_path)
+        //     .map(|contents| contents.contains("[package]"))
+        //     .unwrap_or(false)
+        // {
+        //     crate::toml::init()?;
+        //     println!("Initialized new vpm.toml file.");
+        // }
         fs::create_dir_all("./vpm_modules")?;
         match (&self.url, &self.package_name) {
             (Some(url), Some(name)) => {
