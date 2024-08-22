@@ -18,20 +18,31 @@ static URL_REGEX: Lazy<Regex> = Lazy::new(|| {
 
 impl Execute for Include {
     fn execute(&self) -> Result<()> {
+        // Check if vpm.toml exists and has [package] section
+        let vpm_toml_path = Path::new("vpm.toml");
+        if !vpm_toml_path.exists() || !fs::read_to_string(vpm_toml_path)
+            .map(|contents| contents.contains("[package]"))
+            .unwrap_or(false)
+        {
+            crate::toml::init()?;
+            println!("Initialized new vpm.toml file.");
+        }
         fs::create_dir_all("./vpm_modules")?;
         match (&self.url, &self.package_name) {
             (Some(url), Some(name)) => {
                 println!("Including module '{}' from URL: '{}'", name, url);
-                include_module_from_url(name, url)
+                include_module_from_url(name, url);
+                add_dependency(Some(url), None, None)
             }
             (Some(url), None) | (None, Some(url)) if URL_REGEX.is_match(url) => {
                 println!("Including repository from URL: '{}'", url);
                 include_repo_from_url(url, "./vpm_modules/")?;
-                add_dependency(name_from_url(url), Some(url), None, None)
+                add_dependency(Some(url), None, None)
             }
             (None, Some(name)) => {
                 println!("Including module '{}' from standard library", name);
-                include_module_from_url(name, STD_LIB_URL)
+                include_module_from_url(name, STD_LIB_URL);
+                add_dependency(Some(STD_LIB_URL), None, None)
             }
             _ => {
                 println!("Command not found!");
@@ -55,7 +66,6 @@ pub fn include_module_from_url(module: &str, url: &str) -> Result<()> {
     fs::create_dir_all(&destination)?;
 
     process_module(package_name, module, destination.to_owned(), &mut HashSet::new())?;
-    add_dependency(package_name, Some(url), None, Some(module))?;
 
     fs::remove_dir_all(tmp_path)?;
 
