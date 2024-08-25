@@ -20,10 +20,8 @@ pub enum Cmd {
     version
 )]
 pub struct Include {
-    #[arg(help = "Full module path of package to include")]
-    pub package_path: Option<String>,
     #[arg(help = "URL of repository to include from")]
-    pub url: Option<String>,
+    pub url: String,
 }
 
 #[derive(Debug, Parser)]

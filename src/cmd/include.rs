@@ -7,39 +7,33 @@ use once_cell::sync::Lazy;
 use regex::Regex;
 use tree_sitter::{Node, Parser, Query, QueryCursor};
 use walkdir::WalkDir;
-use walkdir::DirEntry;
 
 use crate::cmd::{Execute, Include};
 use crate::toml::add_dependency;
 
-const STD_LIB_URL: &str = "https://github.com/getinstachip/openchips";
-
 static URL_REGEX: Lazy<Regex> = Lazy::new(|| {
-    Regex::new(r"^(https?://|git://|ftp://|file://|www\.)[\w\-\.]+\.\w+(/[\w\-\.]*)*/?$").unwrap()
+    Regex::new(r"^https://github\.com/[\w-]+/[\w.-]+(?:/)?$").unwrap()
 });
 
 impl Execute for Include {
     fn execute(&self) -> Result<()> {
         fs::create_dir_all("./vpm_modules")?;
-        match (&self.url, &self.package_path) {
-            (Some(url), Some(path)) => {
-                println!("Including module '{}' from URL: '{}'", path, url);
-                include_module_from_url(path, url)
-            }
-            (Some(url), None) | (None, Some(url)) if URL_REGEX.is_match(url) => {
-                println!("Including repository from URL: '{}'", url);
-                include_repo_from_url(url, "./vpm_modules/")?;
-                add_dependency(name_from_url(url), Some(url), None, None)
-            }
-            (None, Some(path)) => {
-                println!("Including module '{}' from standard library", path);
-                include_module_from_url(path, STD_LIB_URL)
-            }
-            _ => {
-                println!("Command not found!");
-                Ok(())
-            }
+        println!("Including repository from URL: '{}'", self.url);
+        include_repo_from_url(&self.url, "./vpm_modules/")?;
+        // add_dependency(name_from_url(&self.url), Some(&self.url), None, None)?;
+           
+        // Prompt for specific module path
+        println!("Enter the specific module path you want to include:");
+        let mut module_path = String::new();
+        std::io::stdin().read_line(&mut module_path)?;
+        let module_path = module_path.trim();
+        
+        if !module_path.is_empty() {
+            println!("Including module '{}' from URL: '{}'", module_path, self.url);
+            include_module_from_url(module_path, &self.url)?;
         }
+        
+        Ok(())
     }
 }
 
