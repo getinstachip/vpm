@@ -42,14 +42,6 @@ impl Default for Package {
 }
 
 impl Dependency {
-    fn new() -> Self {
-        Dependency {
-            git: None,
-            version: None,
-            modules: Vec::new(),
-        }
-    }
-
     pub fn get_url(&self) -> Option<&str> {
         self.git.as_deref()
     }
@@ -130,16 +122,16 @@ pub fn get_dependency(package_name: &str) -> Option<Dependency> {
     vpm_toml.get_dependency(package_name).cloned()
 }
 
-pub fn remove_dependency(package_name: &str) -> Result<()> {
-    let mut vpm_toml = fs::read_to_string("vpm.toml")
-        .map(|contents| toml::from_str(&contents))
-        .unwrap_or_else(|_| Ok(VpmToml::default()))?;
+// pub fn remove_dependency(package_name: &str) -> Result<()> {
+//     let mut vpm_toml = fs::read_to_string("vpm.toml")
+//         .map(|contents| toml::from_str(&contents))
+//         .unwrap_or_else(|_| Ok(VpmToml::default()))?;
 
-    vpm_toml.remove_dependency(package_name);
+//     vpm_toml.remove_dependency(package_name);
 
-    fs::write("vpm.toml", toml::to_string(&vpm_toml)?)?;
-    Ok(())
-}
+//     fs::write("vpm.toml", toml::to_string(&vpm_toml)?)?;
+//     Ok(())
+// }
 
 pub fn update_dependency(package_name: &str, git: Option<&str>, version: Option<&str>, module: Option<&str>) -> Result<()> {
     let mut vpm_toml = fs::read_to_string("vpm.toml")
