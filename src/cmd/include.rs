@@ -15,6 +15,8 @@ impl Execute for Include {
     fn execute(&self) -> Result<()> {
         fs::create_dir_all("./vpm_modules")?;
         println!("Including repository from URL: '{}'", self.url);
+        let tmp_path = PathBuf::from("/tmp").join(name_from_url(&self.url));
+        include_repo_from_url(&self.url, "/tmp/")?;
         // include_repo_from_url(&self.url, "./vpm_modules/")?;
         // add_dependency(name_from_url(&self.url), Some(&self.url), None, None)?;
            
@@ -31,7 +33,7 @@ impl Execute for Include {
             println!("Including entire repository");
             include_repo_from_url(&self.url, "./vpm_modules/")?;
         }
-        
+        fs::remove_dir_all(tmp_path)?;
         Ok(())
     }
 }
@@ -44,23 +46,9 @@ fn is_full_filepath(path: &str) -> bool {
     // Check if the path contains directory separators
     path.contains('/') || path.contains('\\')
 }
-fn filepath_to_direntry(filepath: &str) -> Option<walkdir::DirEntry> {
-    let path = std::path::Path::new(filepath);
-    let parent = path.parent()?;
-    
-    WalkDir::new(parent)
-        .follow_links(true)
-        .into_iter()
-        .filter_map(Result::ok)
-        .find(|entry| entry.path() == path)
-}
-
 
 pub fn include_module_from_url(module_path: &str, url: &str) -> Result<()> {
     let package_name = name_from_url(url);
-    let tmp_path = PathBuf::from("/tmp").join(package_name);
-
-    include_repo_from_url(url, "/tmp/")?;
     let module_name = module_path.split('/').last().unwrap_or(module_path);
     let module_name = module_name.strip_suffix(".v").or_else(|| module_name.strip_suffix(".sv")).unwrap_or(module_name);
     println!("Processing module: {}", module_name);
@@ -69,8 +57,6 @@ pub fn include_module_from_url(module_path: &str, url: &str) -> Result<()> {
 
     process_module(package_name, module_path, destination.to_owned(), &mut HashSet::new(), true)?;
     add_dependency(package_name, Some(url), None, Some(module_path))?;
-
-    fs::remove_dir_all(tmp_path)?;
 
     Ok(())
 }
