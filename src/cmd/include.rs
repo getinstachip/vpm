@@ -7,35 +7,98 @@ use once_cell::sync::Lazy;
 use regex::Regex;
 use tree_sitter::{Node, Parser, Query, QueryCursor};
 use walkdir::WalkDir;
-
+use skim::{prelude::SkimOptionsBuilder, SkimOptions, Skim, prelude::SkimItemReceiver, prelude::SkimItemReader};
 use crate::cmd::{Execute, Include};
 use crate::toml::add_dependency;
+use std::io::Cursor;
+use skim::SkimItem;
+use std::sync::Arc;
+use std::borrow::Cow;
+
+struct Item {
+    text: String,
+}
+
+impl SkimItem for Item {
+    fn text(&self) -> Cow<str> {
+        Cow::Borrowed(&self.text)
+    }
+}
 
 impl Execute for Include {
     fn execute(&self) -> Result<()> {
         fs::create_dir_all("./vpm_modules")?;
         println!("Including repository from URL: '{}'", self.url);
-        let tmp_path = PathBuf::from("/tmp").join(name_from_url(&self.url));
+        let repo_name = name_from_url(&self.url);
+        let tmp_path = PathBuf::from("/tmp").join(repo_name);
         include_repo_from_url(&self.url, "/tmp/")?;
-        // include_repo_from_url(&self.url, "./vpm_modules/")?;
-        // add_dependency(name_from_url(&self.url), Some(&self.url), None, None)?;
-           
-        // Prompt for specific module path
-        println!("Enter module path (ENTER to skip):");
-        let mut module_path = String::new();
-        std::io::stdin().read_line(&mut module_path)?;
-        let module_path = module_path.trim();
-        
-        if !module_path.is_empty() {
-            println!("Including module '{}' from URL: '{}'", module_path, self.url);
+
+        let files = get_files(&tmp_path.to_str().unwrap_or_default());
+
+        let options = SkimOptionsBuilder::default()
+            .height(Some("50%"))
+            .multi(true)
+            .build()
+            .unwrap();
+
+        let items: Vec<Arc<dyn SkimItem>> = files
+            .into_iter()
+            .map(|file| Arc::new(Item { text: file }) as Arc<dyn SkimItem>)
+            .collect();
+
+        let selected_items = Skim::run_with(
+            &options,
+            Some(SkimItemReader::default().of_bufread(Cursor::new(
+                items
+                    .iter()
+                    .map(|item| {
+                        let text = item.text().into_owned();
+                        text.strip_prefix(&tmp_path.to_string_lossy().as_ref()).unwrap_or(&text).trim_start_matches('/').to_string()
+                    })
+                    .collect::<Vec<String>>()
+                    .join("\n"),
+            )))
+        )
+        .map(|out| out.selected_items)
+        .unwrap_or_else(|| Vec::new());
+
+        let has_selected_items = !selected_items.is_empty();
+
+        for item in &selected_items {
+            let item_text = item.text();
+            let displayed_path = item_text.strip_prefix(tmp_path.to_string_lossy().as_ref()).unwrap_or(&item_text).trim_start_matches('/');
+            println!("Including module: {}", displayed_path);
+            
+            let full_path = tmp_path.join(displayed_path);
+            let module_path = full_path.strip_prefix(&tmp_path).unwrap_or(&full_path).to_str().unwrap().trim_start_matches('/');
+            
             include_module_from_url(module_path, &self.url)?;
-        } else {
-            println!("Including entire repository");
+        }
+
+        if !has_selected_items {
+            println!("No modules selected. Including entire repository.");
             include_repo_from_url(&self.url, "./vpm_modules/")?;
         }
+
+        // add_dependency(name_from_url(&self.url), Some(&self.url), None, None)?;
         fs::remove_dir_all(tmp_path)?;
         Ok(())
     }
+}
+
+fn get_files(directory: &str) -> Vec<String> {
+    WalkDir::new(directory)
+        .into_iter()
+        .filter_map(|entry| {
+            entry.ok().and_then(|e| {
+                if e.file_type().is_file() {
+                    Some(e.path().to_string_lossy().into_owned())
+                } else {
+                    None
+                }
+            })
+        })
+        .collect()
 }
 
 fn name_from_url(url: &str) -> &str {
