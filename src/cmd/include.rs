@@ -8,7 +8,7 @@ use tree_sitter::{Node, Parser, Query, QueryCursor};
 use walkdir::WalkDir;
 
 use crate::cmd::{Execute, Include};
-use crate::toml::add_dependency;
+use crate::toml::{add_dependency, add_top_module};
 
 const STD_LIB_URL: &str = "https://github.com/getinstachip/openchips";
 
@@ -32,7 +32,8 @@ impl Execute for Include {
             (Some(url), Some(name)) => {
                 println!("Including module '{}' from URL: '{}'", name, url);
                 include_module_from_url(name, url);
-                add_dependency(url, None)
+                add_dependency(url, None);
+                add_top_module(url, name)
             }
             (Some(url), None) | (None, Some(url)) if URL_REGEX.is_match(url) => {
                 println!("Including repository from URL: '{}'", url);

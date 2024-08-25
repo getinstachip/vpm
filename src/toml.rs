@@ -51,7 +51,7 @@ impl VpmToml {
 
     pub fn add_dependency(&mut self, git: &str, commit: Option<&str>) {
         let mut dependency = Table::new();
-        dependency.insert("top_modules".to_string(), Value::Array(vec![]));
+        dependency.insert("top_modules".to_string(), Value::Array(Vec::new()));
         dependency.insert("commit".to_string(), Value::String(commit.unwrap_or_default().to_string()));
         if let Some(dependencies) = self.toml_value.get_mut("dependencies") {
             dependencies.as_table_mut().unwrap().insert(
@@ -68,6 +68,24 @@ impl VpmToml {
         }
     }
 
+    pub fn add_top_module(&mut self, repo_link: &str, module_name: &str) {
+        if let Some(dependencies) = self.toml_value.get_mut("dependencies") {
+            if let Some(dependency) = dependencies.as_table_mut().unwrap().get_mut(repo_link) {
+                println!("Dependency: {}", dependency);
+                if let Some(top_modules) = dependency.get_mut("top_modules") {
+                    println!("Top modules: {}", top_modules);
+                    if let Some(array) = top_modules.as_array_mut() {
+                        array.push(Value::String(module_name.to_string()));
+                    }
+                    println!("Top modules: {}", top_modules);
+                } else {
+                    dependency.as_table_mut().unwrap().insert("top_modules".to_string(), Value::Array(vec![Value::String(module_name.to_string())]));
+                }
+                println!("Dependency: {}", dependency);
+            }
+        }
+    }
+
     pub fn get_package_info(&self) -> Option<&Table> {
         self.toml_value.as_table().unwrap().get("package").and_then(|v| v.as_table())
     }
@@ -78,7 +96,6 @@ impl VpmToml {
                 .map(|(k, v)| format!("{} = {}", k, format_value(v)))
                 .collect::<Vec<_>>()
                 .join("\n");
-            // formatted_package
             format!("[package]\n{}", formatted_package)
         } else {
             println!("Error: No package section found in vpm.toml");
@@ -92,14 +109,19 @@ impl VpmToml {
         let mut formatted_deps = Vec::new();
         for (dep_key, dep_value) in deps.unwrap().iter() {
             let formatted_table = dep_value.as_table().unwrap().iter()
-                .map(|(k, v)| format!("{}={}", k, format_value(v)))
+                .filter_map(|(k, v)| {
+                    match v {
+                        Value::Array(arr) if arr.is_empty() => None,
+                        Value::String(s) if s.is_empty() => None,
+                        _ => Some(format!("{}={}", k, format_value(v)))
+                    }
+                })
                 .collect::<Vec<_>>()
                 .join(", ");
             formatted_deps.push(format!("\"{}\" = {{{}}}", dep_key, formatted_table));
         }
         let formatted_deps_str = formatted_deps.join("\n");
         
-        // formatted_deps_str
         format!("\n[dependencies]\n{}", formatted_deps_str)
     }
 
@@ -129,8 +151,27 @@ fn format_value(value: &Value) -> String {
 
 pub fn add_dependency(git: &str, commit: Option<&str>) -> Result<()> {
     let mut vpm_toml = VpmToml::from("vpm.toml");
-    vpm_toml.add_dependency(git, commit);
+    if let Some(dependencies) = vpm_toml.get_dependencies() {
+        if !dependencies.contains_key(git) {
+            vpm_toml.add_dependency(git, commit);
+            let toml_string = vpm_toml.to_string();
+            fs::write("vpm.toml", toml_string)?;
+        } else {
+            println!("Dependency '{}' already exists in vpm.toml", git);
+        }
+    } else {
+        vpm_toml.add_dependency(git, commit);
+        let toml_string = vpm_toml.to_string();
+        fs::write("vpm.toml", toml_string)?;
+    }
+    Ok(())
+}
+
+pub fn add_top_module(repo_link: &str, module_name: &str) -> Result<()> {
+    let mut vpm_toml = VpmToml::from("vpm.toml");
+    vpm_toml.add_top_module(repo_link, module_name);
     let toml_string = vpm_toml.to_string();
+    println!("TOML: {}", toml_string);
     fs::write("vpm.toml", toml_string)?;
     Ok(())
 }
@@ -188,14 +229,11 @@ fn parse_and_format_toml(input: &str) -> String {
     let mut current_section = String::new();
 
     for line in input.lines() {
-        // println!("Line: {}", line);
         let trimmed = line.trim();
         if trimmed.starts_with('[') && trimmed.ends_with(']') {
-            // This is a section header
             current_section = trimmed[1..trimmed.len()-1].to_string();
             root.insert(current_section.clone(), Value::Table(Map::new()));
         } else if !current_section.is_empty() && trimmed.contains('=') {
-            // This is a key-value pair within a section
             let parts: Vec<&str> = trimmed.splitn(2, '=').collect();
             if parts.len() == 2 {
                 let key = parts[0].trim().trim_matches('"');
@@ -216,7 +254,7 @@ fn parse_and_format_toml(input: &str) -> String {
 
 fn parse_inline_table(s: &str) -> Map<String, Value> {
     let mut map = Map::new();
-    let inner = &s[1..s.len()-1]; // Remove outer braces
+    let inner = &s[1..s.len()-1];
     for pair in inner.split(',') {
         let kv: Vec<&str> = pair.splitn(2, '=').collect();
         if kv.len() == 2 {
