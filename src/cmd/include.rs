@@ -11,19 +11,15 @@ use walkdir::WalkDir;
 use crate::cmd::{Execute, Include};
 use crate::toml::add_dependency;
 
-static URL_REGEX: Lazy<Regex> = Lazy::new(|| {
-    Regex::new(r"^https://github\.com/[\w-]+/[\w.-]+(?:/)?$").unwrap()
-});
-
 impl Execute for Include {
     fn execute(&self) -> Result<()> {
         fs::create_dir_all("./vpm_modules")?;
         println!("Including repository from URL: '{}'", self.url);
-        include_repo_from_url(&self.url, "./vpm_modules/")?;
+        // include_repo_from_url(&self.url, "./vpm_modules/")?;
         // add_dependency(name_from_url(&self.url), Some(&self.url), None, None)?;
            
         // Prompt for specific module path
-        println!("Enter the specific module path you want to include:");
+        println!("Enter module path (ENTER to skip):");
         let mut module_path = String::new();
         std::io::stdin().read_line(&mut module_path)?;
         let module_path = module_path.trim();
@@ -31,6 +27,9 @@ impl Execute for Include {
         if !module_path.is_empty() {
             println!("Including module '{}' from URL: '{}'", module_path, self.url);
             include_module_from_url(module_path, &self.url)?;
+        } else {
+            println!("Including entire repository");
+            include_repo_from_url(&self.url, "./vpm_modules/")?;
         }
         
         Ok(())
@@ -134,11 +133,31 @@ pub fn process_module(package_name: &str, module_path: &str, destination: String
     if is_full_filepath {
         process_file(&file_path, &target_path, extension, visited, package_name, &destination)?;
     } else {
+        let mut matching_entries = Vec::new();
         for entry in WalkDir::new(&tmp_path).into_iter().filter_map(Result::ok) {
             if entry.file_name().to_str() == Some(&format!("{}.sv", module_name)) || entry.file_name().to_str() == Some(&format!("{}.v", module_name)) {
-                // let file_path = Path::new(entry.file_name().to_str().unwrap());
-                // println!("Processing file: {}", file_path.display());
-                process_file(entry.path(), &target_path, extension, visited, package_name, &destination)?;
+                matching_entries.push(entry.path().to_path_buf());
+            }
+        }
+
+        if matching_entries.is_empty() {
+            anyhow::bail!("No matching files found for module '{}'", module_name);
+        } else if matching_entries.len() == 1 {
+            process_file(&matching_entries[0], &target_path, extension, visited, package_name, &destination)?;
+        } else {
+            println!("Multiple modules found for '{}'. Please choose:", module_name);
+            for (i, entry) in matching_entries.iter().enumerate() {
+                println!("{}: {}", i + 1, entry.display());
+            }
+
+            let mut choice = String::new();
+            std::io::stdin().read_line(&mut choice)?;
+            let index: usize = choice.trim().parse()?;
+
+            if index > 0 && index <= matching_entries.len() {
+                process_file(&matching_entries[index - 1], &target_path, extension, visited, package_name, &destination)?;
+            } else {
+                anyhow::bail!("Invalid choice");
             }
         }
     }
