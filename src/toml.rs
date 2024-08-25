@@ -7,6 +7,7 @@ use toml::value::Value;
 use toml::Table;
 use toml::map::Map;
 use std::collections::BTreeMap;
+use serde_json::from_value;
 
 #[derive(Serialize, Deserialize, Debug)]
 struct Package {
@@ -38,6 +39,11 @@ impl VpmToml {
     pub fn from(filepath: &str) -> Self {
         let raw_toml = fs::read_to_string(filepath).unwrap();
         let toml_content = parse_and_format_toml(&raw_toml);
+        let mut toml_content = toml_content.clone();
+        let package_content = parse_package_info(&raw_toml);
+        println!("Package content:");
+        println!("{}", package_content);
+        toml_content = format!("{}\n{}", package_content, toml_content);
         Self {
             toml_value: toml::from_str(&toml_content).unwrap()
         }
@@ -66,7 +72,24 @@ impl VpmToml {
         }
     }
 
-    pub fn to_string(&self) -> String {
+    pub fn get_package_info(&self) -> Option<&Table> {
+        self.toml_value.as_table().unwrap().get("package").and_then(|v| v.as_table())
+    }
+
+    pub fn package_to_string(&self) -> String {
+        if let Some(package) = self.get_package_info() {
+            let formatted_package = package.iter()
+                .map(|(k, v)| format!("{} = {}", k, format_value(v)))
+                .collect::<Vec<_>>()
+                .join("\n");
+            format!("[package]\n{}", formatted_package)
+        } else {
+            println!("Error: No package section found in vpm.toml");
+            "".to_string()
+        }
+    }
+
+    pub fn all_deps_to_string(&self) -> String {
         let deps = self.get_dependencies();
         
         let mut formatted_deps = Vec::new();
@@ -80,6 +103,12 @@ impl VpmToml {
         let formatted_deps_str = formatted_deps.join("\n");
         
         format!("[dependencies]\n{}", formatted_deps_str)
+    }
+
+    pub fn to_string(&self) -> String {
+        let toml_content = self.all_deps_to_string();
+        let package_content = self.package_to_string();
+        format!("{}\n{}", package_content, toml_content)
     }
 }
 
@@ -106,6 +135,45 @@ pub fn add_dependency(git: &str, commit: Option<&str>) -> Result<()> {
     let toml_string = vpm_toml.to_string();
     fs::write("vpm.toml", toml_string)?;
     Ok(())
+}
+
+fn parse_package_info(input: &str) -> String {
+    let mut package = Package::default();
+    let mut in_package_section = false;
+    let mut package_found = false;
+
+    for line in input.lines() {
+        let trimmed = line.trim();
+        if trimmed == "[package]" {
+            in_package_section = true;
+            package_found = true;
+            continue;
+        }
+        if in_package_section && trimmed.starts_with('[') {
+            break;
+        }
+        if in_package_section && trimmed.contains('=') {
+            let parts: Vec<&str> = trimmed.splitn(2, '=').collect();
+            if parts.len() == 2 {
+                let key = parts[0].trim();
+                let value = parts[1].trim().trim_matches('"');
+                match key {
+                    "name" => package.name = value.to_string(),
+                    "version" => package.version = value.to_string(),
+                    "authors" => package.authors = value.split(',').map(|s| s.trim().to_string()).collect(),
+                    "description" => package.description = value.to_string(),
+                    "license" => package.license = value.to_string(),
+                    _ => {}
+                }
+            }
+        }
+    }
+
+    let package_to_use = if package_found { package } else { Package::default() };
+    println!("Package to use: {:?}", package_to_use);
+    let mut package_toml = toml::Table::new();
+    package_toml.insert("package".to_string(), toml::Value::Table(toml::to_string(&package_to_use).unwrap_or_default().parse().unwrap_or_default()));
+    toml::to_string(&package_toml).unwrap_or_else(|_| "".to_string())
 }
 
 fn parse_and_format_toml(input: &str) -> String {
