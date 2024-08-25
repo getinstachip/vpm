@@ -1,4 +1,5 @@
 use std::collections::HashSet;
+
 use std::path::{Path, PathBuf};
 use std::{fs, process::Command};
 use anyhow::{Context, Result};
@@ -6,6 +7,7 @@ use once_cell::sync::Lazy;
 use regex::Regex;
 use tree_sitter::{Node, Parser, Query, QueryCursor};
 use walkdir::WalkDir;
+use walkdir::DirEntry;
 
 use crate::cmd::{Execute, Include};
 use crate::toml::add_dependency;
@@ -19,19 +21,19 @@ static URL_REGEX: Lazy<Regex> = Lazy::new(|| {
 impl Execute for Include {
     fn execute(&self) -> Result<()> {
         fs::create_dir_all("./vpm_modules")?;
-        match (&self.url, &self.package_name) {
-            (Some(url), Some(name)) => {
-                println!("Including module '{}' from URL: '{}'", name, url);
-                include_module_from_url(name, url)
+        match (&self.url, &self.package_path) {
+            (Some(url), Some(path)) => {
+                println!("Including module '{}' from URL: '{}'", path, url);
+                include_module_from_url(path, url)
             }
             (Some(url), None) | (None, Some(url)) if URL_REGEX.is_match(url) => {
                 println!("Including repository from URL: '{}'", url);
                 include_repo_from_url(url, "./vpm_modules/")?;
                 add_dependency(name_from_url(url), Some(url), None, None)
             }
-            (None, Some(name)) => {
-                println!("Including module '{}' from standard library", name);
-                include_module_from_url(name, STD_LIB_URL)
+            (None, Some(path)) => {
+                println!("Including module '{}' from standard library", path);
+                include_module_from_url(path, STD_LIB_URL)
             }
             _ => {
                 println!("Command not found!");
@@ -45,65 +47,105 @@ fn name_from_url(url: &str) -> &str {
     url.rsplit('/').find(|&s| !s.is_empty()).unwrap_or_default()
 }
 
-pub fn include_module_from_url(module: &str, url: &str) -> Result<()> {
+fn is_full_filepath(path: &str) -> bool {
+    // Check if the path contains directory separators
+    path.contains('/') || path.contains('\\')
+}
+fn filepath_to_direntry(filepath: &str) -> Option<walkdir::DirEntry> {
+    let path = std::path::Path::new(filepath);
+    let parent = path.parent()?;
+    
+    WalkDir::new(parent)
+        .follow_links(true)
+        .into_iter()
+        .filter_map(Result::ok)
+        .find(|entry| entry.path() == path)
+}
+
+
+pub fn include_module_from_url(module_path: &str, url: &str) -> Result<()> {
     let package_name = name_from_url(url);
     let tmp_path = PathBuf::from("/tmp").join(package_name);
 
     include_repo_from_url(url, "/tmp/")?;
-    let module_name = module.strip_suffix(".v").or_else(|| module.strip_suffix(".sv")).unwrap_or(module);
+    let module_name = module_path.split('/').last().unwrap_or(module_path);
+    let module_name = module_name.strip_suffix(".v").or_else(|| module_name.strip_suffix(".sv")).unwrap_or(module_name);
+    println!("Processing module: {}", module_name);
     let destination = format!("./vpm_modules/{}", module_name);
     fs::create_dir_all(&destination)?;
 
-    process_module(package_name, module, destination.to_owned(), &mut HashSet::new())?;
-    add_dependency(package_name, Some(url), None, Some(module))?;
+    process_module(package_name, module_path, destination.to_owned(), &mut HashSet::new(), true)?;
+    add_dependency(package_name, Some(url), None, Some(module_path))?;
 
     fs::remove_dir_all(tmp_path)?;
 
     Ok(())
 }
 
-pub fn process_module(package_name: &str, module: &str, destination: String, visited: &mut HashSet<String>) -> Result<HashSet<String>> {
-    let module_name = module.strip_suffix(".v").or_else(|| module.strip_suffix(".sv")).unwrap_or(module);
+fn process_file(file_path: &Path, target_path: &Path, extension: &str, visited: &mut HashSet<String>, package_name: &str, destination: &str) -> Result<()> {
+    if !file_path.exists() {
+        println!("File not found: {}", file_path.display());
+        return Ok(());
+    }
+    println!("Processing file: {} (Is full filepath: {})", file_path.display(), is_full_filepath(&file_path.to_string_lossy()));
+    println!("Target path: {}", target_path.display());
+    fs::copy(
+        &file_path,
+        target_path.with_extension(extension),
+    )?;
+
+    let mut parser = Parser::new();
+    parser.set_language(tree_sitter_verilog::language())?;
+
+    let contents = fs::read_to_string(file_path)?;
+
+    let tree = parser.parse(&contents, None).context("Failed to parse file")?;
+    let root_node = tree.root_node();
+
+    let header_content = generate_headers(root_node, &contents)?;
+    fs::write(
+        target_path.with_extension(if extension == "sv" { "svh" } else { "vh" }),
+        header_content,
+    )?;
+
+    for submodule in get_submodules(root_node, &contents)? {
+        if !visited.contains(&submodule) {
+            println!("Processing submodule '{}'", submodule);
+            process_module(package_name, (submodule + "." + extension).as_str(), destination.to_owned(), visited, false)?;
+        }
+    }
+    Ok(())
+}
+
+pub fn process_module(package_name: &str, module_path: &str, destination: String, visited: &mut HashSet<String>, is_full_filepath: bool) -> Result<HashSet<String>> {
+    let module_name = module_path.split('/').last().unwrap_or(module_path);
+    let module_name = module_name.strip_suffix(".v").or_else(|| module_name.strip_suffix(".sv")).unwrap_or(module_name);
     if !visited.insert(module_name.to_string()) {
         return Ok(HashSet::new());
     }
-    println!("Including module '{}'", module_name);
+
     let tmp_path = PathBuf::from("/tmp").join(package_name);
-    for entry in WalkDir::new(&tmp_path).into_iter().filter_map(Result::ok) {
-        if entry.file_name() == module || entry.file_name().to_str() == Some(&format!("{}.sv", module_name)) || entry.file_name().to_str() == Some(&format!("{}.v", module_name)) {
-            let target_path = PathBuf::from(&destination).join(module_name);
+    let file_path = tmp_path.join(module_path);
 
-            let extension = if entry.path().extension().and_then(|s| s.to_str()) == Some("sv") {
-                "sv"
-            } else {
-                "v"
-            };
+    let target_path = PathBuf::from(&destination).join(module_name);
 
-            fs::copy(
-                entry.path(),
-                target_path.with_extension(extension),
-            )?;
+    let extension = if file_path.extension().and_then(|s| s.to_str()) == Some("sv") {
+        "sv"
+    } else {
+        "v"
+    };
 
-            let contents = fs::read_to_string(entry.path())?;
-            let mut parser = Parser::new();
-            parser.set_language(tree_sitter_verilog::language())?;
+    println!("Including module '{}'", module_name);
 
-            let tree = parser.parse(&contents, None).context("Failed to parse file")?;
-            let root_node = tree.root_node();
-
-            let header_content = generate_headers(root_node, &contents)?;
-            fs::write(
-                target_path.with_extension(if extension == "sv" { "svh" } else { "vh" }),
-                header_content,
-            )?;
-
-            for submodule in get_submodules(root_node, &contents)? {
-                if !visited.contains(&submodule) {
-                    process_module(package_name, &format!("{}.{}", submodule, extension), destination.to_owned(), visited)?;
-                }
+    if is_full_filepath {
+        process_file(&file_path, &target_path, extension, visited, package_name, &destination)?;
+    } else {
+        for entry in WalkDir::new(&tmp_path).into_iter().filter_map(Result::ok) {
+            if entry.file_name().to_str() == Some(&format!("{}.sv", module_name)) || entry.file_name().to_str() == Some(&format!("{}.v", module_name)) {
+                // let file_path = Path::new(entry.file_name().to_str().unwrap());
+                // println!("Processing file: {}", file_path.display());
+                process_file(entry.path(), &target_path, extension, visited, package_name, &destination)?;
             }
-
-            break;
         }
     }
 

@@ -20,8 +20,8 @@ pub enum Cmd {
     version
 )]
 pub struct Include {
-    #[arg(help = "Name of package to include")]
-    pub package_name: Option<String>,
+    #[arg(help = "Full module path of package to include")]
+    pub package_path: Option<String>,
     #[arg(help = "URL of repository to include from")]
     pub url: Option<String>,
 }
@@ -35,8 +35,8 @@ pub struct Include {
     version
 )]
 pub struct Update {
-    #[arg(help = "Name of package to update")]
-    pub package_name: String,
+    #[arg(help = "Full module path of package to update")]
+    pub package_path: String,
 }
 
 #[derive(Debug, Parser)]
@@ -48,8 +48,8 @@ pub struct Update {
     version
 )]
 pub struct Uninstall {
-    #[arg(help = "Name of package to Uninstall")]
-    pub package_name: String,
+    #[arg(help = "Full module path of package to Uninstall")]
+    pub package_path: String,
 }
 
 
@@ -76,7 +76,7 @@ pub struct Dotf {
 )]
 
 pub struct Install {
-    #[arg(help = "Name of tool to install")]
+    #[arg(help = "Tool to install")]
     pub tool_name: String,
 }
 
