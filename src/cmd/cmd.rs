@@ -25,8 +25,6 @@ pub struct Include {
     pub package_name: Option<String>,
     #[arg(help = "URL of repository to include from")]
     pub url: Option<String>,
-    #[arg(help="Version of package to include")]
-    pub version: Option<String>,
 }
 
 #[derive(Debug, Parser)]
