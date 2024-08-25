@@ -124,7 +124,7 @@ fn install_chipyard() -> Result<()> {
 }
 
 fn install_edalize() -> Result<()> {
-    println!("Installing Edalize and FuseSoC...");
+    println!("Installing Edalize...");
 
     let (python_cmd, pip_cmd) = if check_command("python3") {
         ("python3", "pip3")
@@ -166,7 +166,7 @@ fn install_edalize() -> Result<()> {
         return Ok(());
     }
 
-    println!("Edalize and FuseSoC installed successfully.");
+    println!("Edalize installed successfully.");
     Ok(())
 }
 
