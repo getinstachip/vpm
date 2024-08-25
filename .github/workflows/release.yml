@@ -103,7 +103,7 @@ jobs:
         if: runner.os == 'Windows'
         run: |
           7z a vpm-${{ steps.get_version.outputs.value }}-${{ matrix.target }}.zip `
-            LICENSE README.md `
+            LICENSE.md README.md `
             ./target/${{ matrix.target }}/release/vpm.exe
 
       - name: Upload artifact
