@@ -22,7 +22,7 @@ impl Execute for Install {
             },
             "edalize" => {
                 println!("Installing Edalize...");
-                install_openroad()?;
+                install_edalize()?;
             },
             _ => {
                 println!("Tool '{}' is not recognized for installation.", self.tool_name);
