@@ -37,13 +37,9 @@ impl Default for Package {
 
 impl VpmToml {    
     pub fn from(filepath: &str) -> Self {
-        let raw_toml = fs::read_to_string(filepath).unwrap();
-        let toml_content = parse_and_format_toml(&raw_toml);
-        let mut toml_content = toml_content.clone();
-        let package_content = parse_package_info(&raw_toml);
-        println!("Package content:");
-        println!("{}", package_content);
-        toml_content = format!("{}\n{}", package_content, toml_content);
+        let mut toml_content = fs::read_to_string(filepath).unwrap();
+        toml_content = parse_and_format_toml(&toml_content);
+        toml_content = add_package_info(&toml_content);
         Self {
             toml_value: toml::from_str(&toml_content).unwrap()
         }
@@ -82,6 +78,7 @@ impl VpmToml {
                 .map(|(k, v)| format!("{} = {}", k, format_value(v)))
                 .collect::<Vec<_>>()
                 .join("\n");
+            // formatted_package
             format!("[package]\n{}", formatted_package)
         } else {
             println!("Error: No package section found in vpm.toml");
@@ -102,7 +99,8 @@ impl VpmToml {
         }
         let formatted_deps_str = formatted_deps.join("\n");
         
-        format!("[dependencies]\n{}", formatted_deps_str)
+        // formatted_deps_str
+        format!("\n[dependencies]\n{}", formatted_deps_str)
     }
 
     pub fn to_string(&self) -> String {
@@ -137,7 +135,7 @@ pub fn add_dependency(git: &str, commit: Option<&str>) -> Result<()> {
     Ok(())
 }
 
-fn parse_package_info(input: &str) -> String {
+fn add_package_info(input: &str) -> String {
     let mut package = Package::default();
     let mut in_package_section = false;
     let mut package_found = false;
@@ -170,10 +168,19 @@ fn parse_package_info(input: &str) -> String {
     }
 
     let package_to_use = if package_found { package } else { Package::default() };
-    println!("Package to use: {:?}", package_to_use);
-    let mut package_toml = toml::Table::new();
-    package_toml.insert("package".to_string(), toml::Value::Table(toml::to_string(&package_to_use).unwrap_or_default().parse().unwrap_or_default()));
-    toml::to_string(&package_toml).unwrap_or_else(|_| "".to_string())
+    let mut root = toml::Table::new();
+    if let Ok(existing_toml) = toml::from_str::<toml::Table>(input) {
+        root = existing_toml;
+    }
+    if let Some(toml::Value::Table(package_table)) = root.get_mut("package") {
+        let package_value = toml::to_string(&package_to_use).unwrap_or_default().parse::<toml::Value>().unwrap();
+        if let toml::Value::Table(new_package_table) = package_value {
+            package_table.extend(new_package_table);
+        }
+    } else {
+        root.insert("package".to_string(), toml::Value::Table(toml::to_string(&package_to_use).unwrap_or_default().parse().unwrap_or_default()));
+    }
+    toml::to_string(&root).unwrap_or_else(|_| "".to_string())
 }
 
 fn parse_and_format_toml(input: &str) -> String {
@@ -181,6 +188,7 @@ fn parse_and_format_toml(input: &str) -> String {
     let mut current_section = String::new();
 
     for line in input.lines() {
+        // println!("Line: {}", line);
         let trimmed = line.trim();
         if trimmed.starts_with('[') && trimmed.ends_with(']') {
             // This is a section header
