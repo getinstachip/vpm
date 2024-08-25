@@ -20,6 +20,10 @@ impl Execute for Install {
                 println!("Installing OpenROAD...");
                 install_openroad()?;
             },
+            "openroad" => {
+                println!("Installing OpenROAD...");
+                install_openroad()?;
+            },
             _ => {
                 println!("Tool '{}' is not recognized for installation.", self.tool_name);
             }
