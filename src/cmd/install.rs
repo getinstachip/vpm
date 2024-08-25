@@ -20,8 +20,8 @@ impl Execute for Install {
                 println!("Installing OpenROAD...");
                 install_openroad()?;
             },
-            "openroad" => {
-                println!("Installing OpenROAD...");
+            "edalize" => {
+                println!("Installing Edalize...");
                 install_openroad()?;
             },
             _ => {
