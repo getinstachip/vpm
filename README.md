@@ -21,7 +21,7 @@ curl -f https://getinstachip.com/install.sh | sh
 After installation, you can use the `vpm` command in any terminal.
 
 Note: to use properly, please configure your `.toml` file to be initialized with:
-````
+```toml
 [package]
 
 [dependencies]
