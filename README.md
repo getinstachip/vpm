@@ -7,6 +7,7 @@ VPM is a package manager for Verilog projects being piloted at Stanford and UC B
 You'll be able to:
 - `vpm include` full module hierarchies using a single command
 - Generate documentation for any `.v` or `.sv` module
+- Simulate using `vpm sim`
 - Automatically generate/handle `.f` files, `.svh`, `.xcd`, `.tcl`, etc.
 
 ## Installation
@@ -27,6 +28,7 @@ After installation, you can use the `vpm` command in any terminal.
 - `vpm uninstall <module.sv>`: Remove a module from your project
 - `vpm list`: List all modules in our standard library
 - `vpm dotf <module.sv>`:  Generate a `.f` filelist when exporting your project
+- `vpm sim <module.sv> <testbench.sv>`
   
 ### include
 `vpm include <module.sv> <repo_url>`: includes a `.v` or `.sv` file and all submodule dependencies from the given repo and updates the `vpm.toml` file with the new module's details
