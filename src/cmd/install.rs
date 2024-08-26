@@ -1,7 +1,6 @@
 use anyhow::{Context, Result};
 use std::process::Command;
 use std::path::Path;
-use std::fs;
 
 use crate::cmd::{Execute, Install};
 

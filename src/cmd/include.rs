@@ -1,70 +1,166 @@
 use std::collections::HashSet;
+
 use std::path::{Path, PathBuf};
 use std::{fs, process::Command};
 use anyhow::{Context, Result};
 use once_cell::sync::Lazy;
-use regex::Regex;
 use tree_sitter::{Node, Parser, Query, QueryCursor};
+use skim::{prelude::SkimOptionsBuilder, Skim, prelude::SkimItemReader};
+use crate::cmd::{Execute, Include};
+use crate::toml::add_dependency;
+use std::io::Cursor;
+use skim::SkimItem;
+use std::sync::Arc;
+use std::borrow::Cow;
 use walkdir::{DirEntry, WalkDir};
 
 use crate::cmd::{Execute, Include};
 use crate::toml::{add_dependency, add_top_module, generate_lockfile};
 
-const STD_LIB_URL: &str = "https://github.com/getinstachip/openchips";
+struct Item {
+    text: String,
+}
 
-static URL_REGEX: Lazy<Regex> = Lazy::new(|| {
-    Regex::new(r"^(https?://|git://|ftp://|file://|www\.)[\w\-\.]+\.\w+(/[\w\-\.]*)*/?$").unwrap()
-});
+impl SkimItem for Item {
+    fn text(&self) -> Cow<str> {
+        Cow::Borrowed(&self.text)
+    }
+}
 
 impl Execute for Include {
     fn execute(&self) -> Result<()> {
         fs::create_dir_all("./vpm_modules")?;
-        match (&self.url, &self.package_name) {
-            (Some(url), Some(name)) => {
-                println!("Including module '{}' from URL: '{}'", name, url);
-                include_module_from_url(name, url);
-                add_dependency(url, None);
-                add_top_module(url, name)
-                // generate_lockfile()
-            }
-            (Some(url), None) | (None, Some(url)) if URL_REGEX.is_match(url) => {
-                println!("Including repository from URL: '{}'", url);
-                include_repo_from_url(url, "./vpm_modules/")?;
-                add_dependency(url, None)
-            }
-            (None, Some(name)) => {
-                println!("Including module '{}' from standard library", name);
-                include_module_from_url(name, STD_LIB_URL);
-                add_dependency(STD_LIB_URL, None)
-            }
-            _ => {
-                println!("Command not found!");
-                Ok(())
-            }
+        println!("Including repository from URL: '{}'", self.url);
+        let repo_name = name_from_url(&self.url);
+        let tmp_path = PathBuf::from("/tmp").join(repo_name);
+        include_repo_from_url(&self.url, "/tmp/")?;
+
+        let files = get_files(&tmp_path.to_str().unwrap_or_default());
+
+        let options = SkimOptionsBuilder::default()
+            .height(Some("50%"))
+            .multi(true)
+            .build()
+            .unwrap();
+
+        let items: Vec<Arc<dyn SkimItem>> = files
+            .into_iter()
+            .map(|file| Arc::new(Item { text: file }) as Arc<dyn SkimItem>)
+            .collect();
+
+        let selected_items = Skim::run_with(
+            &options,
+            Some(SkimItemReader::default().of_bufread(Cursor::new(
+                items
+                    .iter()
+                    .map(|item| {
+                        let text = item.text().into_owned();
+                        text.strip_prefix(&tmp_path.to_string_lossy().as_ref()).unwrap_or(&text).trim_start_matches('/').to_string()
+                    })
+                    .collect::<Vec<String>>()
+                    .join("\n"),
+            )))
+        )
+        .map(|out| out.selected_items)
+        .unwrap_or_else(|| Vec::new());
+
+        let has_selected_items = !selected_items.is_empty();
+
+        for item in &selected_items {
+            let item_text = item.text();
+            let displayed_path = item_text.strip_prefix(tmp_path.to_string_lossy().as_ref()).unwrap_or(&item_text).trim_start_matches('/');
+            println!("Including module: {}", displayed_path);
+            
+            let full_path = tmp_path.join(displayed_path);
+            let module_path = full_path.strip_prefix(&tmp_path).unwrap_or(&full_path).to_str().unwrap().trim_start_matches('/');
+            
+            include_module_from_url(module_path, &self.url)?;
         }
+
+        if !has_selected_items {
+            println!("No modules selected. Including entire repository.");
+            include_repo_from_url(&self.url, "./vpm_modules/")?;
+        }
+
+        // add_dependency(name_from_url(&self.url), Some(&self.url), None, None)?;
+        fs::remove_dir_all(tmp_path)?;
+        Ok(())
     }
+}
+
+fn get_files(directory: &str) -> Vec<String> {
+    WalkDir::new(directory)
+        .into_iter()
+        .filter_map(|entry| {
+            entry.ok().and_then(|e| {
+                if e.file_type().is_file() {
+                    Some(e.path().to_string_lossy().into_owned())
+                } else {
+                    None
+                }
+            })
+        })
+        .collect()
 }
 
 fn name_from_url(url: &str) -> &str {
     url.rsplit('/').find(|&s| !s.is_empty()).unwrap_or_default()
 }
 
-pub fn include_module_from_url(module: &str, url: &str) -> Result<()> {
-    let package_name = name_from_url(url);
-    let tmp_path = PathBuf::from("/tmp").join(package_name);
+fn is_full_filepath(path: &str) -> bool {
+    // Check if the path contains directory separators
+    path.contains('/') || path.contains('\\')
+}
 
-    include_repo_from_url(url, "/tmp/")?;
-    let module_name = module.strip_suffix(".v").or_else(|| module.strip_suffix(".sv")).unwrap_or(module);
+pub fn include_module_from_url(module_path: &str, url: &str) -> Result<()> {
+    let package_name = name_from_url(url);
+    let module_name = module_path.split('/').last().unwrap_or(module_path);
+    let module_name = module_name.strip_suffix(".v").or_else(|| module_name.strip_suffix(".sv")).unwrap_or(module_name);
+    println!("Processing module: {}", module_name);
     let destination = format!("./vpm_modules/{}", module_name);
     fs::create_dir_all(&destination)?;
     fs::create_dir_all(format!("{}/dependencies", &destination))?;
 
     process_module(package_name, module, destination.to_owned(), &mut HashSet::new(), url, true)?;
 
-    fs::remove_dir_all(tmp_path)?;
-
     Ok(())
 }
+
+fn process_file(file_path: &Path, target_path: &Path, extension: &str, visited: &mut HashSet<String>, package_name: &str, destination: &str) -> Result<()> {
+    if !file_path.exists() {
+        println!("File not found: {}", file_path.display());
+        return Ok(());
+    }
+    println!("Processing file: {} (Is full filepath: {})", file_path.display(), is_full_filepath(&file_path.to_string_lossy()));
+    println!("Target path: {}", target_path.display());
+    fs::copy(
+        &file_path,
+        target_path.with_extension(extension),
+    )?;
+
+    let mut parser = Parser::new();
+    parser.set_language(tree_sitter_verilog::language())?;
+
+    let contents = fs::read_to_string(file_path)?;
+
+    let tree = parser.parse(&contents, None).context("Failed to parse file")?;
+    let root_node = tree.root_node();
+
+    let header_content = generate_headers(root_node, &contents)?;
+    fs::write(
+        target_path.with_extension(if extension == "sv" { "svh" } else { "vh" }),
+        header_content,
+    )?;
+
+    for submodule in get_submodules(root_node, &contents)? {
+        if !visited.contains(&submodule) {
+            println!("Processing submodule '{}'", submodule);
+            process_module(package_name, (submodule + "." + extension).as_str(), destination.to_owned(), visited, false)?;
+        }
+    }
+    Ok(())
+}
+
 
 pub fn process_module(package_name: &str, module: &str, destination: String, visited: &mut HashSet<String>, url: &str, is_top_module: bool) -> Result<HashSet<String>> {
     let module_name = module.strip_suffix(".v").or_else(|| module.strip_suffix(".sv")).unwrap_or(module);
@@ -78,6 +174,47 @@ pub fn process_module(package_name: &str, module: &str, destination: String, vis
     }
 
     let tmp_path = PathBuf::from("/tmp").join(package_name);
+    let file_path = tmp_path.join(module_path);
+
+    let target_path = PathBuf::from(&destination).join(module_name);
+
+    let extension = if file_path.extension().and_then(|s| s.to_str()) == Some("sv") {
+        "sv"
+    } else {
+        "v"
+    };
+
+    println!("Including module '{}'", module_name);
+
+    if is_full_filepath {
+        process_file(&file_path, &target_path, extension, visited, package_name, &destination)?;
+    } else {
+        let mut matching_entries = Vec::new();
+        for entry in WalkDir::new(&tmp_path).into_iter().filter_map(Result::ok) {
+            if entry.file_name().to_str() == Some(&format!("{}.sv", module_name)) || entry.file_name().to_str() == Some(&format!("{}.v", module_name)) {
+                matching_entries.push(entry.path().to_path_buf());
+            }
+        }
+
+        if matching_entries.is_empty() {
+            anyhow::bail!("No matching files found for module '{}'", module_name);
+        } else if matching_entries.len() == 1 {
+            process_file(&matching_entries[0], &target_path, extension, visited, package_name, &destination)?;
+        } else {
+            println!("Multiple modules found for '{}'. Please choose:", module_name);
+            for (i, entry) in matching_entries.iter().enumerate() {
+                println!("{}: {}", i + 1, entry.display());
+            }
+
+            let mut choice = String::new();
+            std::io::stdin().read_line(&mut choice)?;
+            let index: usize = choice.trim().parse()?;
+
+            if index > 0 && index <= matching_entries.len() {
+                process_file(&matching_entries[index - 1], &target_path, extension, visited, package_name, &destination)?;
+            } else {
+                anyhow::bail!("Invalid choice");
+            }
     if let Some(entry) = find_module_file(&tmp_path, module, module_name) {
         process_file(&entry, &destination, &module_with_ext, url, visited, is_top_module)?;
     }
