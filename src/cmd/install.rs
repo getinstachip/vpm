@@ -1,7 +1,6 @@
 use anyhow::{Context, Result};
 use std::process::Command;
 use std::path::Path;
-use std::fs;
 
 use crate::cmd::{Execute, Install};
 
@@ -11,6 +10,10 @@ impl Execute for Install {
             "verilator" => {
                 println!("Installing Verilator...");
                 install_verilator()?;
+            },
+            "icarus-verilog" => {
+                println!("Installing Icarus Verilog...");
+                install_icarus_verilog()?;
             },
             "chipyard" => {
                 println!("Installing Chipyard...");
@@ -88,6 +91,64 @@ fn install_verilator() -> Result<()> {
     }
 
     println!("Verilator installed successfully.");
+    Ok(())
+}
+
+fn install_icarus_verilog() -> Result<()> {
+    println!("Installing Icarus Verilog...");
+
+    #[cfg(target_os = "macos")]
+    {
+        println!("Running on macOS...");
+        // Install Icarus Verilog using Homebrew on macOS
+        let status = Command::new("brew")
+            .arg("install")
+            .arg("icarus-verilog")
+            .status()
+            .context("Failed to install Icarus Verilog using Homebrew")?;
+
+        if !status.success() {
+            println!("Failed to install Icarus Verilog on macOS.");
+            return Ok(());
+        }
+    }
+
+    #[cfg(target_os = "linux")]
+    {
+        println!("Running on Linux...");
+        // Install Icarus Verilog using apt-get on Linux
+        let status = Command::new("sudo")
+            .arg("apt-get")
+            .arg("update")
+            .status()
+            .context("Failed to update package lists")?;
+
+        if !status.success() {
+            println!("Failed to update package lists on Linux.");
+            return Ok(());
+        }
+
+        let status = Command::new("sudo")
+            .arg("apt-get")
+            .arg("install")
+            .arg("-y")
+            .arg("iverilog")
+            .status()
+            .context("Failed to install Icarus Verilog using apt-get")?;
+
+        if !status.success() {
+            println!("Failed to install Icarus Verilog on Linux.");
+            return Ok(());
+        }
+    }
+
+    #[cfg(not(any(target_os = "macos", target_os = "linux")))]
+    {
+        println!("Unsupported operating system. Please install Icarus Verilog manually.");
+        return Ok(());
+    }
+
+    println!("Icarus Verilog installed successfully.");
     Ok(())
 }
 

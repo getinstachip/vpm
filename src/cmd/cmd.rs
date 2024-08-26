@@ -91,17 +91,10 @@ pub struct Install {
 )]
 
 pub struct Run {
-    #[arg(long, help = "Simulation target (e.g., 'sim')")]
-    pub target: String,
-
-    #[arg(long, help = "EDA tool to use (e.g., 'verilator')")]
-    pub tool: String,
-
-    #[arg(help = "Name of the core to simulate")]
-    pub core_name: String,
-
-    #[arg(last = true, help = "Additional arguments to pass to FuseSoC")]
-    pub additional_args: Vec<String>,
+    #[arg(help = "Output name for the compiled simulation binary")]
+    pub output_name: String,
+    #[arg(help = "List of Verilog files to simulate")]
+    pub verilog_files: Vec<String>,
 }
 
 #[derive(Debug, Parser)]
