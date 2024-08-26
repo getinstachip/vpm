@@ -8,6 +8,7 @@ pub enum Cmd {
     Dotf(Dotf),
     Install(Install),
     List(List),
+    Run(Run),
 }
 
 #[derive(Debug, Parser)]
@@ -86,4 +87,29 @@ pub struct Install {
     propagate_version = true,
     version
 )]
+
+pub struct Run {
+    #[arg(long, help = "Simulation target (e.g., 'sim')")]
+    pub target: String,
+
+    #[arg(long, help = "EDA tool to use (e.g., 'verilator')")]
+    pub tool: String,
+
+    #[arg(help = "Name of the core to simulate")]
+    pub core_name: String,
+
+    #[arg(last = true, help = "Additional arguments to pass to FuseSoC")]
+    pub additional_args: Vec<String>,
+}
+
+#[derive(Debug, Parser)]
+#[clap(
+    about,
+    author,
+    disable_help_subcommand = true,
+    propagate_version = true,
+    version
+)]
+
+
 pub struct List {}

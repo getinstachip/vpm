@@ -5,7 +5,6 @@ use std::{fs, process::Command};
 use anyhow::{Context, Result};
 use once_cell::sync::Lazy;
 use tree_sitter::{Node, Parser, Query, QueryCursor};
-use walkdir::WalkDir;
 use skim::{prelude::SkimOptionsBuilder, Skim, prelude::SkimItemReader};
 use crate::cmd::{Execute, Include};
 use crate::toml::add_dependency;
@@ -13,6 +12,10 @@ use std::io::Cursor;
 use skim::SkimItem;
 use std::sync::Arc;
 use std::borrow::Cow;
+use walkdir::{DirEntry, WalkDir};
+
+use crate::cmd::{Execute, Include};
+use crate::toml::{add_dependency, add_top_module, generate_lockfile};
 
 struct Item {
     text: String,
@@ -116,9 +119,9 @@ pub fn include_module_from_url(module_path: &str, url: &str) -> Result<()> {
     println!("Processing module: {}", module_name);
     let destination = format!("./vpm_modules/{}", module_name);
     fs::create_dir_all(&destination)?;
+    fs::create_dir_all(format!("{}/dependencies", &destination))?;
 
-    process_module(package_name, module_path, destination.to_owned(), &mut HashSet::new(), true)?;
-    add_dependency(package_name, Some(url), None, Some(module_path))?;
+    process_module(package_name, module, destination.to_owned(), &mut HashSet::new(), url, true)?;
 
     Ok(())
 }
@@ -158,10 +161,15 @@ fn process_file(file_path: &Path, target_path: &Path, extension: &str, visited: 
     Ok(())
 }
 
-pub fn process_module(package_name: &str, module_path: &str, destination: String, visited: &mut HashSet<String>, is_full_filepath: bool) -> Result<HashSet<String>> {
-    let module_name = module_path.split('/').last().unwrap_or(module_path);
-    let module_name = module_name.strip_suffix(".v").or_else(|| module_name.strip_suffix(".sv")).unwrap_or(module_name);
-    if !visited.insert(module_name.to_string()) {
+
+pub fn process_module(package_name: &str, module: &str, destination: String, visited: &mut HashSet<String>, url: &str, is_top_module: bool) -> Result<HashSet<String>> {
+    let module_name = module.strip_suffix(".v").or_else(|| module.strip_suffix(".sv")).unwrap_or(module);
+    let module_with_ext = if module.ends_with(".v") || module.ends_with(".sv") {
+        module.to_string()
+    } else {
+        format!("{}.v", module)
+    };
+    if !visited.insert(module_with_ext.clone()) {
         return Ok(HashSet::new());
     }
 
@@ -207,10 +215,149 @@ pub fn process_module(package_name: &str, module_path: &str, destination: String
             } else {
                 anyhow::bail!("Invalid choice");
             }
+    if let Some(entry) = find_module_file(&tmp_path, module, module_name) {
+        process_file(&entry, &destination, &module_with_ext, url, visited, is_top_module)?;
+    }
+
+    let submodules = download_and_process_submodules(package_name, &module_with_ext, &destination, url, visited, is_top_module)?;
+
+    Ok(submodules)
+}
+
+fn find_module_file(tmp_path: &Path, module: &str, module_name: &str) -> Option<DirEntry> {
+    WalkDir::new(tmp_path)
+        .into_iter()
+        .filter_map(Result::ok)
+        .find(|e| {
+            let file_name = e.file_name().to_str().unwrap_or("");
+            file_name == module || file_name == format!("{}.sv", module_name) || file_name == format!("{}.v", module_name)
+        })
+}
+
+fn process_file(entry: &DirEntry, destination: &str, module_name: &str, url: &str, visited: &mut HashSet<String>, is_top_module: bool) -> Result<()> {
+    let target_path = PathBuf::from(destination).join(module_name);
+    let extension = entry.path().extension().and_then(|s| s.to_str()).unwrap_or("v");
+
+    fs::copy(entry.path(), &target_path)?;
+
+    let contents = fs::read_to_string(entry.path())?;
+    let mut parser = Parser::new();
+    parser.set_language(tree_sitter_verilog::language())?;
+    let tree = parser.parse(&contents, None).context("Failed to parse file")?;
+
+    let header_content = generate_headers(tree.root_node(), &contents)?;
+    let header_filename = format!("{}.{}", module_name.strip_suffix(".v").unwrap_or(module_name), if extension == "sv" { "svh" } else { "vh" });
+    fs::write(PathBuf::from(destination).join(header_filename), header_content)?;
+
+    update_lockfile(module_name, url, &contents, visited, is_top_module)?;
+
+    Ok(())
+}
+
+fn download_and_process_submodules(package_name: &str, module_name: &str, destination: &str, url: &str, visited: &mut HashSet<String>, is_top_module: bool) -> Result<HashSet<String>> {
+    let contents = fs::read_to_string(PathBuf::from(destination).join(module_name))?;
+    let mut parser = Parser::new();
+    parser.set_language(tree_sitter_verilog::language())?;
+    let tree = parser.parse(&contents, None).context("Failed to parse file")?;
+
+    let submodules = get_submodules(tree.root_node(), &contents)?;
+    let mut all_submodules = HashSet::new();
+
+    for submodule in submodules {
+        let submodule_with_ext = if submodule.ends_with(".v") || submodule.ends_with(".sv") {
+            submodule
+        } else {
+            format!("{}.v", &submodule)
+        };
+        if !visited.contains(&submodule_with_ext) {
+            let submodule_destination = if is_top_module {
+                PathBuf::from(destination).join("dependencies")
+            } else {
+                PathBuf::from(destination)
+            };
+            fs::create_dir_all(&submodule_destination)?;
+            
+            let submodule_url = format!("{}/{}", url, submodule_with_ext); // Assuming submodules are in subdirectories
+            include_repo_from_url(&submodule_url, submodule_destination.to_str().unwrap())?;
+            
+            let processed_submodules = process_module(
+                package_name,
+                &submodule_with_ext,
+                submodule_destination.to_str().unwrap().to_string(),
+                visited,
+                &submodule_url,
+                false
+            )?;
+            
+            all_submodules.insert(submodule_with_ext);
+            all_submodules.extend(processed_submodules);
         }
     }
 
-    Ok(visited.clone())
+    Ok(all_submodules)
+}
+
+fn update_lockfile(module_name: &str, url: &str, contents: &str, visited: &HashSet<String>, is_top_module: bool) -> Result<()> {
+    let mut lockfile = fs::read_to_string("vpm.lock").unwrap_or_default();
+    let module_entry = if is_top_module {
+        format!("[[package]]\nname = \"{}\"\nsource = \"{}\"\nparents = []", module_name, url)
+    } else {
+        format!("[[package]]\nname = \"{}\"\nsource = \"{}\"", module_name, url)
+    };
+
+    let mut parser = Parser::new();
+    parser.set_language(tree_sitter_verilog::language())?;
+    let tree = parser.parse(contents, None).unwrap();
+    let submodules = get_submodules(tree.root_node(), contents)?;
+    let submodules_vec: Vec<String> = submodules.into_iter().map(|s| {
+        if s.ends_with(".v") || s.ends_with(".sv") {
+            s
+        } else {
+            format!("{}.v", s)
+        }
+    }).collect();
+
+    if !lockfile.contains(&format!("name = \"{}\"", module_name)) {
+        let formatted_submodules = submodules_vec.iter()
+            .map(|s| format!("  \"{}\",", s))
+            .collect::<Vec<_>>()
+            .join("\n");
+        lockfile.push_str(&format!("\n{}\nsubmodules = [\n{}\n]\n", module_entry, formatted_submodules));
+    } else {
+        update_submodules(&mut lockfile, &module_entry, &submodules_vec);
+    }
+
+    for submodule in &submodules_vec {
+        if !visited.contains(submodule) {
+            if let Some(existing_entry) = lockfile.find(&format!("\n[[package]]\nname = \"{}\"", submodule)) {
+                let parent_start = lockfile[existing_entry..].find("parents = [").map(|i| existing_entry + i);
+                if let Some(start) = parent_start {
+                    let end = lockfile[start..].find(']').map(|i| start + i + 1).unwrap_or(lockfile.len());
+                    let current_parents = lockfile[start..end].to_string();
+                    let new_parents = if current_parents.contains(module_name) {
+                        current_parents
+                    } else {
+                        format!("{}  \"{}\",\n]", &current_parents[..current_parents.len() - 1], module_name)
+                    };
+                    lockfile.replace_range(start..end, &new_parents);
+                }
+            } else {
+                let submodule_entry = format!("\n[[package]]\nname = \"{}\"\nsource = \"{}\"\nparents = [\n  \"{}\",\n]\nsubmodules = []\n", submodule, url, module_name);
+                lockfile.push_str(&submodule_entry);
+            }
+        }
+    }
+
+    fs::write("vpm.lock", lockfile)?;
+    Ok(())
+}
+
+fn update_submodules(lockfile: &mut String, module_entry: &str, submodules: &[String]) {
+    if let Some(start) = lockfile.find(module_entry).and_then(|pos| lockfile[pos..].find("submodules = [").map(|offset| pos + offset)) {
+        let end = lockfile[start..].find(']').map(|pos| start + pos + 1).unwrap_or(lockfile.len());
+        let new_modules = format!("submodules = [\n{}\n]", submodules.iter().map(|m| format!("  \"{}\",", m)).collect::<Vec<_>>().join("\n"));
+        lockfile.replace_range(start..end, &new_modules);
+    }
 }
 
 pub fn generate_headers(root_node: Node, contents: &str) -> Result<String> {

@@ -1,6 +1,6 @@
 [package]
 name = "vpm"
-version = "0.2.1"
+version = "0.2.2"
 edition = "2021"
 license = "MIT"
 copyright = "Copyright (c) 2024 Instachip"
@@ -23,6 +23,7 @@ tempfile = "3.12.0"
 toml = "0.8.19"
 indicatif = "0.17.8"
 skim = "0.10.4"
+cargo-lock = "9.0.0"
 
 [build-dependencies]
 cc="*"

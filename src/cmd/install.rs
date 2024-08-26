@@ -19,6 +19,10 @@ impl Execute for Install {
                 println!("Installing OpenROAD...");
                 install_openroad()?;
             },
+            "edalize" => {
+                println!("Installing Edalize...");
+                install_edalize()?;
+            },
             _ => {
                 println!("Tool '{}' is not recognized for installation.", self.tool_name);
             }
@@ -116,6 +120,60 @@ fn install_chipyard() -> Result<()> {
 
     println!("Chipyard installed successfully.");
     Ok(())
+}
+
+fn install_edalize() -> Result<()> {
+    println!("Installing Edalize...");
+
+    let (python_cmd, pip_cmd) = if check_command("python3") {
+        ("python3", "pip3")
+    } else if check_command("python") {
+        ("python", "pip")
+    } else {
+        println!("Neither Python 3 nor Python 2 is installed. Please install Python before proceeding.");
+        return Ok(());
+    };
+
+    if !check_command(pip_cmd) {
+        println!("{} is not installed. Please install pip before proceeding.", pip_cmd);
+        return Ok(());
+    }
+
+    // Install Edalize
+    let status = Command::new(pip_cmd)
+        .arg("install")
+        .arg("--user")
+        .arg("edalize")
+        .status()
+        .context("Failed to install Edalize using pip")?;
+
+    if !status.success() {
+        println!("Failed to install Edalize.");
+        return Ok(());
+    }
+
+    // Install FuseSoC
+    let status = Command::new(pip_cmd)
+        .arg("install")
+        .arg("--user")
+        .arg("fusesoc")
+        .status()
+        .context("Failed to install FuseSoC using pip")?;
+
+    if !status.success() {
+        println!("Failed to install FuseSoC.");
+        return Ok(());
+    }
+
+    println!("Edalize installed successfully.");
+    Ok(())
+}
+
+fn check_command(cmd: &str) -> bool {
+    Command::new(cmd)
+        .arg("--version")
+        .output()
+        .is_ok()
 }
 
 fn install_openroad() -> Result<()> {
