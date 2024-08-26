@@ -4,11 +4,11 @@ use clap::Parser;
 pub enum Cmd {
     Include(Include),
     Update(Update),
-    Uninstall(Uninstall),
+    Remove(Remove),
     Dotf(Dotf),
     Install(Install),
     List(List),
-    Run(Run),
+    Sim(Sim),
 }
 
 #[derive(Debug, Parser)]
@@ -46,8 +46,8 @@ pub struct Update {
     propagate_version = true,
     version
 )]
-pub struct Uninstall {
-    #[arg(help = "Full module path of package to Uninstall")]
+pub struct Remove {
+    #[arg(help = "Full module path of package to remove")]
     pub package_path: String,
 }
 
@@ -88,9 +88,7 @@ pub struct Install {
     version
 )]
 
-pub struct Run {
-    #[arg(help = "Output name for the compiled simulation binary")]
-    pub output_name: String,
+pub struct Sim {
     #[arg(help = "List of Verilog files to simulate")]
     pub verilog_files: Vec<String>,
 }
@@ -103,6 +101,5 @@ pub struct Run {
     propagate_version = true,
     version
 )]
-
 
 pub struct List {}

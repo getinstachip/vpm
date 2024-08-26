@@ -1,14 +1,9 @@
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 use std::fs;
 use anyhow::Result;
-use std::collections::HashSet;
 use toml::value::Value;
 use toml::Table;
 use toml::map::Map;
-use cargo_lock::Lockfile;
-use std::collections::BTreeMap;
-use serde_json::from_value;
 
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -74,17 +69,17 @@ impl VpmToml {
     pub fn add_top_module(&mut self, repo_link: &str, module_name: &str) {
         if let Some(dependencies) = self.toml_value.get_mut("dependencies") {
             if let Some(dependency) = dependencies.as_table_mut().unwrap().get_mut(repo_link) {
-                println!("Dependency: {}", dependency);
+                // println!("Dependency: {}", dependency);
                 if let Some(top_modules) = dependency.get_mut("top_modules") {
-                    println!("Top modules: {}", top_modules);
+                    // println!("Top modules: {}", top_modules);
                     if let Some(array) = top_modules.as_array_mut() {
                         array.push(Value::String(module_name.to_string()));
                     }
-                    println!("Top modules: {}", top_modules);
+                    // println!("Top modules: {}", top_modules);
                 } else {
                     dependency.as_table_mut().unwrap().insert("top_modules".to_string(), Value::Array(vec![Value::String(module_name.to_string())]));
                 }
-                println!("Dependency: {}", dependency);
+                // println!("Dependency: {}", dependency);
             }
         }
     }
@@ -160,7 +155,7 @@ pub fn add_dependency(git: &str, commit: Option<&str>) -> Result<()> {
             let toml_string = vpm_toml.to_string();
             fs::write("vpm.toml", toml_string)?;
         } else {
-            println!("Dependency '{}' already exists in vpm.toml", git);
+            // println!("Dependency '{}' already exists in vpm.toml", git);
         }
     } else {
         vpm_toml.add_dependency(git, commit);
@@ -174,7 +169,7 @@ pub fn add_top_module(repo_link: &str, module_name: &str) -> Result<()> {
     let mut vpm_toml = VpmToml::from("vpm.toml");
     vpm_toml.add_top_module(repo_link, module_name);
     let toml_string = vpm_toml.to_string();
-    println!("TOML: {}", toml_string);
+    // println!("TOML: {}", toml_string);
     fs::write("vpm.toml", toml_string)?;
     Ok(())
 }

@@ -187,7 +187,7 @@ fn install_chipyard() -> Result<()> {
 fn install_edalize() -> Result<()> {
     println!("Installing Edalize...");
 
-    let (python_cmd, pip_cmd) = if check_command("python3") {
+    let (_python_cmd, pip_cmd) = if check_command("python3") {
         ("python3", "pip3")
     } else if check_command("python") {
         ("python", "pip")

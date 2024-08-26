@@ -69,7 +69,7 @@ impl Execute for Include {
         let has_selected_items = !selected_items.is_empty();
 
         for item in &selected_items {
-            let item_text = item.text();
+            let item_text = item.text().into_owned();
             let displayed_path = item_text.strip_prefix(tmp_path.to_string_lossy().as_ref()).unwrap_or(&item_text).trim_start_matches('/');
             println!("Including module: {}", displayed_path);
             
@@ -90,6 +90,21 @@ impl Execute for Include {
         }
 
         fs::remove_dir_all(tmp_path)?;
+        if has_selected_items {
+            let installed_modules = selected_items.iter()
+                .filter_map(|item| {
+                    let item_text = item.text().into_owned();
+                    Path::new(&item_text)
+                        .file_stem()
+                        .and_then(|s| s.to_str())
+                        .map(|s| s.to_string())
+                })
+                .collect::<Vec<String>>()
+                .join(", ");
+            println!("Successfully installed module(s): {}", installed_modules);
+        } else {
+            println!("Successfully installed repository '{}'.", name_from_url(&self.url));
+        }
         Ok(())
     }
 }
@@ -206,7 +221,7 @@ pub fn process_module(package_name: &str, module: &str, destination: String, vis
             }
         }
     }
-    println!("Destination: {}", destination);
+    // println!("Destination: {}", destination);
     let submodules = download_and_process_submodules(package_name, &module_with_ext, &destination, url, visited, is_top_module)?;
     processed_modules.extend(submodules);
 
@@ -216,13 +231,13 @@ pub fn process_module(package_name: &str, module: &str, destination: String, vis
 fn process_file(entry: &DirEntry, destination: &str, module_path: &str, url: &str, visited: &mut HashSet<String>, is_top_module: bool) -> Result<()> {
     let target_path = PathBuf::from(destination);
     let extension = entry.path().extension().and_then(|s| s.to_str()).unwrap_or("v");
-    println!("Copying file: {}", entry.path().to_str().unwrap());
-    println!("Target path: {}", target_path.display());
+    // println!("Copying file: {}", entry.path().to_str().unwrap());
+    // println!("Target path: {}", target_path.display());
     fs::copy(entry.path(), &target_path.join(entry.file_name()))?;
-    println!("Copied file: {}", entry.path().to_str().unwrap());
+    // println!("Copied file: {}", entry.path().to_str().unwrap());
 
     let contents = fs::read_to_string(entry.path())?;
-    println!("Read file: {}", entry.path().to_str().unwrap());
+    // println!("Read file: {}", entry.path().to_str().unwrap());
     let mut parser = Parser::new();
     parser.set_language(tree_sitter_verilog::language())?;
     let tree = parser.parse(&contents, None).context("Failed to parse file")?;
@@ -238,16 +253,16 @@ fn process_file(entry: &DirEntry, destination: &str, module_path: &str, url: &st
         module_name.to_string()
     };
     let header_filename = format!("{}.{}", module_name.strip_suffix(".v").unwrap_or(module_name), if extension == "sv" { "svh" } else { "vh" });
-    println!("Writing header file: {}", target_path.join(&header_filename).to_str().unwrap());
+    // println!("Writing header file: {}", target_path.join(&header_filename).to_str().unwrap());
     fs::write(target_path.join(&header_filename), header_content)?;
-    println!("Wrote header file: {}", target_path.join(&header_filename).to_str().unwrap());
+    println!("Generating header file: {}", target_path.join(&header_filename).to_str().unwrap());
 
     update_lockfile(module_name_with_ext.as_str(), url, &contents, visited, is_top_module)?;
 
     Ok(())
 }
 
-fn download_and_process_submodules(package_name: &str, module_path: &str, destination: &str, url: &str, visited: &mut HashSet<String>, is_top_module: bool) -> Result<HashSet<String>> {
+fn download_and_process_submodules(package_name: &str, module_path: &str, destination: &str, url: &str, visited: &mut HashSet<String>, _is_top_module: bool) -> Result<HashSet<String>> {
     let module_name = Path::new(module_path)
         .file_stem()
         .and_then(|s| s.to_str())

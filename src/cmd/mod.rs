@@ -1,11 +1,11 @@
 mod cmd;
 mod include;
 mod update;
-mod uninstall;
+mod remove;
 mod dotf;
 mod list;
 mod install;
-mod run;
+mod sim;
 
 use anyhow::Result;
 
@@ -20,11 +20,11 @@ impl Execute for Cmd {
         match self {
             Cmd::Include(cmd) => cmd.execute(),
             Cmd::Update(cmd) => cmd.execute(),
-            Cmd::Uninstall(cmd) => cmd.execute(),
+            Cmd::Remove(cmd) => cmd.execute(),
             Cmd::Dotf(cmd) => cmd.execute(),
             Cmd::Install(cmd) => cmd.execute(),
             Cmd::List(cmd) => cmd.execute(),
-            Cmd::Run(cmd) => cmd.execute(),
+            Cmd::Sim(cmd) => cmd.execute(),
         }
     }
 }
