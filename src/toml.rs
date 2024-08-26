@@ -6,8 +6,10 @@ use std::collections::HashSet;
 use toml::value::Value;
 use toml::Table;
 use toml::map::Map;
+use cargo_lock::Lockfile;
 use std::collections::BTreeMap;
 use serde_json::from_value;
+
 
 #[derive(Serialize, Deserialize, Debug)]
 struct Package {
@@ -130,6 +132,37 @@ impl VpmToml {
         let package_content = self.package_to_string();
         format!("{}\n{}", package_content, toml_content)
     }
+
+    pub fn generate_lockfile_content(&self) -> String {
+        let dependencies = self.get_dependencies();
+        let mut lockfile_content = String::new();
+
+        if let Some(deps) = dependencies {
+            for (dep_url, dep_info) in deps {
+                lockfile_content.push_str(&format!("[[package]]\n"));
+                lockfile_content.push_str(&format!("source = \"{}\"\n", dep_url));
+                
+                if let Some(table) = dep_info.as_table() {
+                    if let Some(commit) = table.get("commit").and_then(|v| v.as_str()) {
+                        lockfile_content.push_str(&format!("version = \"{}\"\n", commit));
+                    }
+                    if let Some(top_modules) = table.get("top_modules").and_then(|v| v.as_array()) {
+                        lockfile_content.push_str("modules = [");
+                        let modules: Vec<String> = top_modules
+                            .iter()
+                            .filter_map(|m| m.as_str().map(|s| format!("\"{}\"", s)))
+                            .collect();
+                        lockfile_content.push_str(&modules.join(", "));
+                        lockfile_content.push_str("]\n");
+                    }
+                }
+
+                lockfile_content.push_str("\n");
+            }
+        }
+
+        lockfile_content
+    }
 }
 
 fn format_value(value: &Value) -> String {
@@ -173,6 +206,13 @@ pub fn add_top_module(repo_link: &str, module_name: &str) -> Result<()> {
     let toml_string = vpm_toml.to_string();
     println!("TOML: {}", toml_string);
     fs::write("vpm.toml", toml_string)?;
+    Ok(())
+}
+
+pub fn generate_lockfile() -> Result<()> {
+    let vpm_toml = VpmToml::from("vpm.toml");
+    let lockfile_content = vpm_toml.generate_lockfile_content();
+    fs::write("vpm.lock", lockfile_content)?;
     Ok(())
 }
 
