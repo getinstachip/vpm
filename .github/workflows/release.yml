@@ -44,6 +44,20 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Get Secrets from AWS Secrets Manager
+        id: get_secrets
+        uses: aws-actions/aws-secretsmanager-get-secrets@v2
+        with:
+          secret-ids: ANTHROPIC_API_KEY
+          parse-json-secrets: true
+
       - name: Get version
         id: get_version
         uses: SebRollen/toml-action@v1.2.0
@@ -103,11 +117,10 @@ jobs:
         if: runner.os == 'Windows'
         run: |
           7z a vpm-${{ steps.get_version.outputs.value }}-${{ matrix.target }}.zip `
-            LICENSE.md README.md `
+            LICENSE README.md `
             ./target/${{ matrix.target }}/release/vpm.exe
 
-      - name: Upload artifact (*nix)
-        if: runner.os != 'Windows'
+      - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.target }}
@@ -115,13 +128,6 @@ jobs:
             *.deb
             *.tar.gz
             *.zip
-
-      - name: Upload artifact (Windows)
-        if: runner.os == 'Windows'
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ matrix.target }}
-          path: target/${{ matrix.target }}/release/*.exe
 
       - name: Create release
         if: |
@@ -133,6 +139,5 @@ jobs:
             *.deb
             *.tar.gz
             *.zip
-            *.exe
           name: ${{ steps.get_version.outputs.value }}
           tag_name: ''
