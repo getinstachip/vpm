@@ -24,7 +24,7 @@ toml = "0.8.19"
 skim = "0.10.4"
 cargo-lock = "9.0.0"
 fastrand = "2.1.1"
-indicatif = "0.17.8".
+indicatif = "0.17.8"
 
 [build-dependencies]
 cc="*"
