@@ -30,7 +30,7 @@ After installation, you can use the `vpm` command in any terminal.
 - `vpm sim <module.sv> <testbench.sv>`
   
 ### include
-`vpm include <module.sv> <repo_url>`: includes a `.v` or `.sv` file and all submodule dependencies from the given repo and updates the `vpm.toml` file with the new module's details
+`vpm include <module.sv>`: includes a `.v` or `.sv` file and all submodule dependencies from the given repo and updates the `vpm.toml` file with the new module's details
 - Options:
   - `<module.sv>`: Module to install
   - `<repo_url>`: Link to the repository where the module is stored
