@@ -42,7 +42,7 @@ impl Execute for Include {
         let mut selected_items: HashSet<String> = HashSet::new();
 
         loop {
-            print!("Enter search query (or press Enter to finish): ");
+            print!("Enter module name (or press Enter to finish): ");
             io::stdout().flush()?;
 
             query.clear();
