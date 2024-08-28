@@ -1,5 +1,7 @@
 use serde::{Deserialize, Serialize};
 use std::fs;
+use std::io::Write;
+use std::path::Path;
 use anyhow::Result;
 use toml::value::Value;
 use toml::Table;
@@ -35,6 +37,16 @@ impl Default for Package {
 
 impl VpmToml {    
     pub fn from(filepath: &str) -> Self {
+        if !Path::new(filepath).exists() {
+            fs::OpenOptions::new()
+                .write(true)
+                .create(true)
+                .open(filepath)
+                .expect("Failed to create vpm.toml")
+                .write_all(b"[package]\n\n[dependencies]\n")
+                .expect("Failed to write to vpm.toml");
+        }
+
         let mut toml_content = fs::read_to_string(filepath).unwrap();
         toml_content = parse_and_format_toml(&toml_content);
         toml_content = add_package_info(&toml_content);

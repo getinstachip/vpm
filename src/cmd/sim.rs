@@ -7,7 +7,7 @@ use fastrand;
 use crate::cmd::{Execute, Sim};
 
 impl Execute for Sim {
-    fn execute(&self) -> Result<()> {
+    async fn execute(&self) -> Result<()> {
         // Compile the Verilog files using Icarus Verilog
         let output_path = self.compile_verilog()?;
 

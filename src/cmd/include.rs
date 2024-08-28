@@ -16,7 +16,7 @@ use std::io::{self, Write};
 
 
 impl Execute for Include {
-    fn execute(&self) -> Result<()> {
+    async fn execute(&self) -> Result<()> {
         fs::create_dir_all("./vpm_modules")?;
         println!("Including repository from URL: '{}'", self.url);
         let repo_name = name_from_url(&self.url);
@@ -193,7 +193,7 @@ pub fn process_module(package_name: &str, module: &str, destination: String, vis
         let dir_entry = filepath_to_dir_entry(file_path)?;
         process_file(&dir_entry, &target_path.to_str().unwrap(), module_name, url, visited, is_top_module)?;
         processed_modules.insert(module_with_ext.clone());
-        println!("Processed file: {}", dir_entry.path().to_str().unwrap());
+        // println!("Processed file: {}", dir_entry.path().to_str().unwrap());
     } else {
         let mut matching_entries = Vec::new();
         for entry in WalkDir::new(&tmp_path).into_iter().filter_map(Result::ok) {
@@ -431,12 +431,29 @@ pub fn generate_headers(root_node: Node, contents: &str) -> Result<String> {
         }
         
         header_content.push_str(&format!(
-            "module {} {}(\n{}\n{});\n\n// TODO: Add module implementation\n\nendmodule // {}\n\n",
+            "`ifndef {}_H\n`define {}_H\n\n",
+            module_name.to_uppercase(),
+            module_name.to_uppercase()
+        ));
+
+        if !params.is_empty() {
+            header_content.push_str(&format!(
+                "// Parameters\n{}\n\n",
+                params.trim()
+            ));
+        }
+
+        if !ports.is_empty() {
+            header_content.push_str(&format!(
+                "// Ports\n{}\n\n",
+                ports.trim()
+            ));
+        }
+
+        header_content.push_str(&format!(
+            "// Module: {}\n// TODO: Add module description\n\n`endif // {}_H\n\n",
             module_name,
-            if params.is_empty() { "" } else { "#(\n" },
-            params,
-            ports,
-            module_name
+            module_name.to_uppercase()
         ));
     }
 

@@ -1,6 +1,6 @@
 [package]
 name = "vpm"
-version = "0.2.3"
+version = "0.2.5"
 edition = "2021"
 license = "MIT"
 copyright = "Copyright (c) 2024 Instachip"
@@ -25,6 +25,7 @@ cargo-lock = "9.0.0"
 fastrand = "2.1.1"
 dialoguer = "0.11.0"
 fuzzy-matcher = "0.3.7"
+indicatif = "0.17.8"
 
 [build-dependencies]
 cc="*"

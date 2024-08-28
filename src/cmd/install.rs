@@ -5,7 +5,7 @@ use std::path::Path;
 use crate::cmd::{Execute, Install};
 
 impl Execute for Install {
-    fn execute(&self) -> Result<()> {
+    async fn execute(&self) -> Result<()> {
         match self.tool_name.as_str() {
             "verilator" => {
                 println!("Installing Verilator...");

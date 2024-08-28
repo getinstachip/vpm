@@ -6,6 +6,7 @@ pub enum Cmd {
     Update(Update),
     Remove(Remove),
     Dotf(Dotf),
+    Docs(Docs),
     Install(Install),
     List(List),
     Sim(Sim),
@@ -63,6 +64,21 @@ pub struct Remove {
 pub struct Dotf {
     #[arg(help = "Path to top module to generate filelist for")]
     pub path_to_top_module: String,
+}
+
+#[derive(Debug, Parser)]
+#[clap(
+    about,
+    author,
+    disable_help_subcommand = true,
+    propagate_version = true,
+    version
+)]
+pub struct Docs{
+    #[arg(help = "Name of module to generate documentation for")]
+    pub module: String,
+    #[arg(help = "Url of repository to generate documentation for")]
+    pub url: Option<String>,
 }
 
 #[derive(Debug, Parser)]

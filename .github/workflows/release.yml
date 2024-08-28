@@ -103,11 +103,10 @@ jobs:
         if: runner.os == 'Windows'
         run: |
           7z a vpm-${{ steps.get_version.outputs.value }}-${{ matrix.target }}.zip `
-            LICENSE.md README.md `
+            LICENSE README.md `
             ./target/${{ matrix.target }}/release/vpm.exe
 
-      - name: Upload artifact (*nix)
-        if: runner.os != 'Windows'
+      - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.target }}
@@ -115,13 +114,6 @@ jobs:
             *.deb
             *.tar.gz
             *.zip
-
-      - name: Upload artifact (Windows)
-        if: runner.os == 'Windows'
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ matrix.target }}
-          path: target/${{ matrix.target }}/release/*.exe
 
       - name: Create release
         if: |
@@ -133,6 +125,5 @@ jobs:
             *.deb
             *.tar.gz
             *.zip
-            *.exe
           name: ${{ steps.get_version.outputs.value }}
           tag_name: ''
