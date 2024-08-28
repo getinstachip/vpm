@@ -6,25 +6,28 @@ mod dotf;
 mod list;
 mod install;
 mod sim;
+mod docs;
 
 use anyhow::Result;
 
 pub use crate::cmd::cmd::*;
 
 pub trait Execute {
-    fn execute(&self) -> Result<()>;
+    async fn execute(&self) -> Result<()>;
 }
 
+
 impl Execute for Cmd {
-    fn execute(&self) -> Result<()> {
+    async fn execute(&self) -> Result<()> {
         match self {
-            Cmd::Include(cmd) => cmd.execute(),
-            Cmd::Update(cmd) => cmd.execute(),
-            Cmd::Remove(cmd) => cmd.execute(),
-            Cmd::Dotf(cmd) => cmd.execute(),
-            Cmd::Install(cmd) => cmd.execute(),
-            Cmd::List(cmd) => cmd.execute(),
-            Cmd::Sim(cmd) => cmd.execute(),
+            Cmd::Include(cmd) => cmd.execute().await,
+            Cmd::Update(cmd) => cmd.execute().await,
+            Cmd::Remove(cmd) => cmd.execute().await,
+            Cmd::Dotf(cmd) => cmd.execute().await,
+            Cmd::Install(cmd) => cmd.execute().await,
+            Cmd::List(cmd) => cmd.execute().await,
+            Cmd::Sim(cmd) => cmd.execute().await,
+            Cmd::Docs(cmd) => cmd.execute().await,
         }
     }
 }

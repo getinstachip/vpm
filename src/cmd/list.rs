@@ -8,7 +8,7 @@ use tempfile::tempdir;
 const STD_LIB_URL: &str = "https://github.com/getinstachip/openchips";
 
 impl Execute for List {
-    fn execute(&self) -> Result<()> {
+    async fn execute(&self) -> Result<()> {
         let verilog_files = list_verilog_files()?;
         println!("Available Verilog modules:");
         for file in verilog_files {

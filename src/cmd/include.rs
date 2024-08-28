@@ -26,7 +26,7 @@ impl SkimItem for Item {
 }
 
 impl Execute for Include {
-    fn execute(&self) -> Result<()> {
+    async fn execute(&self) -> Result<()> {
         fs::create_dir_all("./vpm_modules")?;
         println!("Including repository from URL: '{}'", self.url);
         let repo_name = name_from_url(&self.url);
