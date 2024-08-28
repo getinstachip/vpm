@@ -9,7 +9,7 @@ You'll be able to:
 - Simulate using `vpm sim`
 - Automatically generate/handle `.f` files, `.svh`, `.xcd`, `.tcl`, etc.
 
-## Installation
+## Installation (no setup, just run the command)
 
 To install VPM, you don't need any dependencies! Just run the following command:
 
@@ -19,15 +19,8 @@ curl -f https://getinstachip.com/install.sh | sh
 
 After installation, you can use the `vpm` command in any terminal.
 
-Note: to use properly, please configure your `.toml` file to be initialized with:
-```toml
-[package]
-
-[dependencies]
-```
-
 ## Full command list
-- `vpm include <module.sv> <repo_url>`: Include full module hierarchy
+- `vpm include <repo_url>`: Opens a menu where you can type to choose any module from the repo. Include its entire hierarchy.
 - `vpm docs <module.sv> <repo_url>`: Generate documentation for any module (highlighting bugs and edge cases)
 - `vpm install <tool>`: Auto-integrate an open-source tool without manual setup
 - `vpm update <module.sv>`: Update module to the latest version
