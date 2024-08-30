@@ -3,6 +3,7 @@ use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 use std::{fs, process::Command};
 use anyhow::{Context, Result};
+use fancy_regex::Regex;
 use once_cell::sync::Lazy;
 use tree_sitter::{Node, Parser, Query, QueryCursor};
 use crate::cmd::{Execute, Include};
@@ -286,11 +287,11 @@ fn download_and_process_submodules(package_name: &str, module_path: &str, destin
     };
 
     let contents = fs::read_to_string(PathBuf::from(destination).join(module_name_with_ext))?;
-    let mut parser = Parser::new();
-    parser.set_language(tree_sitter_verilog::language())?;
-    let tree = parser.parse(&contents, None).context("Failed to parse file")?;
+    // let mut parser = Parser::new();
+    // parser.set_language(tree_sitter_verilog::language())?;
+    // let tree = parser.parse(&contents, None).context("Failed to parse file")?;
 
-    let submodules = get_submodules(tree.root_node(), &contents)?;
+    let submodules = get_submodules(&contents)?;
     let mut all_submodules = HashSet::new();
 
     for submodule in submodules {
@@ -331,10 +332,10 @@ fn update_lockfile(module_name: &str, url: &str, contents: &str, visited: &HashS
         format!("[[package]]\nname = \"{}\"\nsource = \"{}\"", module_name, url)
     };
 
-    let mut parser = Parser::new();
-    parser.set_language(tree_sitter_verilog::language())?;
-    let tree = parser.parse(contents, None).unwrap();
-    let submodules = get_submodules(tree.root_node(), contents)?;
+    // let mut parser = Parser::new();
+    // parser.set_language(tree_sitter_verilog::language())?;
+    // let tree = parser.parse(contents, None).unwrap();
+    let submodules = get_submodules(contents)?;
     let submodules_vec: Vec<String> = submodules.into_iter().map(|s| {
         if s.ends_with(".v") || s.ends_with(".sv") {
             s
@@ -460,38 +461,13 @@ pub fn generate_headers(root_node: Node, contents: &str) -> Result<String> {
     Ok(header_content)
 }
 
-pub fn get_submodules(root_node: Node, contents: &str) -> Result<HashSet<String>> {
-    static QUERY: Lazy<Query> = Lazy::new(|| {
-        Query::new(
-            tree_sitter_verilog::language(),
-            "(module_or_generate_item 
-                (module_instantiation 
-                    (simple_identifier) @module_submodule
-                )
-            )
-            (module_or_generate_item 
-                (udp_instantiation 
-                    (simple_identifier) @module_submodule
-                )
-            )",
-        )
-        .expect("Failed to create query")
-    });
-
-    let mut query_cursor = QueryCursor::new();
-    let matches = query_cursor.matches(&QUERY, root_node, contents.as_bytes());
-
-    let mut submodules = HashSet::new();
-
-    for match_ in matches {
-        for capture in match_.captures {
-            if capture.index == 0 {
-                let capture_text = &contents[capture.node.byte_range()];
-                submodules.insert(capture_text.to_string());
-            }
-        }
-    }
-
+pub fn get_submodules(contents: &str) -> Result<HashSet<String>> {
+    static REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"(?mi)^\s*(?!(cover|generate|if|begin|assert|assume|wire|reg))(\w+)\s*(?:#\([.\w(),\s+`\d?:<'-/{}]+\))?\s*[\w\[:\]]+\s*(?:\([\s.\w(\[\-:\]\),{'}`/+]+);").unwrap());
+    let submodules: HashSet<String> = REGEX
+        .captures_iter(contents) // Iterate over captures
+        .map(|caps| caps.unwrap().get(0).unwrap().as_str()) // Extract the matched string
+        .map(|s| s.split_whitespace().next().unwrap().to_string()) // Split and get submodule name
+        .collect(); // Collect into a HashSet
     Ok(submodules)
 }
 
