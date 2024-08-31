@@ -19,6 +19,8 @@ main() {
         exit 1
     fi
 
+    echo "Installing VPM for $platform $arch"
+
     case "$arch" in
         arm64 | aarch64)
             arch="aarch64"
@@ -79,6 +81,8 @@ linux() {
     elif [[ "$download_url" == *.deb ]]; then
         sudo dpkg -i "$temp/vpm-package"
     fi
+
+    echo "VPM has been installed successfully. Run 'vpm --help' to get started."
 }
 
 macos() {
