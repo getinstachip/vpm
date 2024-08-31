@@ -453,12 +453,17 @@ pub fn generate_headers(root_node: Node, contents: &str) -> Result<String> {
 }
 
 pub fn get_submodules(contents: &str) -> Result<HashSet<String>> {
-    static REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"(?mi)^\s*(?!(cover|generate|if|begin|assert|assume|wire|reg))(\w+)\s*(?:#\([.\w(),\s+`\d?:<'-/{}]+\))?\s*[\w\[:\]]+\s*(?:\([\s.\w(\[\-:\]\),{'}`/+]+);").unwrap());
+    static REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(
+        r"(?mi)^\s*(?!(cover|generate|if|begin|end|assert|assume|wire|reg|else|case|initial|(local)?param))(\w+)\s*(?:#\([\s.\w(\[\-:\]\),{'}`/+!~@#$%^&*=<>?]+\))?\s*[\w\[:\]]+\s*(?:\([\s.\w(\[\-:\]\),{'}`/+!~@#$%^&*=<>?]+\));"
+    ).unwrap());
     let submodules: HashSet<String> = REGEX
         .captures_iter(contents) // Iterate over captures
         .map(|caps| caps.unwrap().get(0).unwrap().as_str()) // Extract the matched string
         .map(|s| s.split_whitespace().next().unwrap().to_string()) // Split and get submodule name
         .collect(); // Collect into a HashSet
+    for submodule in &submodules {
+        println!("Found submodule: {}", submodule);
+    }
     Ok(submodules)
 }
 
