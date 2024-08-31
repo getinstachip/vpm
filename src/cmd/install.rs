@@ -27,6 +27,10 @@ impl Execute for Install {
                 println!("Installing Edalize...");
                 install_edalize()?;
             },
+            "yosys" => {
+                println!("Installing Yosys...");
+                install_yosys()?;
+            },
             _ => {
                 println!("Tool '{}' is not recognized for installation.", self.tool_name);
             }
@@ -293,5 +297,65 @@ fn install_openroad() -> Result<()> {
     }
 
     println!("OpenROAD installed successfully.");
+    Ok(())
+}
+
+fn install_yosys() -> Result<()> {
+    println!("Installing Yosys and ABC...");
+
+    #[cfg(target_os = "macos")]
+    {
+        println!("Running on macOS...");
+        // Install Yosys using Homebrew on macOS
+        let status = Command::new("brew")
+            .arg("install")
+            .arg("yosys")
+            .status()
+            .context("Failed to install Yosys using Homebrew")?;
+
+        if !status.success() {
+            println!("Failed to install Yosys on macOS.");
+            return Ok(());
+        }
+
+        // Install ABC by git cloning and making
+        if !Path::new("/usr/local/bin/abc").exists() {
+            println!("Installing ABC...");
+            let status = Command::new("git")
+                .args(&["clone", "https://github.com/berkeley-abc/abc.git"])
+                .status()
+                .context("Failed to clone ABC repository")?;
+
+            if !status.success() {
+                println!("Failed to clone ABC repository.");
+                return Ok(());
+            }
+
+            let status = Command::new("make")
+                .current_dir("abc")
+                .status()
+                .context("Failed to make ABC")?;
+
+            if !status.success() {
+                println!("Failed to make ABC.");
+                return Ok(());
+            }
+
+            let status = Command::new("sudo")
+                .args(&["mv", "abc/abc", "/usr/local/bin/"])
+                .status()
+                .context("Failed to move ABC to /usr/local/bin/")?;
+
+            if !status.success() {
+                println!("Failed to move ABC to /usr/local/bin/.");
+                return Ok(());
+            }
+
+            println!("ABC installed successfully.");
+        } else {
+            println!("ABC is already installed.");
+        }
+    }
+    println!("Yosys and ABC installed successfully.");
     Ok(())
 }

@@ -10,6 +10,7 @@ pub enum Cmd {
     Install(Install),
     List(List),
     Sim(Sim),
+    Synthesize(Synthesize),
 }
 
 #[derive(Debug, Parser)]
@@ -119,3 +120,16 @@ pub struct Sim {
 )]
 
 pub struct List {}
+
+#[derive(Debug, Parser)]
+#[clap(
+    about,
+    author,
+    disable_help_subcommand = true,
+    propagate_version = true,
+    version
+)]  
+pub struct Synthesize {
+    #[arg(help = "Top module path to synthesize")]
+    pub top_module_path: String,
+}
