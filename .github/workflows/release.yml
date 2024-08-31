@@ -34,10 +34,6 @@ jobs:
             target: x86_64-apple-darwin
           - os: macos-latest
             target: aarch64-apple-darwin
-          - os: windows-latest
-            target: x86_64-pc-windows-msvc
-          - os: windows-latest
-            target: aarch64-pc-windows-msvc
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -92,19 +88,11 @@ jobs:
           args: --no-build --no-strip --output=. --target=${{ matrix.target }}
 
       - name: Package (*nix)
-        if: runner.os != 'Windows'
         run: |
           tar -cv LICENSE README.md \
             -C target/${{ matrix.target }}/release/ vpm |
             gzip --best > \
             vpm-${{ steps.get_version.outputs.value }}-${{ matrix.target }}.tar.gz
-
-      - name: Package (Windows)
-        if: runner.os == 'Windows'
-        run: |
-          7z a vpm-${{ steps.get_version.outputs.value }}-${{ matrix.target }}.zip `
-            LICENSE README.md `
-            ./target/${{ matrix.target }}/release/vpm.exe
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
