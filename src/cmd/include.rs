@@ -170,6 +170,7 @@ pub fn include_module_from_url(module_path: &str, url: &str) -> Result<()> {
 }
 
 pub fn process_module(package_name: &str, module: &str, destination: String, visited: &mut HashSet<String>, url: &str, is_top_module: bool) -> Result<HashSet<String>> {
+    let mut skip_mod = false;
     let module_name = module.strip_suffix(".v").or_else(|| module.strip_suffix(".sv")).unwrap_or(module);
     let module_with_ext = if module.ends_with(".v") || module.ends_with(".sv") {
         module.to_string()
@@ -205,7 +206,8 @@ pub fn process_module(package_name: &str, module: &str, destination: String, vis
         }
 
         if matching_entries.is_empty() {
-            anyhow::bail!("No matching files found for module '{}'", module_name);
+            println!("No matching files found for module '{}'. Skipping...", module_name);
+            skip_mod = true;
         } else if matching_entries.len() == 1 {
             let dir_entry = filepath_to_dir_entry(matching_entries[0].clone())?;
             // println!("Processing file: {}", dir_entry.path().to_str().unwrap());
@@ -232,10 +234,14 @@ pub fn process_module(package_name: &str, module: &str, destination: String, vis
         }
     }
     // println!("Destination: {}", destination);
-    let submodules = download_and_process_submodules(package_name, &module_with_ext, &destination, url, visited, is_top_module)?;
-    processed_modules.extend(submodules);
+    if !skip_mod {
+        let submodules = download_and_process_submodules(package_name, &module_with_ext, &destination, url, visited, is_top_module)?;
+        processed_modules.extend(submodules);
 
-    Ok(processed_modules)
+        Ok(processed_modules)
+    } else {
+        Ok(HashSet::new())
+    }
 }
 
 fn process_file(entry: &DirEntry, destination: &str, module_path: &str, url: &str, visited: &mut HashSet<String>, is_top_module: bool) -> Result<()> {
