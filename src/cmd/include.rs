@@ -6,28 +6,18 @@ use anyhow::{Context, Result};
 use fancy_regex::Regex;
 use once_cell::sync::Lazy;
 use tree_sitter::{Node, Parser, Query, QueryCursor};
-use skim::{prelude::SkimOptionsBuilder, Skim, prelude::SkimItemReader};
 use crate::cmd::{Execute, Include};
 use crate::toml::{add_dependency, add_top_module};
-use std::io::Cursor;
-use skim::SkimItem;
-use std::sync::Arc;
-use std::borrow::Cow;
 use walkdir::{DirEntry, WalkDir};
 
+use dialoguer::{theme::ColorfulTheme, MultiSelect};
+use fuzzy_matcher::FuzzyMatcher;
+use fuzzy_matcher::skim::SkimMatcherV2;
+use std::io::{self, Write};
 
-struct Item {
-    text: String,
-}
-
-impl SkimItem for Item {
-    fn text(&self) -> Cow<str> {
-        Cow::Borrowed(&self.text)
-    }
-}
 
 impl Execute for Include {
-    fn execute(&self) -> Result<()> {
+    async fn execute(&self) -> Result<()> {
         fs::create_dir_all("./vpm_modules")?;
         println!("Including repository from URL: '{}'", self.url);
         let repo_name = name_from_url(&self.url);
@@ -37,32 +27,51 @@ impl Execute for Include {
 
         let files = get_files(&tmp_path.to_str().unwrap_or_default());
 
-        let options = SkimOptionsBuilder::default()
-            .height(Some("50%"))
-            .multi(true)
-            .build()
-            .unwrap();
-
-        let items: Vec<Arc<dyn SkimItem>> = files
+        let items: Vec<String> = files
             .into_iter()
-            .map(|file| Arc::new(Item { text: file }) as Arc<dyn SkimItem>)
+            .map(|file| file.strip_prefix(&tmp_path.to_string_lossy().as_ref())
+                .unwrap_or(&file)
+                .trim_start_matches('/')
+                .to_string())
             .collect();
 
-        let selected_items = Skim::run_with(
-            &options,
-            Some(SkimItemReader::default().of_bufread(Cursor::new(
-                items
-                    .iter()
-                    .map(|item| {
-                        let text = item.text().into_owned();
-                        text.strip_prefix(&tmp_path.to_string_lossy().as_ref()).unwrap_or(&text).trim_start_matches('/').to_string()
-                    })
-                    .collect::<Vec<String>>()
-                    .join("\n"),
-            )))
-        )
-        .map(|out| out.selected_items)
-        .unwrap_or_else(|| Vec::new());
+
+        let matcher = SkimMatcherV2::default();
+        let mut _filtered_items = items.clone();
+        let mut query = String::new();
+
+        let mut selected_items: HashSet<String> = HashSet::new();
+
+        loop {
+            print!("Enter module name (or press Enter to finish): ");
+            io::stdout().flush()?;
+
+            query.clear();
+            io::stdin().read_line(&mut query)?;
+            query = query.trim().to_string();
+
+            if query.is_empty() {
+                break;
+            }
+
+            _filtered_items = items
+                .iter()
+                .filter(|&item| matcher.fuzzy_match(item, &query).is_some())
+                .cloned()
+                .collect();
+
+            let selection = MultiSelect::with_theme(&ColorfulTheme::default())
+                .with_prompt("Toggle items to include with the space bar. Hit enter to start a new search")
+                .items(&_filtered_items)
+                .interact()?;
+
+            println!("\nSelected items:");
+            for i in &selected_items {
+                println!("- {}", i);
+            }
+    
+            selected_items.extend(selection.iter().map(|&i| _filtered_items[i].clone()));
+        }
 
         // Clear the terminal
         print!("\x1B[2J\x1B[1;1H");
@@ -70,7 +79,7 @@ impl Execute for Include {
         let has_selected_items = !selected_items.is_empty();
 
         for item in &selected_items {
-            let item_text = item.text().into_owned();
+            let item_text = item.clone();
             let displayed_path = item_text.strip_prefix(tmp_path.to_string_lossy().as_ref()).unwrap_or(&item_text).trim_start_matches('/');
             println!("Including module: {}", displayed_path);
             
@@ -94,7 +103,7 @@ impl Execute for Include {
         if has_selected_items {
             let installed_modules = selected_items.iter()
                 .filter_map(|item| {
-                    let item_text = item.text().into_owned();
+                    let item_text = item.clone();
                     Path::new(&item_text)
                         .file_stem()
                         .and_then(|s| s.to_str())

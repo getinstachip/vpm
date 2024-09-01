@@ -11,12 +11,13 @@ use clap::Parser;
 use crate::cmd::{Cmd, Execute};
 use crate::error::SilentExit;
 
-pub fn main() -> ExitCode {
+#[tokio::main]
+pub async fn main() -> ExitCode {
     // Forcibly disable backtraces.
     env::remove_var("RUST_LIB_BACKTRACE");
     env::remove_var("RUST_BACKTRACE");
 
-    match Cmd::parse().execute() {
+    match Cmd::parse().execute().await {
         Ok(()) => ExitCode::SUCCESS,
         Err(e) => match e.downcast::<SilentExit>() {
             Ok(SilentExit { code }) => code.into(),

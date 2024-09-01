@@ -6,7 +6,7 @@ use std::io::Write;
 use crate::cmd::{Execute, Dotf};
 
 impl Execute for Dotf {
-    fn execute(&self) -> Result<()> {
+    async fn execute(&self) -> Result<()> {
         // Clear the .f file if it already exists
         let top_module_file = Path::new(&self.path_to_top_module).file_name().and_then(|f| f.to_str()).unwrap_or("");
         let top_module_dir = Path::new(&self.path_to_top_module).with_extension("").to_str().unwrap_or("").to_string();
