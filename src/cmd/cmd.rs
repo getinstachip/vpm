@@ -22,6 +22,8 @@ pub enum Cmd {
     version
 )]
 pub struct Include {
+    #[arg(long, short, help = "Include as a repository")]
+    pub repo: bool,
     #[arg(help = "URL of repository to include from")]
     pub url: String,
 }
