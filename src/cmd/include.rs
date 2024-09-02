@@ -205,7 +205,8 @@ pub fn process_module(package_name: &str, module: &str, destination: String, vis
         }
 
         if matching_entries.is_empty() {
-            anyhow::bail!("No matching files found for module '{}'", module_name);
+            println!("No matching files found for module '{}'. Skipping...", module_name);
+            return Ok(HashSet::new());
         } else if matching_entries.len() == 1 {
             let dir_entry = filepath_to_dir_entry(matching_entries[0].clone())?;
             // println!("Processing file: {}", dir_entry.path().to_str().unwrap());
@@ -462,12 +463,17 @@ pub fn generate_headers(root_node: Node, contents: &str) -> Result<String> {
 }
 
 pub fn get_submodules(contents: &str) -> Result<HashSet<String>> {
-    static REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"(?mi)^\s*(?!(cover|generate|if|begin|assert|assume|wire|reg))(\w+)\s*(?:#\([.\w(),\s+`\d?:<'-/{}]+\))?\s*[\w\[:\]]+\s*(?:\([\s.\w(\[\-:\]\),{'}`/+]+);").unwrap());
+    static REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(
+        r"(?mi)^\s*(?!(always(_comb|_ff|_latch)?|assert|assign|assume|begin|case|cover|else|end(case|function|generate|module|primitive|table|task)?|enum|for|forever|function|generate|if|initial|input|int|localparam|logic|module|negedge|output|param(eter)?|posedge|primitive|real|reg|repeat|table|task|time|timescale|typedef|while|wire))(\w+)\s*(?:#\([\s.\w(\[\-:\]\),{'}`/+!~@#$%^&*=<>?]+\))?\s*[\w\[:\]]+\s*(?:\([\s.\w(\[\-:\]\),{'}`/+!~@#$%^&*=<>?]+\));"
+    ).unwrap());
     let submodules: HashSet<String> = REGEX
         .captures_iter(contents) // Iterate over captures
         .map(|caps| caps.unwrap().get(0).unwrap().as_str()) // Extract the matched string
         .map(|s| s.split_whitespace().next().unwrap().to_string()) // Split and get submodule name
         .collect(); // Collect into a HashSet
+    for submodule in &submodules {
+        println!("Found submodule: {}", submodule);
+    }
     Ok(submodules)
 }
 
