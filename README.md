@@ -14,7 +14,7 @@ You'll be able to:
 To install VPM, you don't need any dependencies! Just run the following command:
 
 ```bash
-curl -f https://getinstachip.com/install.sh | sh
+curl -sSfL https://raw.githubusercontent.com/getinstachip/vpm/main/install.sh | sh
 ```
 
 After installation, you can use the `vpm` command in any terminal.
