@@ -4,7 +4,7 @@
 VPM is a package manager for Verilog projects being piloted at Stanford and UC Berkeley. It's designed to simplify the management, reuse, and communication of IP cores and dependencies in hardware design workflows. Easily import modules for use, manage dependencies, and create documentation to accelerate your design process.
 
 You'll be able to:
-- `vpm include` full module hierarchies using a single command
+- `vpm include` module hierarchies using a single command
 - Generate documentation for any `.v` or `.sv` module
 - Simulate using `vpm sim`
 - Automatically generate/handle `.f` files, `.svh`, `.xcd`, `.tcl`, etc.
@@ -20,7 +20,7 @@ curl -sSfL https://raw.githubusercontent.com/getinstachip/vpm/main/install.sh | 
 After installation, you can use the `vpm` command in any terminal.
 
 ## Full command list
-- `vpm include <repo_url>`: Opens a menu where you can type to choose any module from the repo. Include its entire hierarchy.
+- `vpm include <path_to_component>`: Opens a menu where you can type to choose any module from the repo. Include its entire hierarchy.
 - `vpm docs <module.sv> <repo_url>`: Generate documentation for any module (highlighting bugs and edge cases)
 - `vpm install <tool>`: Auto-integrate an open-source tool without manual setup
 - `vpm update <module.sv>`: Update module to the latest version
