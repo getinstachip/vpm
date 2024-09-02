@@ -85,7 +85,7 @@ impl Execute for Include {
             let full_path = tmp_path.join(displayed_path);
             let module_path = full_path.strip_prefix(&tmp_path).unwrap_or(&full_path).to_str().unwrap().trim_start_matches('/');
             
-            include_module_from_url(module_path, &self.url)?;
+            include_module_from_url(module_path, &self.url, self.riscv)?;
             let module_name = Path::new(module_path)
                 .file_name()
                 .and_then(|s| s.to_str())
@@ -153,7 +153,97 @@ fn filepath_to_dir_entry(filepath: PathBuf) -> Result<DirEntry> {
 }
 
 
-pub fn include_module_from_url(module_path: &str, url: &str) -> Result<()> {
+fn generate_top_v_content(module_path: &str) -> Result<String> {
+    println!("Generating top.v file for RISC-V in {}", module_path);
+    let module_content = fs::read_to_string(module_path)?;
+
+    let mut top_content = String::new();
+    top_content.push_str("// Auto-generated top.v file for RISC-V\n\n");
+
+    // Use regex to find module declaration
+    let module_re = regex::Regex::new(r"module\s+(\w+)\s*(?:#\s*\(([\s\S]*?)\))?\s*\(([\s\S]*?)\);").unwrap();
+    if let Some(captures) = module_re.captures(&module_content) {
+        let module_name = captures.get(1).unwrap().as_str();
+        println!("Module name: {}", module_name);
+
+        // Extract parameters
+        let params = captures.get(2).map_or(Vec::new(), |m| {
+            m.as_str().lines()
+                .map(|line| line.trim())
+                .filter(|line| !line.is_empty())
+                .collect()
+        });
+
+        // Extract ports
+        let ports: Vec<&str> = captures.get(3).unwrap().as_str()
+            .lines()
+            .map(|line| line.trim())
+            .filter(|line| !line.is_empty())
+            .collect();
+
+        // Generate top module ports
+        top_content.push_str("module top (\n");
+        for port in &ports {
+            top_content.push_str(&format!("    {}\n", port));
+        }
+        top_content.push_str(");\n\n");
+
+        // Instantiate the module
+        top_content.push_str(&format!("{} #(\n", module_name));
+        for param in params.iter() {
+            if let Some((name, value)) = param.split_once('=') {
+                let name = name.trim().trim_start_matches("parameter").trim();
+                let name = name.split_whitespace().last().unwrap_or(name);
+                let value = value.trim().trim_end_matches(',');
+                top_content.push_str(&format!("    .{}({}),\n", name, value));
+            }
+        }
+        top_content.push_str(") cpu (\n");
+
+        // Connect ports
+        let port_re = regex::Regex::new(r"(input|output|inout)\s+(?:wire|reg)?\s*(?:\[.*?\])?\s*(\w+)").unwrap();
+        for (i, port) in ports.iter().enumerate() {
+            if let Some(port_captures) = port_re.captures(port) {
+                let port_name = port_captures.get(2).unwrap().as_str();
+                top_content.push_str(&format!("    .{}({}){}\n", port_name, port_name, if i < ports.len() - 1 { "," } else { "" }));
+            }
+        }
+        top_content.push_str(");\n\n");
+
+        top_content.push_str("endmodule\n");
+        return Ok(top_content);
+    }
+
+    Err(anyhow::anyhow!("No module declaration found in the file"))
+}
+
+fn generate_xdc_content(module_path: &str) -> Result<String> {
+    println!("Generating constraints.xdc file for Xilinx Artix-7 board in {}", module_path);
+    let module_content = fs::read_to_string(module_path)?;
+
+    let mut xdc_content = String::new();
+    xdc_content.push_str("## Auto-generated constraints.xdc file for Xilinx Artix-7 board\n\n");
+
+    // Use regex to find the clock signal
+    let clock_re = regex::Regex::new(r"input\s+(\w+)\s*,\s*input\s+(\w+)\s*,\s*output\s+(\w+)\s*,\s*output\s+(\w+)\s*,\s*output\s+(\w+)\s*").unwrap();
+    if let Some(captures) = clock_re.captures(&module_content) {
+        let clk_input = captures.get(1).unwrap().as_str();
+        let rst_input = captures.get(2).unwrap().as_str();
+        let gpio_output = captures.get(3).unwrap().as_str();
+        let uart_output = captures.get(4).unwrap().as_str();
+        let spi_output = captures.get(5).unwrap().as_str();
+
+        xdc_content.push_str(&format!("create_clock -period 10.000 -name clk -waveform {{0 5}} {}\n", clk_input));
+        xdc_content.push_str(&format!("create_reset -name reset -waveform {{0 5}} {}\n", rst_input));
+        xdc_content.push_str(&format!("set_property PACKAGE_PIN U16 [get_ports {{ {}}} -to top]\n", gpio_output));
+        xdc_content.push_str(&format!("set_property PACKAGE_PIN U15 [get_ports {{ {}}} -to top]\n", uart_output));
+        xdc_content.push_str(&format!("set_property PACKAGE_PIN U14 [get_ports {{ {}}} -to top]\n", spi_output));
+    }
+
+    Ok(xdc_content)
+}
+
+pub fn include_module_from_url(module_path: &str, url: &str, riscv: bool) -> Result<()> {
     let package_name = name_from_url(url);
 
     include_repo_from_url(url, "/tmp/")?;
@@ -163,8 +253,29 @@ pub fn include_module_from_url(module_path: &str, url: &str) -> Result<()> {
         .unwrap_or(module_path);
     let destination = format!("./vpm_modules/{}", module_name);
     fs::create_dir_all(&destination)?;
-    // fs::create_dir_all(format!("{}/dependencies", &destination))?;
     process_module(package_name, module_path, destination.to_owned(), &mut HashSet::new(), url, true)?;
+    
+    if riscv {
+        let module_file_name = Path::new(&destination)
+            .file_name()
+            .and_then(|name| name.to_str())
+            .ok_or_else(|| anyhow::anyhow!("Invalid destination path"))?;
+        let module_path = Path::new(&destination).join(format!("{}.v", module_file_name));
+        if !module_path.exists() {
+            let module_path = Path::new(&destination).join(format!("{}.sv", module_file_name));
+            if !module_path.exists() {
+                return Err(anyhow::anyhow!("Module file not found in the destination folder"));
+            }
+        }
+        let top_v_content = generate_top_v_content(&module_path.to_str().unwrap())?;
+        fs::write(format!("{}/top.v", destination), top_v_content)?;
+        println!("Created top.v file for RISC-V in {}", destination);
+        // Generate .xdc file for Xilinx Artix-7 board
+        let xdc_content = generate_xdc_content(&module_path.to_str().unwrap())?;
+        fs::write(format!("{}/constraints.xdc", destination), xdc_content)?;
+        println!("Created constraints.xdc file for Xilinx Artix-7 board in {}", destination);
+    }
+    
     Ok(())
 }
 
@@ -204,7 +315,8 @@ pub fn process_module(package_name: &str, module: &str, destination: String, vis
         }
 
         if matching_entries.is_empty() {
-            anyhow::bail!("No matching files found for module '{}'", module_name);
+            println!("Skipping submodule import: No matching files found for module '{}'", module_name);
+            return Ok(HashSet::new());
         } else if matching_entries.len() == 1 {
             let dir_entry = filepath_to_dir_entry(matching_entries[0].clone())?;
             // println!("Processing file: {}", dir_entry.path().to_str().unwrap());

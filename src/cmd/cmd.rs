@@ -11,6 +11,8 @@ pub enum Cmd {
     List(List),
     Sim(Sim),
     Synthesize(Synthesize),
+    Load(Load),
+    Run(Run),
 }
 
 #[derive(Debug, Parser)]
@@ -25,6 +27,8 @@ pub enum Cmd {
 pub struct Include {
     #[arg(help = "URL of repository to include from")]
     pub url: String,
+    #[arg(long, help = "Include RISC-V specific modules")]
+    pub riscv: bool,
 }
 
 #[derive(Debug, Parser)]
@@ -132,4 +136,44 @@ pub struct List {}
 pub struct Synthesize {
     #[arg(help = "Top module path to synthesize")]
     pub top_module_path: String,
+    #[arg(long, help = "Use RISC-V toolchain")]
+    pub riscv: bool,
+    #[arg(long, help = "Path to RISC-V core", required_if_eq("riscv", "true"))]
+    pub core_path: Option<String>,
+}
+
+#[derive(Debug, Parser)]
+#[clap(
+    about,
+    author,
+    disable_help_subcommand = true,
+    propagate_version = true,
+    version
+)]
+
+pub struct Load {
+    #[arg(help = "Path to top module to load")]
+    pub top_module_path: String,
+    #[arg(help = "Path to constraints file")]
+    pub constraints_path: String,
+    #[arg(long, help = "Use RISC-V toolchain")]
+    pub riscv: bool,
+
+}
+
+#[derive(Debug, Parser)]
+#[clap(
+    about,
+    author,
+    disable_help_subcommand = true,
+    propagate_version = true,
+    version
+)]
+
+pub struct Run {
+    #[arg(help = "Path to the program to run")]
+    pub program_path: String,
+
+    #[arg(long, help = "Use RISC-V toolchain")]
+    pub riscv: bool,
 }

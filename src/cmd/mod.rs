@@ -8,7 +8,8 @@ mod install;
 mod sim;
 mod docs;
 mod synthesize;
-
+mod run;
+mod load;
 
 use anyhow::Result;
 
@@ -31,6 +32,8 @@ impl Execute for Cmd {
             Cmd::Sim(cmd) => cmd.execute().await,
             Cmd::Docs(cmd) => cmd.execute().await,
             Cmd::Synthesize(cmd) => cmd.execute().await,
+            Cmd::Load(cmd) => cmd.execute().await,
+            Cmd::Run(cmd) => cmd.execute().await,
         }
     }
 }
