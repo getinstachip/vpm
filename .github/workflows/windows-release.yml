@@ -1,0 +1,45 @@
+name: Build and Release
+
+on:
+  release:
+    types: [created]
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    - name: Set up Rust
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+        profile: minimal
+        override: true
+
+    - name: Build Rust project
+      run: |
+        cargo build --release
+
+    - name: Set up Inno Setup
+      uses: yuvakumar/inno-setup@v1.0
+
+    - name: Get release version
+      id: get_version
+      run: echo ::set-output name=VERSION::${GITHUB_REF#refs/tags/}
+
+    - name: Build EXE
+      run: |
+        iscc /DMyAppVersion="${{ steps.get_version.outputs.VERSION }}" /DMyAppRelease=".\target\release" setup.iss
+
+    - name: Upload EXE to Releases
+      uses: actions/upload-release-asset@v1.0.1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ github.event.release.upload_url }}
+        asset_path: .\Output\myapp-setup.exe
+        asset_name: myapp-${{ steps.get_version.outputs.VERSION }}-setup.exe
+        asset_content_type: application/octet-stream
