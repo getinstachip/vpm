@@ -54,7 +54,9 @@ vpm include https://github.com/ZipCPU/zipcpu/blob/master/rtl/core/prefetch.v
 ```bash
 vpm include --repo <AUTHOR_NAME/REPO_NAME>
 ```
+
 Press tab to select multiple modules and press ENTER to install. If no modules are selected, all modules in the repository will be installed.
+
 Example:
 ```bash
 vpm include --repo ZipCPU/zipcpu
