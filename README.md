@@ -222,11 +222,11 @@ description = "A basic CPU."
 ```
 
 ### Support and Contribution
-For issues, feature requests, or contributions, please email: sathvikr@getinstachip.com or create a GitHub Issue. Please read our CONTRIBUTING.md file for guidelines on how to contribute to VPM.
+For issues, feature requests, or contributions, please email sathvikr@getinstachip.com or create a GitHub Issue. Please read our CONTRIBUTING.md file for guidelines on how to contribute to VPM.
 
 ### License
 VPM is released under the MIT License.
 
 ### Acknowledgements
-We'd like to thank our early adopters for their valuable feedback and support in developing VPM.
+We'd like to thank our early adopters for their valuable feedback and support in developing VPM. In no particular order: Kasun Buddhi, Krishna, Yash, Max Korbel, Samuel, Biplab Das, Nikhil Raju, and more.
 
