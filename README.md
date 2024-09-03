@@ -37,16 +37,6 @@ After installation, the vpm command will be available in any terminal.
 ### include
 Include a module or repository in your project.
 
-```bash
-vpm include [--repo] <URL>
-```
-
-Options:
--r or --repo: Include as a repository
-<URL>: URL of the repository to include from
-
-Examples:
-
 To include a module and all its submodules:
 ```bash
 vpm include <URL_TO_TOP_MODULE.sv>
