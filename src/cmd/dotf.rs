@@ -161,7 +161,7 @@ fn append_module(
             if sub {
                 let mut parser = tree_sitter::Parser::new();
                 parser
-                    .set_language(tree_sitter_verilog::language())
+                    .set_language(&tree_sitter_verilog::language())
                     .expect("Error loading Verilog grammar");
 
                 if let Some(tree) = parser.parse(&contents, None) {
