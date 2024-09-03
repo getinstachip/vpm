@@ -228,5 +228,5 @@ For issues, feature requests, or contributions, please email sathvikr@getinstach
 VPM is released under the MIT License.
 
 ### Acknowledgements
-We'd like to thank our early adopters for their valuable feedback and support in developing VPM. In no particular order: Kasun Buddhi, Krishna, Yash, Max Korbel, Samuel, Biplab Das, Nikhil Raju, and more.
+We'd like to thank our early adopters for their valuable feedback and support in developing VPM. In no particular order, that includes Kasun Buddhi, Krishna, Yash, Max Korbel, Samuel, Biplab Das, Nikhil Raju, and more.
 
