@@ -52,6 +52,8 @@ Example:
 ```bash
 vpm include https://github.com/ZipCPU/zipcpu/blob/master/rtl/core/prefetch.v
 ```
+![](https://i.giphy.com/media/v1.Y2lkPTc5MGI3NjExMDkxZjI1bWp3Y2JzZmt5bG1jc24wczFtNHVuY3FpbGpodjlreDNrcCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/DzB1ipAEADXeHZakbz/giphy.gif)
+
 2. Include a repository:
 ```bash
 vpm include --repo <AUTHOR_NAME/REPO_NAME>
