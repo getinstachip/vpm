@@ -1,173 +1,240 @@
 # Verilog Package Manager (VPM)
-![downloads](https://img.shields.io/github/downloads/getinstachip/vpm/total?logo=github&logoColor=white&style=flat-square)
 
-VPM is a package manager for Verilog projects being piloted at Stanford and UC Berkeley. It's designed to simplify the management, reuse, and communication of IP cores and dependencies in hardware design workflows. Easily import modules for use, manage dependencies, and create documentation to accelerate your design process.
+VPM is a powerful package manager for Verilog projects, currently being piloted at Stanford and UC Berkeley. It's designed to streamline the management, reuse, and communication of IP cores and dependencies in hardware design workflows, significantly accelerating your design process.
 
-You'll be able to:
-- `vpm include` full module hierarchies using a single command
-- Generate documentation for any `.v` or `.sv` module
-- Simulate using `vpm sim`
-- Automatically generate/handle `.f` files, `.svh`, `.xcd`, `.tcl`, etc.
+## Features
 
-## Installation (no setup, just run the command)
+- **Module Management**: Easily include, update, and remove modules in your project.
+- **Documentation Generation**: Automatically create comprehensive documentation for your Verilog modules.
+- **Dependency Handling**: Manage project dependencies with ease.
+- **Simulation Support**: Simulate your Verilog files directly through VPM.
+- **Tool Integration**: Seamlessly install and set up open-source tools for your project.
+- **File Generation**: Automatically generate necessary files like .f, .svh, .xcd, and .tcl.
 
-To install VPM, you don't need any dependencies! Just run the following command:
+## Installation
+
+VPM is designed for easy installation with no additional dependencies. Simply run:
 
 ```bash
 curl -sSfL https://raw.githubusercontent.com/getinstachip/vpm/main/install.sh | sh
 ```
 
-After installation, you can use the `vpm` command in any terminal.
+After installation, the vpm command will be available in any terminal.
 
-## Full command list
-- `vpm include <repo_url>`: Opens a menu where you can type to choose any module from the repo. Include its entire hierarchy.
-- `vpm docs <module.sv> <repo_url>`: Generate documentation for any module (highlighting bugs and edge cases)
-- `vpm install <tool>`: Auto-integrate an open-source tool without manual setup
-- `vpm update <module.sv>`: Update module to the latest version
-- `vpm uninstall <module.sv>`: Remove a module from your project
-- `vpm list`: List all modules in our standard library
-- `vpm dotf <module.sv>`:  Generate a `.f` filelist when exporting your project
-- `vpm sim <module.sv> <testbench.sv>`
-  
+## Commands
+
 ### include
-`vpm include <module.sv>`: includes a `.v` or `.sv` file and all submodule dependencies from the given repo and updates the `vpm.toml` file with the new module's details
-- Options:
-  - `<module.sv>`: Module to install
-  - `<repo_url>`: Link to the repository where the module is stored
+Include a module or repository in your project.
 
-![include](https://github.com/user-attachments/assets/481384eb-5b71-4284-b9e3-08ea807afa34)
-
-### docs
-`vpm docs <module.sv> <repo_url>`: generates a complete Markdown README documentation file for the given module 
-- Options:
-  - `<module.sv>`: Verilog or SystemVerilog module to generate documentation for
-  - `<repo_url>`: Link to the repository where the module is stored
-&nbsp;
-- Generation location can be overwritten in `vpm.toml`. All documentation contains the following sections:
-  1. Overview and module description
-  2. Pinout diagram
-  3. Table of ports
-  4. Table of parameters
-  5. Important implementation details
-  6. Simulation output and details (Coming soon!)
-  7. List of any major bugs or caveats (if they exist)
-
-![docs](https://github.com/user-attachments/assets/9f1b9cb4-05e1-4e69-9440-16d498277f0f)
-
-### install
-`vpm install <tool>`: Automatically installs and sets up an open-source tool for integration into your project
-- Options:
-  - `<tool>`: Tool to install
-&nbsp;
-- Currently supported tools
-  - Verilator
-  - Chipyard
-  - OpenROAD
-
-![install](https://github.com/user-attachments/assets/78569e63-b2d7-41e2-9690-8f18f50516bc)
-
-### update
-`vpm update <module.sv>`: Updates an included Verilog or SystemVerilog module to the latest version and updates version control accordingly
-- Options:
-  - `<module.sv>`: Module to update
-
-*Example video coming soon!*
-
-### uninstall
-`vpm uninstall <module.sv>`: Removes an included Verilog or SystemVerilog module from your project and updates version control accordingly
-- Options:
-  - `<module.sv>`: Module to uninstall
-
-*Example video coming soon!*
-
-### list
-`vpm list`: Lists all modules in our [standard Verilog library](https://github.com/getinstachip/openchips)
-- Current module lists:
-  - Common modules
-  - RISC-V
-
-![list](https://github.com/user-attachments/assets/0e36a7cd-70bd-406d-9696-8a5550fff99b)
-
-### dotf
-`vpm dotf <module.sv>`: generates a `.f` file list for a Verilog or SystemVerilog module and for all locally scoped defines for the submodules and links everything accordingly
-- Options:
-  - `<module.sv>`: Local top Verilog module to generate the file list for
-
-*Example video coming soon!*
-
-## Configuration
-
-Close your eyes and relax. Our parser takes care of submodule dependencies. Use the appropriate fields in `vpm.toml` to adjust your project's properties. We are working on handling synthesis collateral.
-
-Example `vpm.toml` file:
-
-```toml
-[library]
-name = "library_name"
-version = "0.3.5"
-description = "Most important library in the world"
-authors = ["First Last"]
-license = [
-    {type="GPLv3", source=["folder_with_artifacts/*.whatever"]},
-    {type="CC-4", source=["folder_with_artifacts/*.whatever"]},
-    {type="Copyright@RandomStuffyCompany", source=["whatever"]},
-]
-include = [
-    "folder_with_modules/*",
-]
-
-[config]
-configparam1=true
-configparam2=false
-
-[docs]
-docspath="./not-standard-docs-path"
-docsoption1=true
-docsoption2=false
-
-[dependencies]
-"https://github.com/ZipCPU/zipcpu" = {"version"="1.1.1", alias="unique_library_name", modules = ["m1", "m2"], branch="not-main", commit="hash"}
-"https://github.com/ZipCPU/zipcpu" = {"version"="1.1.1", alias="unique_library_name", modules = ["m1", "m2"], branch="not-main", commit="hash"}
-
-[dev-dependencies]
-"./path/to/file" = {"version"="1.1.1", alias="unique_library_name", modules = ["m1", "m2"], branch="not-main", commit="hash"}
+```bash
+vpm include [--repo] <URL>
 ```
 
-- `[library]`: Contains the metadata for the library/project
-  - `name`: Name of the library/project
-  - `version`: Version of the library/project
-  - `description`: Description of the library/project
-  - `authors`: List of authors
-  - `license`: List of licenses and their source locations
-  - `include`: List of directories to include in the library/project
-&nbsp;
-- `[config]`: Contains the configuration parameters for the library/project. Custom options will be added here.
-&nbsp;
-- `[docs]`: Contains the documentation generation parameters for the library. Custom options will be added here.
-  - `docspath`: Path to folder with all generated documentation
-&nbsp;
-- `[dependencies]`: Contains the external dependencies for the library/project
-  - `url`: URL of the dependency repository
-  - `version`: User-specified version of the dependency
-  - `alias`: Alias for the dependency
-  - `modules`: List of modules in the dependency, including submodule dependencies
-  - `branch`: Branch of the repository the dependency is on
-  - `commit`: Commit hash of the repository the dependency is on
-&nbsp;
-- `[dev-dependencies]`: Contains the development dependencies for the library/project
-  - `url`: URL of the dependency repository
-  - `version`: User-specified version of the dependency
-  - `alias`: Alias for the dependency
-  - `modules`: List of modules in the dependency, including submodule dependencies
-  - `branch`: Branch of the repository the dependency is on
-  - `commit`: Commit hash of the repository the dependency is on
+Options:
+-r or --repo: Include as a repository
+<URL>: URL of the repository to include from
 
-## Enterprise version
+Examples:
+To include a module and all its submodules:
+```bash
+vpm include <URL_TO_TOP_MODULE.sv>
+```
+Example:
+```bash
+vpm include https://github.com/ZipCPU/zipcpu/blob/master/rtl/core/prefetch.v
+```
+To include a repository:
+```bash
+vpm include --repo <AUTHOR_NAME/REPO_NAME>
+```
+Press tab to select multiple modules and press ENTER to install. If no modules are selected, all modules in the repository will be installed.
+Example:
+```bash
+vpm include --repo ZipCPU/zipcpu
+```
 
-We are receiving overwhelming interest for an enterprise version with additional features and integrations to manage internal IP for ASIC/FPGA companies.
+This command:
+- Downloads the specified module or repository
+- Analyzes the module hierarchy
+- Includes all necessary submodules
+- Updates the vpm.toml file with new module details
 
-[Join the waitlist if you're interested](https://www.waitlistr.com/lists/ce1719b7/vpm-enterprise-version-waitlist). We're launching an enterprise batch pilot soon.
+### update
+Update a package to the latest version.
 
-## Support
+```bash
+vpm update <PACKAGE_PATH>
+```
 
-For issues and feature requests, please email sathvikr@getinstachip.com or create an [issue on GitHub](https://github.com/getinstachip/vpm/issues).
+<PACKAGE_PATH>: Full module path of the package to update
+
+Example:
+```bash
+vpm update my_project/modules/counter
+```
+
+This command:
+- Checks for the latest version of the specified module
+- Downloads and replaces the current version with the latest
+- Updates all dependencies and submodules
+- Modifies the vpm.toml file to reflect the changes
+
+### remove
+Remove a package from your project.
+
+```bash
+vpm remove <PACKAGE_PATH>
+```
+
+<PACKAGE_PATH>: Full module path of the package to remove
+
+Example:
+```bash
+vpm remove my_project/modules/unused_module
+```
+
+This command:
+Removes the specified module from your project
+- Updates the vpm.toml file to remove the module entry
+- Cleans up any orphaned dependencies
+
+### dotf
+Generate a .f file list for a Verilog or SystemVerilog module.
+
+```bash
+vpm dotf <PATH_TO_TOP_MODULE>
+
+<PATH_TO_TOP_MODULE>: Path to the top module to generate the file list for
+
+Example:
+```bash
+vpm dotf src/top_module.v
+```
+
+This command:
+- Analyzes the specified top module
+- Identifies all submodules and dependencies
+- Generates a .f file containing all necessary file paths
+- Includes all locally scoped defines for submodules
+
+### docs
+Generate comprehensive documentation for a module.
+
+```bash
+vpm docs <MODULE> [URL]
+
+<MODULE>: Name of the module to generate documentation for
+[URL]: Optional URL of the repository to generate documentation for
+
+Example:
+```bash
+vpm docs my_module
+vpm docs external_module https://github.com/example/external_repo
+```
+
+This command generates a Markdown README file containing:
+- Overview and module description
+- Pinout diagram
+- Table of ports
+- Table of parameters
+- Important implementation details
+- Simulation output and details (Coming soon!)
+- List of any major bugs or caveats (if they exist)
+
+### install
+Install and set up an open-source tool for integration into your project.
+
+```bash
+vpm install <TOOL_NAME>
+
+<TOOL_NAME>: Name of the tool to install
+Example:
+```bash
+vpm install verilator
+```
+
+Currently supported tools:
+- Verilator
+- Chipyard
+- OpenROAD
+
+This command:
+- Downloads the specified tool
+- Configures the tool for your system
+- Integrates it with your VPM project setup
+
+### sim
+Simulate Verilog files.
+
+```bash
+vpm sim <VERILOG_FILES>...
+
+<VERILOG_FILES>: List of Verilog files to simulate
+
+Example:
+```bash
+vpm sim testbench.v module1.v module2.v
+```
+
+This command:
+- Compiles the specified Verilog files
+- Runs the simulation
+- Provides output and analysis of the simulation results
+
+### list
+List all modules in the standard Verilog library.
+```bash
+vpm list
+```
+
+This command displays all available modules in the standard Verilog library, including:
+- Common modules
+- RISC-V modules
+- Configuration
+
+VPM uses a vpm.toml file for project configuration. This file allows you to specify project properties, dependencies, and custom settings.
+
+Example vpm.toml file:
+```toml
+[library]
+name = "my_project"
+version = "0.3.5"
+description = "A comprehensive Verilog project"
+authors = ["John Doe", "Jane Smith"]
+license = [
+    {type = "GPLv3", source = ["src/*.v"]},
+    {type = "CC-4", source = ["docs/*.md"]},
+]
+include = ["modules/*", "tests/*"]
+
+[config]
+use_systemverilog = true
+enable_assertions = true
+
+[docs]
+output_path = "./documentation"
+include_waveforms = true
+generate_pdf = false
+
+[dependencies]
+"https://github.com/example/module1" = { version = "1.2.0", alias = "core_module", modules = ["alu", "register_file"], branch = "main" }
+"https://github.com/example/module2" = { version = "0.9.1", alias = "peripheral_module", modules = ["uart", "i2c"], commit = "a1b2c3d4" }
+
+[dev-dependencies]
+"./local_test_module" = { version = "0.1.0", alias = "test_utils" }
+```
+
+### Enterprise Version
+We're developing an enterprise version with advanced features for managing internal IP in ASIC/FPGA companies. Join the waitlist for our upcoming enterprise batch pilot.
+
+### Support and Contribution
+For issues, feature requests, or contributions:
+Email: support@getinstachip.com
+GitHub Issues: Create an issue
+Contributing: Please read our CONTRIBUTING.md file for guidelines on how to contribute to VPM.
+
+### License
+VPM is released under the MIT License.
+
+### Acknowledgements
+We'd like to thank the Verilog community and our early adopters for their valuable feedback and support in developing VPM.
