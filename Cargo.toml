@@ -16,7 +16,7 @@ tokio = { version = "1.39.2", features = ["full"] }
 openssl = { version = "0.10", features = ["vendored"] }
 reqwest = { version = "0.12.5", features = ["json", "blocking"] }
 serde = { version = "1.0.208", features = ["derive"] }
-tree-sitter-verilog = { version="0.1.0", git = "https://github.com/tree-sitter/tree-sitter-verilog" }
+tree-sitter-verilog = { git = "https://github.com/tree-sitter/tree-sitter-verilog" }
 tree-sitter = "0.23.0"
 anyhow = "1.0.86"
 serde_json = "1.0.125"
