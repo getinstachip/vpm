@@ -221,14 +221,8 @@ description = "A basic CPU."
 "https://github.com/ZipCPU/zipcpu" = { modules = ["alu", "register_file"], commit = "1234567890abcdef" }
 ```
 
-### Enterprise Version
-We're developing an enterprise version with advanced features for managing internal IP in ASIC/FPGA companies. Join the waitlist for our upcoming enterprise batch pilot.
-
 ### Support and Contribution
-For issues, feature requests, or contributions:
-Email: support@getinstachip.com
-GitHub Issues: Create an issue
-Contributing: Please read our CONTRIBUTING.md file for guidelines on how to contribute to VPM.
+For issues, feature requests, or contributions, please email: sathvikr@getinstachip.com or create a GitHub Issue. Please read our CONTRIBUTING.md file for guidelines on how to contribute to VPM.
 
 ### License
 VPM is released under the MIT License.
