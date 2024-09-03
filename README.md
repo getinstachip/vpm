@@ -46,6 +46,7 @@ Options:
 <URL>: URL of the repository to include from
 
 Examples:
+
 To include a module and all its submodules:
 ```bash
 vpm include <URL_TO_TOP_MODULE.sv>
