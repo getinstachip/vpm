@@ -30,7 +30,7 @@ After installation, the vpm command will be available in any terminal.
 - `vpm uninstall <module.sv>`: Remove a module from your project
 - `vpm list`: List all modules in our standard library
 - `vpm dotf <module.sv>`:  Generate a `.f` filelist when exporting your project
-- `vpm sim <module.sv> <testbench.sv>`: Simulate Verilog module using Iverilog
+- `vpm sim <module.sv> <testbench.sv>`: Simulate Verilog module using iVerilog
   
 ### vpm include
 Include a module or repository in your project.
