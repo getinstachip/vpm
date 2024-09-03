@@ -44,7 +44,7 @@ This command comes in two forms:
 ```bash
 vpm include <URL_TO_TOP_MODULE.sv>
 ```
-URL_TO_TOP_MODULE: Full GitHub URL to the top module to include. The URL should come in the format of https://github.com/<AUTHOR_NAME>/<REPO_NAME>/blob/branch/<PATH_TO_MODULE.sv>
+`URL_TO_TOP_MODULE`: Full GitHub URL to the top module to include. The URL should come in the format of `https://github.com/<AUTHOR_NAME>/<REPO_NAME>/blob/branch/<PATH_TO_MODULE.sv>`.
 
 Example:
 ```bash
