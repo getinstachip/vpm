@@ -70,7 +70,7 @@ main() {
 # Parse the arguments passed and set variables accordingly.
 parse_args() {
     # BIN_DIR_DEFAULT="${HOME}/.local/bin"
-    BIN_DIR_DEFAULT=/usr/bin
+    BIN_DIR_DEFAULT=/usr/local/bin
     # MAN_DIR_DEFAULT="${HOME}/.local/share/man"
     SUDO_DEFAULT="sudo"
 
