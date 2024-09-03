@@ -82,9 +82,9 @@ vpm docs <MODULE.sv>
 `[URL]`: Optional URL of the repository to generate documentation for. If not specified, VPM will assume the module is local, and will search for the module in the vpm_modules directory.
 
 Examples:
-```text
-vpm docs pfcache.v // Creates documentation for pfcache.v in the vpm_modules directory
-vpm docs pfcache.v https://github.com/ZipCPU/zipcpu // Creates documentation for pfcache.v in the zipcpu repository
+```bash
+vpm docs pfcache.v
+vpm docs pfcache.v https://github.com/ZipCPU/zipcpu
 ```
 
 ### vpm update
