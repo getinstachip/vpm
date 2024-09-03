@@ -13,9 +13,7 @@ VPM is a powerful package manager for Verilog projects, currently being piloted 
 
 ## Installation
 
-VPM is designed for easy installation with no additional dependencies. Simply run:
-
-```bash
+VPM is designed for easy installation with no additional dependencies. Simply run:```bash
 curl -sSfL https://raw.githubusercontent.com/getinstachip/vpm/main/install.sh | sh
 ```
 
@@ -79,8 +77,9 @@ This command generates a Markdown README file containing:
 vpm docs <MODULE.sv>
 ```
 
-<MODULE>: Name of the module to generate documentation for. Include the file extension.
-[URL]: Optional URL of the repository to generate documentation for. If not specified, VPM will assume the module is local, and will search for the module in the vpm_modules directory.
+`<MODULE>`: Name of the module to generate documentation for. Include the file extension.
+
+`[URL]`: Optional URL of the repository to generate documentation for. If not specified, VPM will assume the module is local, and will search for the module in the vpm_modules directory.
 
 Examples:
 ```bash
@@ -234,3 +233,4 @@ VPM is released under the MIT License.
 
 ### Acknowledgements
 We'd like to thank our early adopters for their valuable feedback and support in developing VPM.
+
