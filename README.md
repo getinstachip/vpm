@@ -46,6 +46,8 @@ This command comes in two forms:
 ```bash
 vpm include <URL_TO_TOP_MODULE.sv>
 ```
+URL_TO_TOP_MODULE: Full GitHub URL to the top module to include. The URL should come in the format of https://github.com/<AUTHOR_NAME>/<REPO_NAME>/blob/branch/<PATH_TO_MODULE.sv>
+
 Example:
 ```bash
 vpm include https://github.com/ZipCPU/zipcpu/blob/master/rtl/core/prefetch.v
@@ -106,12 +108,13 @@ Generate a .f file list for a Verilog or SystemVerilog module.
 
 ```bash
 vpm dotf <PATH_TO_TOP_MODULE>
+```
 
-<PATH_TO_TOP_MODULE>: Path to the top module to generate the file list for
+<PATH_TO_TOP_MODULE>: Path to the top module to generate the file list for. File should be local.
 
 Example:
 ```bash
-vpm dotf src/top_module.v
+vpm dotf ./vpm_modules/pfcache/fwb_master.v
 ```
 
 This command:
@@ -123,34 +126,41 @@ This command:
 ### vpm docs
 Generate comprehensive documentation for a module.
 
-```bash
-vpm docs <MODULE> [URL]
-
-<MODULE>: Name of the module to generate documentation for
-[URL]: Optional URL of the repository to generate documentation for. If not specified, VPM will assume the module is local.
-
-Example:
-```bash
-vpm docs my_module
-vpm docs external_module https://github.com/example/external_repo
-```
-
 This command generates a Markdown README file containing:
 - Overview and module description
 - Pinout diagram
 - Table of ports
 - Table of parameters
 - Important implementation details
-- Simulation output and details (Coming soon!)
-- List of any major bugs or caveats (if they exist)
+- Simulation output and GTKWave waveform details (Coming soon!)
+- List of any major bugs or caveats if they exist
+
+```bash
+vpm docs <MODULE.sv>
+```
+
+<MODULE>: Name of the module to generate documentation for. Include the file extension.
+[URL]: Optional URL of the repository to generate documentation for. If not specified, VPM will assume the module is local, and will search for the module in the vpm_modules directory.
+
+Examples:
+```bash
+vpm docs pfcache.v // Creates documentation for pfcache.v in the vpm_modules directory
+vpm docs pfcache.v https://github.com/ZipCPU/zipcpu // Creates documentation for pfcache.v in the zipcpu repository
+```
 
 ### vpm install
 Install and set up an open-source tool for integration into your project.
 
+This command:
+- Downloads the specified tool
+- Configures the tool for your system
+- Integrates it with your VPM project setup
+
 ```bash
 vpm install <TOOL_NAME>
-
+```
 <TOOL_NAME>: Name of the tool to install
+
 Example:
 ```bash
 vpm install verilator
@@ -160,71 +170,55 @@ Currently supported tools:
 - Verilator
 - Chipyard
 - OpenROAD
+- Edalize
+- Icarus Verilog
 
-This command:
-- Downloads the specified tool
-- Configures the tool for your system
-- Integrates it with your VPM project setup
+Coming soon:
+- Yosys (with support for ABC)
+- RISC-V GNU Toolchain
 
 ### vpm sim
 Simulate Verilog files.
-
-```bash
-vpm sim <VERILOG_FILES>...
-
-<VERILOG_FILES>: List of Verilog files to simulate
-
-Example:
-```bash
-vpm sim testbench.v module1.v module2.v
-```
 
 This command:
 - Compiles the specified Verilog files
 - Runs the simulation
 - Provides output and analysis of the simulation results
 
+```bash
+vpm sim <VERILOG_FILES>...
+```
+<VERILOG_FILES>: List of Verilog files to simulate using Icarus Verilog.
+
+Example:
+```bash
+vpm sim testbench.v module1.v module2.v
+```
+
 ### vpm list
 List all modules in VPM's standard library.
-```bash
-vpm list
-```
 
 This command displays all available modules in the standard Verilog library, including:
 - Common modules
 - RISC-V modules
-- Configuration
+
+```bash
+vpm list
+```
+
+## Configuration
 
 VPM uses a vpm.toml file for project configuration. This file allows you to specify project properties, dependencies, and custom settings.
 
 Example vpm.toml file:
 ```toml
 [library]
-name = "my_project"
+name = "my_cpu"
 version = "0.3.5"
-description = "A comprehensive Verilog project"
-authors = ["John Doe", "Jane Smith"]
-license = [
-    {type = "GPLv3", source = ["src/*.v"]},
-    {type = "CC-4", source = ["docs/*.md"]},
-]
-include = ["modules/*", "tests/*"]
-
-[config]
-use_systemverilog = true
-enable_assertions = true
-
-[docs]
-output_path = "./documentation"
-include_waveforms = true
-generate_pdf = false
+description = "A basic CPU."
 
 [dependencies]
-"https://github.com/example/module1" = { version = "1.2.0", alias = "core_module", modules = ["alu", "register_file"], branch = "main" }
-"https://github.com/example/module2" = { version = "0.9.1", alias = "peripheral_module", modules = ["uart", "i2c"], commit = "a1b2c3d4" }
-
-[dev-dependencies]
-"./local_test_module" = { version = "0.1.0", alias = "test_utils" }
+"https://github.com/ZipCPU/zipcpu" = { modules = ["alu", "register_file"], commit = "1234567890abcdef" }
 ```
 
 ### Enterprise Version
