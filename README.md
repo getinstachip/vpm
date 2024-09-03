@@ -100,7 +100,7 @@ This command:
 vpm update <PACKAGE_PATH>
 ```
 
-<PACKAGE_PATH>: Full module path of the package to update
+`<PACKAGE_PATH>`: Full module path of the package to update
 
 Example:
 ```bash
@@ -119,7 +119,7 @@ This command:
 vpm remove <PACKAGE_PATH>
 ```
 
-<PACKAGE_PATH>: Full module path of the package to remove
+`<PACKAGE_PATH>`: Full module path of the package to remove
 
 Example:
 ```bash
@@ -133,7 +133,7 @@ Generate a .f file list for a Verilog or SystemVerilog module.
 vpm dotf <PATH_TO_TOP_MODULE>
 ```
 
-<PATH_TO_TOP_MODULE>: Path to the top module to generate the file list for. File should be local.
+`<PATH_TO_TOP_MODULE>`: Path to the top module to generate the file list for. File should be local.
 
 Example:
 ```bash
@@ -157,7 +157,7 @@ This command:
 ```bash
 vpm install <TOOL_NAME>
 ```
-<TOOL_NAME>: Name of the tool to install
+`<TOOL_NAME>`: Name of the tool to install
 
 Example:
 ```bash
@@ -186,7 +186,7 @@ This command:
 ```bash
 vpm sim <VERILOG_FILES>...
 ```
-<VERILOG_FILES>: List of Verilog files to simulate using Icarus Verilog.
+`<VERILOG_FILES>`: List of Verilog files to simulate using Icarus Verilog.
 
 Example:
 ```bash
@@ -206,7 +206,7 @@ vpm list
 
 ## Configuration
 
-VPM uses a vpm.toml file for project configuration. This file allows you to specify project properties, dependencies, and custom settings.
+VPM uses a `vpm.toml` file for project configuration. This file allows you to specify project properties, dependencies, and custom settings.
 
 Example vpm.toml file:
 ```toml
