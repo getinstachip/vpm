@@ -63,6 +63,30 @@ Example:
 ```bash
 vpm include --repo ZipCPU/zipcpu
 ```
+### vpm docs
+Generate comprehensive documentation for a module.
+
+This command generates a Markdown README file containing:
+- Overview and module description
+- Pinout diagram
+- Table of ports
+- Table of parameters
+- Important implementation details
+- Simulation output and GTKWave waveform details (Coming soon!)
+- List of any major bugs or caveats if they exist
+
+```bash
+vpm docs <MODULE.sv>
+```
+
+<MODULE>: Name of the module to generate documentation for. Include the file extension.
+[URL]: Optional URL of the repository to generate documentation for. If not specified, VPM will assume the module is local, and will search for the module in the vpm_modules directory.
+
+Examples:
+```bash
+vpm docs pfcache.v // Creates documentation for pfcache.v in the vpm_modules directory
+vpm docs pfcache.v https://github.com/ZipCPU/zipcpu // Creates documentation for pfcache.v in the zipcpu repository
+```
 
 ### vpm update
 Update a package to the latest version.
@@ -122,31 +146,6 @@ This command:
 - Identifies all submodules and dependencies
 - Generates a .f file containing all necessary file paths
 - Includes all locally scoped defines for submodules
-
-### vpm docs
-Generate comprehensive documentation for a module.
-
-This command generates a Markdown README file containing:
-- Overview and module description
-- Pinout diagram
-- Table of ports
-- Table of parameters
-- Important implementation details
-- Simulation output and GTKWave waveform details (Coming soon!)
-- List of any major bugs or caveats if they exist
-
-```bash
-vpm docs <MODULE.sv>
-```
-
-<MODULE>: Name of the module to generate documentation for. Include the file extension.
-[URL]: Optional URL of the repository to generate documentation for. If not specified, VPM will assume the module is local, and will search for the module in the vpm_modules directory.
-
-Examples:
-```bash
-vpm docs pfcache.v // Creates documentation for pfcache.v in the vpm_modules directory
-vpm docs pfcache.v https://github.com/ZipCPU/zipcpu // Creates documentation for pfcache.v in the zipcpu repository
-```
 
 ### vpm install
 Install and set up an open-source tool for integration into your project.
