@@ -72,7 +72,10 @@ impl VpmToml {
     }
 
     pub fn add_top_module(&mut self, repo_link: &str, module_name: &str) {
-        self.toml_doc["dependencies"][repo_link]["top_modules"].as_array_mut().unwrap().push(Value::from(module_name));
+        let array = self.toml_doc["dependencies"][repo_link]["top_modules"].as_array_mut().unwrap();
+        if !array.iter().any(|m| m.as_str().unwrap() == module_name) {
+            array.push(Value::from(module_name));
+        }
     }
 
     pub fn write_to_file(&self, filepath: &str) -> Result<()> {

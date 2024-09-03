@@ -23,6 +23,17 @@ After installation, the vpm command will be available in any terminal.
 
 ## Commands
 
+
+## Full command list
+- `vpm include <path_to_component>`: Opens a menu where you can type to choose any module from the repo. Include its entire hierarchy.
+- `vpm docs <module.sv> <repo_url>`: Generate documentation for any module (highlighting bugs and edge cases)
+- `vpm install <tool>`: Auto-integrate an open-source tool without manual setup
+- `vpm update <module.sv>`: Update module to the latest version
+- `vpm uninstall <module.sv>`: Remove a module from your project
+- `vpm list`: List all modules in our standard library
+- `vpm dotf <module.sv>`:  Generate a `.f` filelist when exporting your project
+- `vpm sim <module.sv> <testbench.sv>`
+  
 ### include
 Include a module or repository in your project.
 
@@ -237,4 +248,4 @@ Contributing: Please read our CONTRIBUTING.md file for guidelines on how to cont
 VPM is released under the MIT License.
 
 ### Acknowledgements
-We'd like to thank the Verilog community and our early adopters for their valuable feedback and support in developing VPM.
+We'd like to thank our early adopters for their valuable feedback and support in developing VPM.
