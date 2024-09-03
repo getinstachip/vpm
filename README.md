@@ -24,7 +24,6 @@ After installation, the vpm command will be available in any terminal.
 ## Commands
 
 - `vpm include <path_to_module.sv>`: Include any module from a repo (and all its submodules).
-- `vpm include --repo <repo_url>`: Include an entire repo.
 - `vpm docs <module.sv>`: Generate documentation for any module (highlighting bugs and edge cases)
 - `vpm install <tool>`: Auto-integrate an open-source tool without manual setup
 - `vpm update <module.sv>`: Update module to the latest version
