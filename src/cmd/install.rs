@@ -27,6 +27,10 @@ impl Execute for Install {
                 println!("Installing Edalize...");
                 install_edalize()?;
             },
+            "yosys" => {
+                println!("Installing Yosys...");
+                install_yosys()?;
+            },
             _ => {
                 println!("Tool '{}' is not recognized for installation.", self.tool_name);
             }
@@ -228,6 +232,64 @@ fn install_edalize() -> Result<()> {
     }
 
     println!("Edalize installed successfully.");
+    Ok(())
+}
+
+fn install_yosys() -> Result<()> {
+    println!("Installing Yosys...");
+
+    #[cfg(target_os = "macos")]
+    {
+        println!("Running on macOS...");
+        // Install Yosys using Homebrew on macOS
+        let status = Command::new("brew")
+            .arg("install")
+            .arg("yosys")
+            .status()
+            .context("Failed to install Yosys using Homebrew")?;
+
+        if !status.success() {
+            println!("Failed to install Yosys on macOS.");
+            return Ok(());
+        }
+    }
+
+    #[cfg(target_os = "linux")]
+    {
+        println!("Running on Linux...");
+        // Install Yosys using apt-get on Linux
+        let status = Command::new("sudo")
+            .arg("apt-get")
+            .arg("update")
+            .status()
+            .context("Failed to update package lists")?;
+
+        if !status.success() {
+            println!("Failed to update package lists on Linux.");
+            return Ok(());
+        }
+
+        let status = Command::new("sudo")
+            .arg("apt-get")
+            .arg("install")
+            .arg("-y")
+            .arg("yosys")
+            .status()
+            .context("Failed to install Yosys using apt-get")?;
+
+        if !status.success() {
+            println!("Failed to install Yosys on Linux.");
+            return Ok(());
+        }
+    }
+
+    #[cfg(not(any(target_os = "macos", target_os = "linux")))]
+    {
+        println!("Unsupported operating system. Please install Yosys manually.");
+        return Ok(());
+    }
+
+    println!("Yosys installed successfully.");
     Ok(())
 }
 
