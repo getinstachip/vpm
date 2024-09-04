@@ -28,6 +28,14 @@ curl -sSfL https://raw.githubusercontent.com/getinstachip/vpm/main/install.sh | 
 
 After installation, the vpm command will be available in any terminal.
 
+If installation doesn't work, try the following:
+
+Mac:
+```bash
+brew tap getinstachip/vpm
+brew install vpm
+```
+
 ## Commands
 
 - `vpm include <path_to_module.sv>`: Include any module from a repo (and all its submodules).
