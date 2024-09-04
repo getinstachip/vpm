@@ -130,7 +130,7 @@ pub fn add_dependency(git: &str, commit: Option<&str>) -> Result<()> {
 
 pub fn add_top_module(repo_link: &str, module_path: &str) -> Result<()> {
     let mut vpm_toml = VpmToml::from("vpm.toml");
-    vpm_toml.add_top_module(repo_link, module_name);
+    vpm_toml.add_top_module(repo_link, module_path);
     vpm_toml.write_to_file("vpm.toml")?;
     Ok(())
 }

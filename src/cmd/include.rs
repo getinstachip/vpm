@@ -7,6 +7,7 @@ use tree_sitter::{Node, Parser, Query, QueryCursor};
 use crate::cmd::{Execute, Include};
 use crate::toml::{add_dependency, add_top_module};
 use walkdir::{DirEntry, WalkDir};
+use fancy_regex::Regex;
 
 use dialoguer::{theme::ColorfulTheme, MultiSelect};
 use fuzzy_matcher::FuzzyMatcher;
@@ -53,13 +54,8 @@ fn include_single_module(url: &str) -> Result<()> {
     println!("Repo URL: {}", repo_url);
     let module_path = get_component_path_from_github_url(url).unwrap_or_default();
     println!("Including module: {}", module_path);
-    include_module_from_url(&module_path, &repo_url)?;
-    let module_name = Path::new(&module_path)
-        .file_name()
-        .and_then(|s| s.to_str())
-        .unwrap_or(&module_path);
-    add_top_module(&repo_url, module_name)?;
-    println!("Successfully installed module: {}", module_name);
+    include_module_from_url(&module_path, &repo_url, false)?;
+    println!("Successfully installed module: {}", module_path);
     Ok(())
 }
 
@@ -134,18 +130,13 @@ fn process_selected_modules(url: &str, tmp_path: &PathBuf, selected_items: &Hash
         let module_path = full_path.strip_prefix(tmp_path).unwrap_or(&full_path).to_str().unwrap().trim_start_matches('/');
         println!("Module path: {}", module_path);
 
-        include_module_from_url(module_path, url)?;
-        let module_name = Path::new(module_path)
-            .file_name()
-            .and_then(|s| s.to_str())
-            .unwrap_or(module_path);
-        add_top_module(url, module_name)?;
+        include_module_from_url(module_path, url, false)?;
     }
 
     if selected_items.is_empty() {
         println!("No modules selected. Including entire repository.");
         include_repo_from_url(url, "./vpm_modules/")?;
-    }
+}
 
     Ok(())
 }
@@ -153,12 +144,7 @@ fn process_selected_modules(url: &str, tmp_path: &PathBuf, selected_items: &Hash
 fn print_success_message(url: &str, selected_items: &HashSet<String>) {
     if !selected_items.is_empty() {
         let installed_modules = selected_items.iter()
-            .filter_map(|item| {
-                Path::new(item)
-                    .file_stem()
-                    .and_then(|s| s.to_str())
-                    .map(|s| s.to_string())
-            })
+            .map(|item| item.to_string())
             .collect::<Vec<String>>()
             .join(", ");
         println!("Successfully installed module(s): {}", installed_modules);
@@ -305,18 +291,18 @@ pub fn include_module_from_url(module_path: &str, url: &str, riscv: bool) -> Res
     fs::create_dir_all(&destination)?;
     process_module(package_name, module_path, destination.to_owned(), &mut HashSet::new(), url, true)?;
     
-    if riscv {
-        let module_file_name = Path::new(&destination)
-            .file_name()
-            .and_then(|name| name.to_str())
-            .ok_or_else(|| anyhow::anyhow!("Invalid destination path"))?;
-        let module_path = Path::new(&destination).join(format!("{}.v", module_file_name));
+    let module_file_name = Path::new(&destination)
+        .file_name()
+        .and_then(|name| name.to_str())
+        .ok_or_else(|| anyhow::anyhow!("Invalid destination path"))?;
+    let module_path = Path::new(&destination).join(format!("{}.v", module_file_name));
+    if !module_path.exists() {
+        let module_path = Path::new(&destination).join(format!("{}.sv", module_file_name));
         if !module_path.exists() {
-            let module_path = Path::new(&destination).join(format!("{}.sv", module_file_name));
-            if !module_path.exists() {
-                return Err(anyhow::anyhow!("Module file not found in the destination folder"));
-            }
+            return Err(anyhow::anyhow!("Module file not found in the destination folder"));
         }
+    }
+    if riscv {
         let top_v_content = generate_top_v_content(&module_path.to_str().unwrap())?;
         fs::write(format!("{}/top.v", destination), top_v_content)?;
         println!("Created top.v file for RISC-V in {}", destination);
@@ -325,6 +311,7 @@ pub fn include_module_from_url(module_path: &str, url: &str, riscv: bool) -> Res
         fs::write(format!("{}/constraints.xdc", destination), xdc_content)?;
         println!("Created constraints.xdc file for Xilinx Artix-7 board in {}", destination);
     }
+    add_top_module(url, module_path.to_str().unwrap())?;
     
     Ok(())
 }
@@ -351,13 +338,13 @@ pub fn process_module(package_name: &str, module: &str, destination: String, vis
 
     if is_full_filepath(&module_with_ext) {
         let dir_entry = filepath_to_dir_entry(file_path)?;
-        process_file(&dir_entry, &target_path.to_str().unwrap(), module_name, url, visited, is_top_module)?;
+        process_file(&dir_entry, &target_path.to_str().unwrap(), module, url, visited, is_top_module)?;
         processed_modules.insert(module_with_ext.clone());
     } else {
         process_non_full_filepath(module_name, &tmp_path, &target_path, url, visited, is_top_module, &mut processed_modules)?;
     }
 
-    let submodules = download_and_process_submodules(package_name, &module_with_ext, &destination, url, visited, is_top_module)?;
+    let submodules = download_and_process_submodules(package_name, module, &destination, url, visited, is_top_module)?;
     processed_modules.extend(submodules);
 
     Ok(processed_modules)
@@ -437,7 +424,8 @@ fn process_file(entry: &DirEntry, destination: &str, module_path: &str, url: &st
     fs::write(target_path.join(&header_filename), header_content)?;
     println!("Generating header file: {}", target_path.join(&header_filename).to_str().unwrap());
 
-    update_lockfile(module_name_with_ext.as_str(), url, &contents, visited, is_top_module)?;
+    let full_module_path = target_path.join(&module_name_with_ext);
+    update_lockfile(&full_module_path, url, &contents, visited, is_top_module)?;
 
     Ok(())
 }
@@ -456,12 +444,12 @@ fn download_and_process_submodules(package_name: &str, module_path: &str, destin
         module_path.to_string()
     };
 
-    let contents = fs::read_to_string(PathBuf::from(destination).join(module_name_with_ext))?;
+    let full_module_path = PathBuf::from(destination).join(&module_name_with_ext);
+    let contents = fs::read_to_string(&full_module_path)?;
     let mut parser = Parser::new();
     parser.set_language(tree_sitter_verilog::language())?;
-    let tree = parser.parse(&contents, None).context("Failed to parse file")?;
 
-    let submodules = get_submodules(tree.root_node(), &contents)?;
+    let submodules = get_submodules(&contents)?;
     let mut all_submodules = HashSet::new();
 
     for submodule in submodules {
@@ -486,35 +474,32 @@ fn download_and_process_submodules(package_name: &str, module_path: &str, destin
                 false
             )?;
             
-            all_submodules.insert(submodule_with_ext);
+            all_submodules.insert(submodule_with_ext.clone());
             all_submodules.extend(processed_submodules);
+
+            let full_submodule_path = submodule_destination.join(&submodule_with_ext);
+            update_lockfile(&full_submodule_path, &submodule_url, &contents, visited, false)?;
         }
     }
 
     Ok(all_submodules)
 }
 
-fn update_lockfile(module_name: &str, url: &str, contents: &str, visited: &HashSet<String>, is_top_module: bool) -> Result<()> {
+fn update_lockfile(full_path: &PathBuf, url: &str, contents: &str, visited: &HashSet<String>, is_top_module: bool) -> Result<()> {
     let mut lockfile = fs::read_to_string("vpm.lock").unwrap_or_default();
+    let full_module_path = format!("{}/{}", url, full_path.file_name().unwrap().to_str().unwrap());
     let module_entry = if is_top_module {
-        format!("[[package]]\nname = \"{}\"\nsource = \"{}\"\nparents = []", module_name, url)
+        format!("[[package]]\nfull_path = \"{}\"\nsource = \"{}\"\nparents = []\n", full_path.display(), url)
     } else {
-        format!("[[package]]\nname = \"{}\"\nsource = \"{}\"", module_name, url)
+        format!("[[package]]\nfull_path = \"{}\"\nsource = \"{}\"\n", full_path.display(), url)
     };
 
     let mut parser = Parser::new();
     parser.set_language(tree_sitter_verilog::language())?;
-    let tree = parser.parse(contents, None).unwrap();
-    let submodules = get_submodules(tree.root_node(), contents)?;
-    let submodules_vec: Vec<String> = submodules.into_iter().map(|s| {
-        if s.ends_with(".v") || s.ends_with(".sv") {
-            s
-        } else {
-            format!("{}.v", s)
-        }
-    }).collect();
+    let submodules = get_submodules(contents)?;
+    let submodules_vec: Vec<String> = submodules.into_iter().collect();
 
-    if !lockfile.contains(&format!("name = \"{}\"", module_name)) {
+    if !lockfile.contains(&format!("full_path = \"{}\"", full_path.display())) {
         let formatted_submodules = submodules_vec.iter()
             .map(|s| format!("  \"{}\",", s))
             .collect::<Vec<_>>()
@@ -526,20 +511,21 @@ fn update_lockfile(module_name: &str, url: &str, contents: &str, visited: &HashS
 
     for submodule in &submodules_vec {
         if !visited.contains(submodule) {
-            if let Some(existing_entry) = lockfile.find(&format!("\n[[package]]\nname = \"{}\"", submodule)) {
+            let submodule_path = full_path.parent().unwrap().join(submodule);
+            if let Some(existing_entry) = lockfile.find(&format!("\n[[package]]\nfull_path = \"{}\"", submodule_path.display())) {
                 let parent_start = lockfile[existing_entry..].find("parents = [").map(|i| existing_entry + i);
                 if let Some(start) = parent_start {
                     let end = lockfile[start..].find(']').map(|i| start + i + 1).unwrap_or(lockfile.len());
                     let current_parents = lockfile[start..end].to_string();
-                    let new_parents = if current_parents.contains(module_name) {
+                    let new_parents = if current_parents.contains(&full_path.display().to_string()) {
                         current_parents
                     } else {
-                        format!("{}  \"{}\",\n]", &current_parents[..current_parents.len() - 1], module_name)
+                        format!("{}  \"{}\",\n]", &current_parents[..current_parents.len() - 1], full_path.display())
                     };
                     lockfile.replace_range(start..end, &new_parents);
                 }
             } else {
-                let submodule_entry = format!("\n[[package]]\nname = \"{}\"\nsource = \"{}\"\nparents = [\n  \"{}\",\n]\nsubmodules = []\n", submodule, url, module_name);
+                let submodule_entry = format!("\n[[package]]\nfull_path = \"{}\"\nsource = \"{}\"\nparents = [\n  \"{}\",\n]\nsubmodules = []\n", submodule_path.display(), url, full_path.display());
                 lockfile.push_str(&submodule_entry);
             }
         }
