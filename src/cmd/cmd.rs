@@ -10,7 +10,7 @@ pub enum Cmd {
     Install(Install),
     List(List),
     Sim(Sim),
-    Synthesize(Synthesize),
+    Synth(Synth),
     Load(Load),
     Run(Run),
 }
@@ -133,13 +133,15 @@ pub struct List {}
     propagate_version = true,
     version
 )]  
-pub struct Synthesize {
+pub struct Synth {
     #[arg(help = "Top module path to synthesize")]
     pub top_module_path: String,
     #[arg(long, help = "Use RISC-V toolchain")]
     pub riscv: bool,
     #[arg(long, help = "Path to RISC-V core", required_if_eq("riscv", "true"))]
     pub core_path: Option<String>,
+    #[arg(long, help = "Specify target board")]
+    pub board: Option<String>,
 }
 
 #[derive(Debug, Parser)]
