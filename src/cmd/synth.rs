@@ -41,7 +41,7 @@ pub fn synthesize_design(input_file: &str, top_module: &str, output_file: &str) 
 pub fn create_yosys_script(input_file: &str, top_module: &str, output_file: &str) -> Result<PathBuf> {
     let script_content = generate_yosys_script_content(input_file, top_module, output_file);
 
-    let script_path = PathBuf::from(format!("{}_synth_script.ys", top_module));
+    let script_path = PathBuf::from(input_file).with_file_name(format!("{}_synth_script.ys", top_module));
     std::fs::write(&script_path, script_content).context("Failed to create Yosys script")?;
 
     Ok(script_path)
@@ -93,12 +93,10 @@ pub fn synthesize_xilinx(top_module_path: PathBuf, riscv: bool, core_path: Optio
     
     let script_content = generate_xilinx_script_content(&top_module_path_str, riscv, core_path, &module_name, &output_file)?;
 
-    let script_file = "temp_synth_script.ys";
-    write_script_to_file(script_file, &script_content)?;
+    let script_file = top_module_path.with_file_name(format!("{}_xilinx_synth_script.ys", module_name));
+    write_script_to_file(&script_file, &script_content)?;
 
-    run_yosys_with_script(script_file)?;
-
-    std::fs::remove_file(script_file)?;
+    run_yosys_with_script(&script_file)?;
 
     println!("Synthesis complete. Output written to {}", output_file);
 
@@ -160,13 +158,13 @@ stat
     Ok(script_content)
 }
 
-fn write_script_to_file(script_file: &str, script_content: &str) -> Result<()> {
+fn write_script_to_file(script_file: &PathBuf, script_content: &str) -> Result<()> {
     let mut file = File::create(script_file)?;
     file.write_all(script_content.as_bytes())?;
     Ok(())
 }
 
-fn run_yosys_with_script(script_file: &str) -> Result<()> {
+fn run_yosys_with_script(script_file: &PathBuf) -> Result<()> {
     let output = Command::new("yosys")
         .arg("-s")
         .arg(script_file)
