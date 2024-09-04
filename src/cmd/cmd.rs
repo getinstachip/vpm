@@ -82,8 +82,8 @@ pub struct Dotf {
     version
 )]
 pub struct Docs{
-    #[arg(help = "Name of module to generate documentation for")]
-    pub module: String,
+    #[arg(help = "Path of module to generate documentation for")]
+    pub module_path: String,
     #[arg(help = "Url of repository to generate documentation for")]
     pub url: Option<String>,
 }
