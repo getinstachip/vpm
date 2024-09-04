@@ -1,5 +1,4 @@
 use std::collections::HashSet;
-
 use std::path::{Path, PathBuf};
 use std::{fs, process::Command};
 use anyhow::{Context, Result};
@@ -14,104 +13,54 @@ use fuzzy_matcher::FuzzyMatcher;
 use fuzzy_matcher::skim::SkimMatcherV2;
 use std::io::{self, Write};
 
-
 impl Execute for Include {
     async fn execute(&self) -> Result<()> {
         fs::create_dir_all("./vpm_modules")?;
-        println!("Including repository from URL: '{}'", self.url);
+        println!("Including from: '{}'", self.url);
         let repo_name = name_from_url(&self.url);
         let tmp_path = PathBuf::from("/tmp").join(repo_name);
-        include_repo_from_url(&self.url, "/tmp/")?;
-        add_dependency(&self.url, None)?;
-
-        let files = get_files(&tmp_path.to_str().unwrap_or_default());
-
-        let items: Vec<String> = files
-            .into_iter()
-            .map(|file| file.strip_prefix(&tmp_path.to_string_lossy().as_ref())
-                .unwrap_or(&file)
-                .trim_start_matches('/')
-                .to_string())
-            .collect();
-
-
-        let matcher = SkimMatcherV2::default();
-        let mut _filtered_items = items.clone();
-        let mut query = String::new();
-
-        let mut selected_items: HashSet<String> = HashSet::new();
-
-        loop {
-            print!("Enter module name (or press Enter to finish): ");
-            io::stdout().flush()?;
-
-            query.clear();
-            io::stdin().read_line(&mut query)?;
-            query = query.trim().to_string();
-
-            if query.is_empty() {
-                break;
-            }
-
-            _filtered_items = items
-                .iter()
-                .filter(|&item| matcher.fuzzy_match(item, &query).is_some())
-                .cloned()
-                .collect();
-
-            let selection = MultiSelect::with_theme(&ColorfulTheme::default())
-                .with_prompt("Toggle items to include with the space bar. Hit enter to start a new search")
-                .items(&_filtered_items)
-                .interact()?;
-
-            println!("\nSelected items:");
-            for i in &selected_items {
-                println!("- {}", i);
-            }
-    
-            selected_items.extend(selection.iter().map(|&i| _filtered_items[i].clone()));
-        }
-
-        // Clear the terminal
-        print!("\x1B[2J\x1B[1;1H");
-
-        let has_selected_items = !selected_items.is_empty();
-
-        for item in &selected_items {
-            let item_text = item.clone();
-            let displayed_path = item_text.strip_prefix(tmp_path.to_string_lossy().as_ref()).unwrap_or(&item_text).trim_start_matches('/');
-            println!("Including module: {}", displayed_path);
-            
-            let full_path = tmp_path.join(displayed_path);
-            let module_path = full_path.strip_prefix(&tmp_path).unwrap_or(&full_path).to_str().unwrap().trim_start_matches('/');
-            
-            include_module_from_url(module_path, &self.url, self.riscv)?;
-            add_top_module(&self.url, module_path)?;
-        }
-
-        if !has_selected_items {
-            println!("No modules selected. Including entire repository.");
-            include_repo_from_url(&self.url, "./vpm_modules/")?;
-        }
-
-        fs::remove_dir_all(tmp_path)?;
-        if has_selected_items {
-            let installed_modules = selected_items.iter()
-                .filter_map(|item| {
-                    let item_text = item.clone();
-                    Path::new(&item_text)
-                        .file_stem()
-                        .and_then(|s| s.to_str())
-                        .map(|s| s.to_string())
-                })
-                .collect::<Vec<String>>()
-                .join(", ");
-            println!("Successfully installed module(s): {}", installed_modules);
+        if self.repo {
+            include_entire_repo(&self.url, &tmp_path)?
         } else {
-            println!("Successfully installed repository '{}'.", name_from_url(&self.url));
+            include_single_module(&self.url)?
         }
         Ok(())
     }
+}
+
+fn include_entire_repo(url: &str, tmp_path: &PathBuf) -> Result<()> {
+    let url = format!("https://github.com/{}", url);
+    println!("Full GitHub URL: {}", url);
+    include_repo_from_url(&url, "/tmp/")?;
+    add_dependency(&url, None)?;
+
+    let files = get_files(&tmp_path.to_str().unwrap_or_default());
+    let items = get_relative_paths(&files, tmp_path);
+
+    let selected_items = select_modules(&items)?;
+
+    process_selected_modules(&url, tmp_path, &selected_items)?;
+
+    fs::remove_dir_all(tmp_path)?;
+    print_success_message(&url, &selected_items);
+    Ok(())
+}
+
+fn include_single_module(url: &str) -> Result<()> {
+    let repo_url = get_github_repo_url(url).unwrap();
+    include_repo_from_url(&repo_url, "/tmp/")?;
+    add_dependency(&repo_url, None)?;
+    println!("Repo URL: {}", repo_url);
+    let module_path = get_component_path_from_github_url(url).unwrap_or_default();
+    println!("Including module: {}", module_path);
+    include_module_from_url(&module_path, &repo_url)?;
+    let module_name = Path::new(&module_path)
+        .file_name()
+        .and_then(|s| s.to_str())
+        .unwrap_or(&module_path);
+    add_top_module(&repo_url, module_name)?;
+    println!("Successfully installed module: {}", module_name);
+    Ok(())
 }
 
 fn get_files(directory: &str) -> Vec<String> {
@@ -129,12 +78,118 @@ fn get_files(directory: &str) -> Vec<String> {
         .collect()
 }
 
+fn get_relative_paths(files: &[String], tmp_path: &PathBuf) -> Vec<String> {
+    files.iter()
+        .map(|file| file.strip_prefix(&tmp_path.to_string_lossy().as_ref())
+            .unwrap_or(file)
+            .trim_start_matches('/')
+            .to_string())
+        .collect()
+}
+
+fn select_modules(items: &[String]) -> Result<HashSet<String>> {
+    let matcher = SkimMatcherV2::default();
+    let mut selected_items: HashSet<String> = HashSet::new();
+
+    loop {
+        print!("Enter module name (or press Enter to finish): ");
+        io::stdout().flush()?;
+
+        let mut query = String::new();
+        io::stdin().read_line(&mut query)?;
+        query = query.trim().to_string();
+
+        if query.is_empty() {
+            break;
+        }
+
+        let filtered_items: Vec<String> = items
+            .iter()
+            .filter(|&item| matcher.fuzzy_match(item, &query).is_some())
+            .cloned()
+            .collect();
+
+        let selection = MultiSelect::with_theme(&ColorfulTheme::default())
+            .with_prompt("Toggle items to include with the space bar. Hit enter to start a new search")
+            .items(&filtered_items)
+            .interact()?;
+
+        for i in &selected_items {
+            println!("- {}", i);
+        }
+
+        selected_items.extend(selection.iter().map(|&i| filtered_items[i].clone()));
+    }
+
+    print!("\x1B[2J\x1B[1;1H");
+    Ok(selected_items)
+}
+
+fn process_selected_modules(url: &str, tmp_path: &PathBuf, selected_items: &HashSet<String>) -> Result<()> {
+    for item in selected_items {
+        let displayed_path = item.strip_prefix(tmp_path.to_string_lossy().as_ref()).unwrap_or(item).trim_start_matches('/');
+        println!("Including module: {}", displayed_path);
+        
+        let full_path = tmp_path.join(displayed_path);
+        let module_path = full_path.strip_prefix(tmp_path).unwrap_or(&full_path).to_str().unwrap().trim_start_matches('/');
+        println!("Module path: {}", module_path);
+
+        include_module_from_url(module_path, url)?;
+        let module_name = Path::new(module_path)
+            .file_name()
+            .and_then(|s| s.to_str())
+            .unwrap_or(module_path);
+        add_top_module(url, module_name)?;
+    }
+
+    if selected_items.is_empty() {
+        println!("No modules selected. Including entire repository.");
+        include_repo_from_url(url, "./vpm_modules/")?;
+    }
+
+    Ok(())
+}
+
+fn print_success_message(url: &str, selected_items: &HashSet<String>) {
+    if !selected_items.is_empty() {
+        let installed_modules = selected_items.iter()
+            .filter_map(|item| {
+                Path::new(item)
+                    .file_stem()
+                    .and_then(|s| s.to_str())
+                    .map(|s| s.to_string())
+            })
+            .collect::<Vec<String>>()
+            .join(", ");
+        println!("Successfully installed module(s): {}", installed_modules);
+    } else {
+        println!("Successfully installed repository '{}'.", name_from_url(url));
+    }
+}
+
 fn name_from_url(url: &str) -> &str {
     url.rsplit('/').find(|&s| !s.is_empty()).unwrap_or_default()
 }
 
+fn get_component_path_from_github_url(url: &str) -> Option<String> {
+    let parts: Vec<&str> = url.split("/").collect();
+    if parts.len() < 8 || !url.starts_with("https://github.com/") {
+        return None;
+    }
+
+    Some(parts[7..].join("/"))
+}
+
+fn get_github_repo_url(url: &str) -> Option<String> {
+    let parts: Vec<&str> = url.split('/').collect();
+    if parts.len() < 5 || !url.starts_with("https://github.com/") {
+        return None;
+    }
+
+    Some(format!("https://github.com/{}/{}", parts[3], parts[4]))
+}
+
 fn is_full_filepath(path: &str) -> bool {
-    // Check if the path contains directory separators
     path.contains('/') || path.contains('\\')
 }
 
@@ -147,7 +202,6 @@ fn filepath_to_dir_entry(filepath: PathBuf) -> Result<DirEntry> {
         .ok_or_else(|| anyhow::anyhow!("Failed to create DirEntry"))?
         .context("Failed to create DirEntry")
 }
-
 
 fn generate_top_v_content(module_path: &str) -> Result<String> {
     println!("Generating top.v file for RISC-V in {}", module_path);
@@ -290,7 +344,6 @@ pub fn process_module(package_name: &str, module: &str, destination: String, vis
     let file_path = tmp_path.join(&module_with_ext);
 
     let target_path = PathBuf::from(&destination);
-    // println!("Target path: {}", target_path.display());
 
     println!("Including submodule '{}'", module_with_ext);
 
@@ -300,61 +353,72 @@ pub fn process_module(package_name: &str, module: &str, destination: String, vis
         let dir_entry = filepath_to_dir_entry(file_path)?;
         process_file(&dir_entry, &target_path.to_str().unwrap(), module_name, url, visited, is_top_module)?;
         processed_modules.insert(module_with_ext.clone());
-        // println!("Processed file: {}", dir_entry.path().to_str().unwrap());
     } else {
-        let mut matching_entries = Vec::new();
-        for entry in WalkDir::new(&tmp_path).into_iter().filter_map(Result::ok) {
-            if entry.file_name().to_str() == Some(&format!("{}.sv", module_name)) || entry.file_name().to_str() == Some(&format!("{}.v", module_name)) {
-                matching_entries.push(entry.path().to_path_buf());
-                // println!("Matching entry: {}", entry.path().to_str().unwrap());
-            }
-        }
-
-        if matching_entries.is_empty() {
-            println!("Skipping submodule import: No matching files found for module '{}'", module_name);
-            return Ok(HashSet::new());
-        } else if matching_entries.len() == 1 {
-            let dir_entry = filepath_to_dir_entry(matching_entries[0].clone())?;
-            // println!("Processing file: {}", dir_entry.path().to_str().unwrap());
-            process_file(&dir_entry, target_path.to_str().unwrap(), module_name, url, visited, is_top_module)?;
-            // println!("Processed file: {}", dir_entry.path().to_str().unwrap());
-            processed_modules.insert(module_with_ext.clone());
-        } else {
-            println!("Multiple modules found for '{}'. Please choose:", module_name);
-            for (i, entry) in matching_entries.iter().enumerate() {
-                println!("{}: {}", i + 1, entry.display());
-            }
-
-            let mut choice = String::new();
-            std::io::stdin().read_line(&mut choice)?;
-            let index: usize = choice.trim().parse()?;
-
-            if index > 0 && index <= matching_entries.len() {
-                let dir_entry = filepath_to_dir_entry(matching_entries[index - 1].clone())?;
-                process_file(&dir_entry, target_path.to_str().unwrap(), module_name, url, visited, is_top_module)?;
-                processed_modules.insert(module_with_ext.clone());
-            } else {
-                anyhow::bail!("Invalid choice");
-            }
-        }
+        process_non_full_filepath(module_name, &tmp_path, &target_path, url, visited, is_top_module, &mut processed_modules)?;
     }
-    // println!("Destination: {}", destination);
+
     let submodules = download_and_process_submodules(package_name, &module_with_ext, &destination, url, visited, is_top_module)?;
     processed_modules.extend(submodules);
 
     Ok(processed_modules)
 }
 
+fn process_non_full_filepath(module_name: &str, tmp_path: &PathBuf, target_path: &PathBuf, url: &str, visited: &mut HashSet<String>, is_top_module: bool, processed_modules: &mut HashSet<String>) -> Result<()> {
+    let matching_entries = find_matching_entries(module_name, tmp_path);
+
+    if matching_entries.is_empty() {
+        println!("No matching files found for module '{}'. Skipping...", module_name);
+        return Ok(());
+    } else if matching_entries.len() == 1 {
+        let dir_entry = filepath_to_dir_entry(matching_entries[0].clone())?;
+        process_file(&dir_entry, target_path.to_str().unwrap(), module_name, url, visited, is_top_module)?;
+        processed_modules.insert(format!("{}.v", module_name));
+    } else {
+        process_multiple_matches(matching_entries, target_path, module_name, url, visited, is_top_module, processed_modules)?;
+    }
+
+    Ok(())
+}
+
+fn find_matching_entries(module_name: &str, tmp_path: &PathBuf) -> Vec<PathBuf> {
+    WalkDir::new(tmp_path)
+        .into_iter()
+        .filter_map(Result::ok)
+        .filter(|entry| {
+            entry.file_name().to_str() == Some(&format!("{}.sv", module_name)) || 
+            entry.file_name().to_str() == Some(&format!("{}.v", module_name))
+        })
+        .map(|entry| entry.path().to_path_buf())
+        .collect()
+}
+
+fn process_multiple_matches(matching_entries: Vec<PathBuf>, target_path: &PathBuf, module_name: &str, url: &str, visited: &mut HashSet<String>, is_top_module: bool, processed_modules: &mut HashSet<String>) -> Result<()> {
+    println!("Multiple modules found for '{}'. Please choose:", module_name);
+    for (i, entry) in matching_entries.iter().enumerate() {
+        println!("{}: {}", i + 1, entry.display());
+    }
+
+    let mut choice = String::new();
+    std::io::stdin().read_line(&mut choice)?;
+    let index: usize = choice.trim().parse()?;
+
+    if index > 0 && index <= matching_entries.len() {
+        let dir_entry = filepath_to_dir_entry(matching_entries[index - 1].clone())?;
+        process_file(&dir_entry, target_path.to_str().unwrap(), module_name, url, visited, is_top_module)?;
+        processed_modules.insert(format!("{}.v", module_name));
+    } else {
+        anyhow::bail!("Invalid choice");
+    }
+
+    Ok(())
+}
+
 fn process_file(entry: &DirEntry, destination: &str, module_path: &str, url: &str, visited: &mut HashSet<String>, is_top_module: bool) -> Result<()> {
     let target_path = PathBuf::from(destination);
     let extension = entry.path().extension().and_then(|s| s.to_str()).unwrap_or("v");
-    // println!("Copying file: {}", entry.path().to_str().unwrap());
-    // println!("Target path: {}", target_path.display());
     fs::copy(entry.path(), &target_path.join(entry.file_name()))?;
-    // println!("Copied file: {}", entry.path().to_str().unwrap());
 
     let contents = fs::read_to_string(entry.path())?;
-    // println!("Read file: {}", entry.path().to_str().unwrap());
     let mut parser = Parser::new();
     parser.set_language(tree_sitter_verilog::language())?;
     let tree = parser.parse(&contents, None).context("Failed to parse file")?;
@@ -370,7 +434,6 @@ fn process_file(entry: &DirEntry, destination: &str, module_path: &str, url: &st
         module_name.to_string()
     };
     let header_filename = format!("{}.{}", module_name.strip_suffix(".v").unwrap_or(module_name), if extension == "sv" { "svh" } else { "vh" });
-    // println!("Writing header file: {}", target_path.join(&header_filename).to_str().unwrap());
     fs::write(target_path.join(&header_filename), header_content)?;
     println!("Generating header file: {}", target_path.join(&header_filename).to_str().unwrap());
 
@@ -568,38 +631,19 @@ pub fn generate_headers(root_node: Node, contents: &str) -> Result<String> {
     Ok(header_content)
 }
 
-pub fn get_submodules(root_node: Node, contents: &str) -> Result<HashSet<String>> {
-    static QUERY: Lazy<Query> = Lazy::new(|| {
-        Query::new(
-            tree_sitter_verilog::language(),
-            "(module_or_generate_item 
-                (module_instantiation 
-                    (simple_identifier) @module_submodule
-                )
-            )
-            (module_or_generate_item 
-                (udp_instantiation 
-                    (simple_identifier) @module_submodule
-                )
-            )",
-        )
-        .expect("Failed to create query")
-    });
 
-    let mut query_cursor = QueryCursor::new();
-    let matches = query_cursor.matches(&QUERY, root_node, contents.as_bytes());
-
-    let mut submodules = HashSet::new();
-
-    for match_ in matches {
-        for capture in match_.captures {
-            if capture.index == 0 {
-                let capture_text = &contents[capture.node.byte_range()];
-                submodules.insert(capture_text.to_string());
-            }
-        }
+pub fn get_submodules(contents: &str) -> Result<HashSet<String>> {
+    static REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(
+        r"(?mi)^\s*(?!(always(_comb|_ff|_latch)?|assert|assign|assume|begin|case|cover|else|end(case|function|generate|module|primitive|table|task)?|enum|for|forever|function|generate|if|initial|input|int|localparam|logic|module|negedge|output|param(eter)?|posedge|primitive|real|reg|repeat|table|task|time|timescale|typedef|while|wire))(\w+)\s*(?:#\([\s.\w(\[\-:\]\),{'}`/+!~@#$%^&*=<>?]+\))?\s*[\w\[:\]]+\s*(?:\([\s.\w(\[\-:\]\),{'}`/+!~@#$%^&*=<>?]+\));"
+    ).unwrap());
+    let submodules: HashSet<String> = REGEX
+        .captures_iter(contents) // Iterate over captures
+        .map(|caps| caps.unwrap().get(0).unwrap().as_str()) // Extract the matched string
+        .map(|s| s.split_whitespace().next().unwrap().to_string()) // Split and get submodule name
+        .collect(); // Collect into a HashSet
+    for submodule in &submodules {
+        println!("Found submodule: {}", submodule);
     }
-
     Ok(submodules)
 }
 
