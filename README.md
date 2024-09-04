@@ -145,6 +145,7 @@ Example:
 ```bash
 vpm dotf ./vpm_modules/pfcache/fwb_master.v
 ```
+![](https://i.giphy.com/media/v1.Y2lkPTc5MGI3NjExMHhkdjQ1bnl0cTA3cW1lOHVuNjkxaW1ydzFndXNnaDZlMHFiMWRpNSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/mafBT4PURloV52oLFP/giphy.gif)
 
 This command:
 - Analyzes the specified top module
