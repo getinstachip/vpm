@@ -65,6 +65,7 @@ Example:
 ```bash
 vpm include --repo ZipCPU/zipcpu
 ```
+![](https://i.giphy.com/media/v1.Y2lkPTc5MGI3NjExMG5uaHJ1N2twd2JiY2pucjlwbjNjNm02NjRycDlocDF5bnB2eHNvYiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/QJ2sIDYIftEgu5uNAg/giphy.gif)
 ### vpm docs
 Generate comprehensive documentation for a module.
 
