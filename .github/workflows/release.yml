@@ -34,6 +34,12 @@ jobs:
             target: x86_64-apple-darwin
           - os: macos-latest
             target: aarch64-apple-darwin
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+          - os: windows-latest
+            target: i686-pc-windows-msvc
+          - os: windows-latest
+            target: aaarch64-pc-windows-msvc
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -88,11 +94,19 @@ jobs:
           args: --no-build --no-strip --output=. --target=${{ matrix.target }}
 
       - name: Package (*nix)
+        if: ${{ runner.os != 'Windows' }}
         run: |
           tar -cv LICENSE README.md \
             -C target/${{ matrix.target }}/release/ vpm |
             gzip --best > \
             vpm-${{ steps.get_version.outputs.value }}-${{ matrix.target }}.tar.gz
+
+      - name: Package (Windows)
+        if: ${{ runner.os == 'Windows' }}
+        uses: Minionguyjpro/Inno-Setup-Action@v1.2.4
+        with:
+          path: installer.iss
+          options: /vers=${{ steps.get_version.outputs.value }} /target=${{ matrix.target }}
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
@@ -102,6 +116,7 @@ jobs:
             *.deb
             *.tar.gz
             *.zip
+            *.exe
 
       - name: Create release
         if: |
@@ -113,5 +128,6 @@ jobs:
             *.deb
             *.tar.gz
             *.zip
+            *.exe
           name: ${{ steps.get_version.outputs.value }}
           tag_name: ''
