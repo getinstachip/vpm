@@ -15,7 +15,6 @@ VPM is a powerful package manager for Verilog projects, currently being piloted 
 
 VPM is designed for easy installation with no additional dependencies. 
 
-For Linux:
 ```bash
 curl -sSfL https://raw.githubusercontent.com/getinstachip/vpm/main/install.sh | sh
 ```
