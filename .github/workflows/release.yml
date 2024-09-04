@@ -39,7 +39,7 @@ jobs:
           - os: windows-latest
             target: i686-pc-windows-msvc
           - os: windows-latest
-            target: aaarch64-pc-windows-msvc
+            target: aarch64-pc-windows-msvc
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
