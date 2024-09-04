@@ -52,7 +52,7 @@ Example:
 ```bash
 vpm include https://github.com/ZipCPU/zipcpu/blob/master/rtl/core/prefetch.v
 ```
-![](https://i.giphy.com/media/v1.Y2lkPTc5MGI3NjExYnE0M2R4bWlmNTExdms2MWNtdndzbnN3aTZhczQzcHZrNWwxOGx4MCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/QFhXbO6HFhFZAgLgjj/giphy.gif)
+![](https://i.giphy.com/media/v1.Y2lkPTc5MGI3NjExY3Jmbmw0NWlva3F2bHdyY2h0NGZwNGlvNXRjZTY2bXB4ODRzOXd6eiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/KwHCr2ifmIZzSkpfjv/giphy.gif)
 
 2. Include a repository:
 ```bash
