@@ -27,10 +27,10 @@ After installation, the vpm command will be available in any terminal.
 - `vpm docs <module.sv>`: Generate documentation for any module (highlighting bugs and edge cases)
 - `vpm install <tool>`: Auto-integrate an open-source tool without manual setup
 - `vpm update <module.sv>`: Update module to the latest version
-- `vpm uninstall <module.sv>`: Remove a module from your project
+- `vpm remove <module.sv>`: Remove a module from your project
 - `vpm list`: List all modules in our standard library
 - `vpm dotf <module.sv>`:  Generate a `.f` filelist when exporting your project
-- `vpm sim <module.sv> <testbench.sv>`: Simulate Verilog module using Iverilog
+- `vpm sim <module.sv> <testbench.sv>`: Simulate Verilog module using iVerilog
   
 ### vpm include
 Include a module or repository in your project.
@@ -52,6 +52,8 @@ Example:
 ```bash
 vpm include https://github.com/ZipCPU/zipcpu/blob/master/rtl/core/prefetch.v
 ```
+![](https://i.giphy.com/media/v1.Y2lkPTc5MGI3NjExMDkxZjI1bWp3Y2JzZmt5bG1jc24wczFtNHVuY3FpbGpodjlreDNrcCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/DzB1ipAEADXeHZakbz/giphy.gif)
+
 2. Include a repository:
 ```bash
 vpm include --repo <AUTHOR_NAME/REPO_NAME>
@@ -63,6 +65,7 @@ Example:
 ```bash
 vpm include --repo ZipCPU/zipcpu
 ```
+![](https://i.giphy.com/media/v1.Y2lkPTc5MGI3NjExMG5uaHJ1N2twd2JiY2pucjlwbjNjNm02NjRycDlocDF5bnB2eHNvYiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/QJ2sIDYIftEgu5uNAg/giphy.gif)
 ### vpm docs
 Generate comprehensive documentation for a module.
 
@@ -88,6 +91,7 @@ Examples:
 vpm docs pfcache.v
 vpm docs pfcache.v https://github.com/ZipCPU/zipcpu
 ```
+![](https://i.giphy.com/media/v1.Y2lkPTc5MGI3NjExdG51NGVjb21xNWJ2ZjN5YWhmaWd5OTZzMTJiOXJwMTkwaXBpeWF6biZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/m60rw8DolnLioIfDJ0/giphy.gif)
 
 ### vpm update
 Update a package to the latest version.
@@ -141,6 +145,7 @@ Example:
 ```bash
 vpm dotf ./vpm_modules/pfcache/fwb_master.v
 ```
+![](https://i.giphy.com/media/v1.Y2lkPTc5MGI3NjExMHhkdjQ1bnl0cTA3cW1lOHVuNjkxaW1ydzFndXNnaDZlMHFiMWRpNSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/mafBT4PURloV52oLFP/giphy.gif)
 
 This command:
 - Analyzes the specified top module
@@ -165,6 +170,7 @@ Example:
 ```bash
 vpm install verilator
 ```
+![](https://i.giphy.com/media/v1.Y2lkPTc5MGI3NjExNjFhc2t1ZTBwM29xdm10dThubWN3ZGhvOWhjeXJjNnQ0dWVqd2szdSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/737P65RSHVlu2dxXVu/giphy.gif)
 
 Currently supported tools:
 - Verilator
@@ -194,6 +200,7 @@ Example:
 ```bash
 vpm sim testbench.v module1.v module2.v
 ```
+![](https://i.giphy.com/media/v1.Y2lkPTc5MGI3NjExcnhiaDNwZmRhazVlODAxanlqaW1yaXdpazVmNTVwanJ4c2V3a3RscSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/6ImXOh4OVsjrWYrikf/giphy.gif)
 
 ### vpm list
 List all modules in VPM's standard library.
