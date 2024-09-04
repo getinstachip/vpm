@@ -91,7 +91,7 @@ Examples:
 vpm docs pfcache.v
 vpm docs pfcache.v https://github.com/ZipCPU/zipcpu
 ```
-![](https://i.giphy.com/media/v1.Y2lkPTc5MGI3NjExdG51NGVjb21xNWJ2ZjN5YWhmaWd5OTZzMTJiOXJwMTkwaXBpeWF6biZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/m60rw8DolnLioIfDJ0/giphy.gif)
+![](https://i.giphy.com/media/v1.Y2lkPTc5MGI3NjExOXc5NWpmYnV5eGxtYzRud2tid3poYTZyYXEwdmpqaGF3MjZwdW5leiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/C8nFHwNq0qBpXRF9pP/giphy.gif)
 
 ### vpm update
 Update a package to the latest version.
