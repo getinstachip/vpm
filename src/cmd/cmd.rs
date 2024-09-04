@@ -142,6 +142,8 @@ pub struct Synth {
     pub core_path: Option<String>,
     #[arg(long, help = "Specify target board")]
     pub board: Option<String>,
+    #[arg(long, help = "Generate synthesis script")]
+    pub gen_yosys_script: bool,
 }
 
 #[derive(Debug, Parser)]

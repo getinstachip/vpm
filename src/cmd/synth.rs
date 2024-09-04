@@ -8,43 +8,58 @@ use crate::cmd::{Execute, Synth};
 
 impl Execute for Synth {
     async fn execute(&self) -> Result<()> {
-        let top_module_path = PathBuf::from(&self.top_module_path);
-        
-        match &self.board {
-            Some(board) if board.to_lowercase() == "xilinx" => {
-                synthesize_xilinx(top_module_path, self.riscv, self.core_path.clone())?;
-            },
-            None => {
-                let input_file = top_module_path.to_str().unwrap();
-                let top_module = top_module_path.file_stem().unwrap().to_str().unwrap();
-                let output_file = format!("{}_synth.v", top_module);
-                synthesize_design(input_file, top_module, &output_file)?;
-            },
-            Some(other) => {
-                return Err(anyhow::anyhow!("Unsupported board: {}", other));
-            }
-        }
-        Ok(())
+        synthesize_design(
+            &self.top_module_path,
+            self.riscv,
+            self.core_path.as_ref(),
+            &self.board,
+            self.gen_yosys_script
+        )
     }
 }
 
-pub fn synthesize_design(input_file: &str, top_module: &str, output_file: &str) -> Result<()> {
-    println!("Synthesizing design...");
+fn synthesize_design(
+    top_module_path: &str,
+    riscv: bool,
+    core_path: Option<&String>,
+    board: &Option<String>,
+    gen_yosys_script: bool
+) -> Result<()> {
+    let top_module_path = PathBuf::from(top_module_path);
+    let (input_file, module_name, parent_dir, _) = extract_path_info(&top_module_path);
+    
+    let script_content = match board {
+        Some(board) if board.to_lowercase() == "xilinx" => {
+            let board_name = "artix7";
+            let output_file = format!("{}/{}_{}_{}_synth.v", parent_dir, module_name, board_name, "xilinx");
+            generate_xilinx_script_content(&input_file, riscv, core_path.cloned(), &module_name, &output_file)?
+        },
+        None => {
+            let output_file = format!("{}/{}_synth.v", parent_dir, module_name);
+            generate_yosys_script_content(&input_file, &module_name, &output_file)
+        },
+        Some(other) => {
+            return Err(anyhow::anyhow!("Unsupported board: {}", other));
+        }
+    };
 
-    let script_path = create_yosys_script(input_file, top_module, output_file)?;
-    run_yosys(&script_path)?;
+    if gen_yosys_script {
+        let script_file = PathBuf::from(&parent_dir).join(format!("{}_synth_script.ys", module_name));
+        write_script_to_file(&script_file, &script_content)?;
+        println!("Yosys script generated at: {:?}", script_file);
+    }
 
+    run_yosys_with_script_content(&script_content)?;
     println!("Synthesis completed successfully.");
     Ok(())
 }
 
-pub fn create_yosys_script(input_file: &str, top_module: &str, output_file: &str) -> Result<PathBuf> {
-    let script_content = generate_yosys_script_content(input_file, top_module, output_file);
-
-    let script_path = PathBuf::from(input_file).with_file_name(format!("{}_synth_script.ys", top_module));
-    std::fs::write(&script_path, script_content).context("Failed to create Yosys script")?;
-
-    Ok(script_path)
+fn extract_path_info(top_module_path: &PathBuf) -> (String, String, String, String) {
+    let input_file = top_module_path.to_str().unwrap().to_string();
+    let top_module = top_module_path.file_stem().unwrap().to_str().unwrap().to_string();
+    let parent_dir = top_module_path.parent().unwrap().to_string_lossy().to_string();
+    let output_file = format!("{}/{}_synth.v", parent_dir, top_module);
+    (input_file, top_module, parent_dir, output_file)
 }
 
 fn generate_yosys_script_content(input_file: &str, top_module: &str, output_file: &str) -> String {
@@ -66,48 +81,6 @@ write_verilog {}
         top_module,
         output_file
     )
-}
-
-fn run_yosys(script_path: &PathBuf) -> Result<()> {
-    let output = Command::new("yosys")
-        .arg(script_path)
-        .output()
-        .context("Failed to execute Yosys")?;
-
-    if !output.status.success() {
-        let error_message = String::from_utf8_lossy(&output.stderr);
-        return Err(anyhow::anyhow!("Yosys synthesis failed: {}", error_message));
-    }
-
-    println!("Yosys Output:");
-    println!("{}", String::from_utf8_lossy(&output.stdout));
-
-    Ok(())
-}
-
-pub fn synthesize_xilinx(top_module_path: PathBuf, riscv: bool, core_path: Option<String>) -> Result<()> {
-    println!("Starting synthesis with Yosys...");
-    let (module_name, top_module_path_str, parent_dir) = extract_path_info(&top_module_path);
-    let board_name = "artix7";
-    let output_file = format!("{}/{}_{}_{}_synth.v", parent_dir, module_name, board_name, "xilinx");
-    
-    let script_content = generate_xilinx_script_content(&top_module_path_str, riscv, core_path, &module_name, &output_file)?;
-
-    let script_file = top_module_path.with_file_name(format!("{}_xilinx_synth_script.ys", module_name));
-    write_script_to_file(&script_file, &script_content)?;
-
-    run_yosys_with_script(&script_file)?;
-
-    println!("Synthesis complete. Output written to {}", output_file);
-
-    Ok(())
-}
-
-fn extract_path_info(top_module_path: &PathBuf) -> (String, String, String) {
-    let module_name = top_module_path.file_stem().unwrap().to_str().unwrap().to_string();
-    let top_module_path_str = top_module_path.to_string_lossy().to_string();
-    let parent_dir = top_module_path.parent().unwrap().to_string_lossy().to_string();
-    (module_name, top_module_path_str, parent_dir)
 }
 
 fn generate_xilinx_script_content(top_module_path_str: &str, riscv: bool, core_path: Option<String>, module_name: &str, output_file: &str) -> Result<String> {
@@ -164,18 +137,19 @@ fn write_script_to_file(script_file: &PathBuf, script_content: &str) -> Result<(
     Ok(())
 }
 
-fn run_yosys_with_script(script_file: &PathBuf) -> Result<()> {
+fn run_yosys_with_script_content(script_content: &str) -> Result<()> {
     let output = Command::new("yosys")
-        .arg("-s")
-        .arg(script_file)
-        .output()?;
+        .arg("-p")
+        .arg(script_content)
+        .output()
+        .context("Failed to execute Yosys")?;
 
     println!("Yosys output:");
     println!("{}", String::from_utf8_lossy(&output.stdout));
 
     if !output.status.success() {
-        eprintln!("Yosys error:");
-        eprintln!("{}", String::from_utf8_lossy(&output.stderr));
+        let error_message = String::from_utf8_lossy(&output.stderr);
+        return Err(anyhow::anyhow!("Yosys synthesis failed: {}", error_message));
     }
 
     Ok(())
