@@ -170,6 +170,7 @@ Example:
 ```bash
 vpm install verilator
 ```
+![](https://i.giphy.com/media/v1.Y2lkPTc5MGI3NjExNjFhc2t1ZTBwM29xdm10dThubWN3ZGhvOWhjeXJjNnQ0dWVqd2szdSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/737P65RSHVlu2dxXVu/giphy.gif)
 
 Currently supported tools:
 - Verilator
