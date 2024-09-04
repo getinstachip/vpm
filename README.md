@@ -200,6 +200,7 @@ Example:
 ```bash
 vpm sim testbench.v module1.v module2.v
 ```
+![](https://i.giphy.com/media/v1.Y2lkPTc5MGI3NjExcnhiaDNwZmRhazVlODAxanlqaW1yaXdpazVmNTVwanJ4c2V3a3RscSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/6ImXOh4OVsjrWYrikf/giphy.gif)
 
 ### vpm list
 List all modules in VPM's standard library.
