@@ -4,12 +4,12 @@ use crate::cmd::{Execute, Update};
 
 impl Execute for Update {
     async fn execute(&self) -> Result<()> {
-        let package_name = &self.package_path;
-        println!("Updating package '{}'", package_name);
-        update_package(package_name)
+        let module_path = &self.module_path;
+        println!("Updating module '{}'", module_path);
+        update_module(module_path)
     }
 }
 
-fn update_package(_package_name: &str) -> Result<()> {
+fn update_module(_module_path: &str) -> Result<()> {
     Ok(())
 }

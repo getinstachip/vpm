@@ -86,11 +86,7 @@ impl Execute for Include {
             let module_path = full_path.strip_prefix(&tmp_path).unwrap_or(&full_path).to_str().unwrap().trim_start_matches('/');
             
             include_module_from_url(module_path, &self.url, self.riscv)?;
-            let module_name = Path::new(module_path)
-                .file_name()
-                .and_then(|s| s.to_str())
-                .unwrap_or(module_path);
-            add_top_module(&self.url, module_name)?;
+            add_top_module(&self.url, module_path)?;
         }
 
         if !has_selected_items {

@@ -40,8 +40,8 @@ pub struct Include {
     version
 )]
 pub struct Update {
-    #[arg(help = "Full module path of package to update")]
-    pub package_path: String,
+    #[arg(help = "Full module path of module to update")]
+    pub module_path: String,
 }
 
 #[derive(Debug, Parser)]

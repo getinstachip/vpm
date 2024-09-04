@@ -78,20 +78,16 @@ impl VpmToml {
         }
     }
 
-    pub fn add_top_module(&mut self, repo_link: &str, module_name: &str) {
+    pub fn add_top_module(&mut self, repo_link: &str, module_path: &str) {
         if let Some(dependencies) = self.toml_value.get_mut("dependencies") {
             if let Some(dependency) = dependencies.as_table_mut().unwrap().get_mut(repo_link) {
-                // println!("Dependency: {}", dependency);
                 if let Some(top_modules) = dependency.get_mut("top_modules") {
-                    // println!("Top modules: {}", top_modules);
                     if let Some(array) = top_modules.as_array_mut() {
-                        array.push(Value::String(module_name.to_string()));
+                        array.push(Value::String(module_path.to_string()));
                     }
-                    // println!("Top modules: {}", top_modules);
                 } else {
-                    dependency.as_table_mut().unwrap().insert("top_modules".to_string(), Value::Array(vec![Value::String(module_name.to_string())]));
+                    dependency.as_table_mut().unwrap().insert("top_modules".to_string(), Value::Array(vec![Value::String(module_path.to_string())]));
                 }
-                // println!("Dependency: {}", dependency);
             }
         }
     }
@@ -177,9 +173,9 @@ pub fn add_dependency(git: &str, commit: Option<&str>) -> Result<()> {
     Ok(())
 }
 
-pub fn add_top_module(repo_link: &str, module_name: &str) -> Result<()> {
+pub fn add_top_module(repo_link: &str, module_path: &str) -> Result<()> {
     let mut vpm_toml = VpmToml::from("vpm.toml");
-    vpm_toml.add_top_module(repo_link, module_name);
+    vpm_toml.add_top_module(repo_link, module_path);
     let toml_string = vpm_toml.to_string();
     // println!("TOML: {}", toml_string);
     fs::write("vpm.toml", toml_string)?;
