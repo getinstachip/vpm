@@ -74,6 +74,8 @@ async fn generate_docs(module_path: &str, content: &str, full_module_path: Optio
         .json(&json!({ "code": content }))
         .send().await?;
 
+
+    // println!("Response: {}", &response.text().await?);
     let documentation = format_text(&response.text().await?);
 
     pb.set_position(66);
@@ -88,7 +90,7 @@ async fn generate_docs(module_path: &str, content: &str, full_module_path: Optio
         dir.join(format!("{}_README.md", module_name))
     };
     tokio::fs::write(&readme_path, documentation).await?;
-
+    
     pb.set_position(100);
     pb.finish_with_message(format!("Documentation for {} written to {}", module_path, readme_path.display()));
 
