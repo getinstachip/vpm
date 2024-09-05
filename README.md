@@ -17,7 +17,7 @@ VPM is designed for easy installation with no additional dependencies.
 
 ### Linux/MacOS:
 ```bash
-curl -sSfL https://raw.githubusercontent.com/getinstachip/vpm/main/install.sh | sh
+curl -f https://getinstachip.com/install.sh | sh
 ```
 If installation doesn't work, try the following:
 
