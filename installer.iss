@@ -31,6 +31,7 @@ SolidCompression=yes
 WizardStyle=modern
 DefaultDirName={autopf}\{#MyAppName}
 OutputBaseFilename=vpm-installer-{#MyAppVersion}-{#MyTarget}
+OutputDir=.
 
 [Languages]
 Name: "english"; MessagesFile: "compiler:Default.isl"
@@ -83,7 +84,6 @@ var
     oldpath: string;
     newpath: string;
     updatepath: boolean;
-    pathArr: TArrayOfString;
 begin
     if not RegQueryStringValue(HKEY_CURRENT_USER, 'Environment', 'Path', oldpath) then
         oldpath := '';
