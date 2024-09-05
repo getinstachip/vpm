@@ -101,12 +101,18 @@ jobs:
             gzip --best > \
             vpm-${{ steps.get_version.outputs.value }}-${{ matrix.target }}.tar.gz
 
+      - name: Create variable files
+        if: ${{ runner.os == 'Windows' }}
+        run: |
+          echo "${{ steps.get_version.outputs.value }}" > version.txt
+          echo "${{ matrix.target }}" >> target.txt
+
       - name: Package (Windows)
         if: ${{ runner.os == 'Windows' }}
         uses: Minionguyjpro/Inno-Setup-Action@v1.2.4
         with:
           path: installer.iss
-          options: /vers=${{ steps.get_version.outputs.value }} /target=${{ matrix.target }}
+          options: /O+
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
