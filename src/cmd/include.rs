@@ -196,14 +196,14 @@ fn generate_top_v_content(module_path: &str) -> Result<String> {
     let mut top_content = String::new();
     top_content.push_str("// Auto-generated top.v file for RISC-V\n\n");
 
-    // Use regex to find module declaration
-    let module_re = regex::Regex::new(r"module\s+(\w+)\s*(?:#\s*\(([\s\S]*?)\))?\s*\(([\s\S]*?)\);").unwrap();
-    if let Some(captures) = module_re.captures(&module_content) {
-        let module_name = captures.get(1).unwrap().as_str();
-        println!("Module name: {}", module_name);
+    // Extract filename without extension
+    let filename = Path::new(module_path).file_stem().and_then(|s| s.to_str()).unwrap_or("");
 
+    // Use regex to find module declaration with the same name as the filename
+    let module_re = regex::Regex::new(&format!(r"module\s+{}\s*(?:#\s*\(([\s\S]*?)\))?\s*\(([\s\S]*?)\);", filename)).unwrap();
+    if let Some(captures) = module_re.captures(&module_content) {
         // Extract parameters
-        let params = captures.get(2).map_or(Vec::new(), |m| {
+        let params = captures.get(1).map_or(Vec::new(), |m| {
             m.as_str().lines()
                 .map(|line| line.trim())
                 .filter(|line| !line.is_empty())
@@ -211,7 +211,7 @@ fn generate_top_v_content(module_path: &str) -> Result<String> {
         });
 
         // Extract ports
-        let ports: Vec<&str> = captures.get(3).unwrap().as_str()
+        let ports: Vec<&str> = captures.get(2).unwrap().as_str()
             .lines()
             .map(|line| line.trim())
             .filter(|line| !line.is_empty())
@@ -225,7 +225,7 @@ fn generate_top_v_content(module_path: &str) -> Result<String> {
         top_content.push_str(");\n\n");
 
         // Instantiate the module
-        top_content.push_str(&format!("{} #(\n", module_name));
+        top_content.push_str(&format!("{} #(\n", filename));
         for param in params.iter() {
             if let Some((name, value)) = param.split_once('=') {
                 let name = name.trim().trim_start_matches("parameter").trim();
@@ -237,7 +237,7 @@ fn generate_top_v_content(module_path: &str) -> Result<String> {
         top_content.push_str(") cpu (\n");
 
         // Connect ports
-        let port_re = regex::Regex::new(r"(input|output|inout)\s+(?:wire|reg)?\s*(?:\[.*?\])?\s*(\w+)").unwrap();
+        let port_re = regex::Regex::new(r"(input)\s+(?:wire|reg)?\s*(?:\[.*?\])?\s*(\w+)").unwrap();
         for (i, port) in ports.iter().enumerate() {
             if let Some(port_captures) = port_re.captures(port) {
                 let port_name = port_captures.get(2).unwrap().as_str();
@@ -250,7 +250,7 @@ fn generate_top_v_content(module_path: &str) -> Result<String> {
         return Ok(top_content);
     }
 
-    Err(anyhow::anyhow!("No module declaration found in the file"))
+    Err(anyhow::anyhow!("No matching module declaration found in the file"))
 }
 
 fn generate_xdc_content(module_path: &str) -> Result<String> {

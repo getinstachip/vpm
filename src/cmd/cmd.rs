@@ -11,7 +11,7 @@ pub enum Cmd {
     List(List),
     Sim(Sim),
     Synth(Synth),
-    Load(Load),
+    Build(Build),
     Run(Run),
 }
 
@@ -157,7 +157,7 @@ pub struct Synth {
     version
 )]
 
-pub struct Load {
+pub struct Build {
     #[arg(help = "Path to top module to load")]
     pub top_module_path: String,
     #[arg(help = "Path to constraints file")]
