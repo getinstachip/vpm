@@ -7,6 +7,9 @@ mod list;
 mod install;
 mod sim;
 mod docs;
+mod synth;
+mod run;
+mod load;
 
 use anyhow::Result;
 
@@ -28,6 +31,9 @@ impl Execute for Cmd {
             Cmd::List(cmd) => cmd.execute().await,
             Cmd::Sim(cmd) => cmd.execute().await,
             Cmd::Docs(cmd) => cmd.execute().await,
+            Cmd::Synth(cmd) => cmd.execute().await,
+            Cmd::Load(cmd) => cmd.execute().await,
+            Cmd::Run(cmd) => cmd.execute().await,
         }
     }
 }

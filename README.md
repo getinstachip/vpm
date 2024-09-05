@@ -13,13 +13,21 @@ VPM is a powerful package manager for Verilog projects, currently being piloted 
 
 ## Installation
 
-VPM is designed for easy installation with no additional dependencies. Simply run:
+VPM is designed for easy installation with no additional dependencies. 
 
 ```bash
 curl -sSfL https://raw.githubusercontent.com/getinstachip/vpm/main/install.sh | sh
 ```
 
 After installation, the vpm command will be available in any terminal.
+
+If installation doesn't work, try the following:
+
+Mac:
+```bash
+brew tap getinstachip/vpm
+brew install vpm
+```
 
 ## Commands
 
@@ -52,7 +60,8 @@ Example:
 ```bash
 vpm include https://github.com/ZipCPU/zipcpu/blob/master/rtl/core/prefetch.v
 ```
-![](https://i.giphy.com/media/v1.Y2lkPTc5MGI3NjExMDkxZjI1bWp3Y2JzZmt5bG1jc24wczFtNHVuY3FpbGpodjlreDNrcCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/DzB1ipAEADXeHZakbz/giphy.gif)
+
+![](https://i.giphy.com/media/v1.Y2lkPTc5MGI3NjExY3Jmbmw0NWlva3F2bHdyY2h0NGZwNGlvNXRjZTY2bXB4ODRzOXd6eiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/KwHCr2ifmIZzSkpfjv/giphy.gif)
 
 2. Include a repository:
 ```bash
@@ -91,7 +100,7 @@ Examples:
 vpm docs pfcache.v
 vpm docs pfcache.v https://github.com/ZipCPU/zipcpu
 ```
-![](https://i.giphy.com/media/v1.Y2lkPTc5MGI3NjExdG51NGVjb21xNWJ2ZjN5YWhmaWd5OTZzMTJiOXJwMTkwaXBpeWF6biZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/m60rw8DolnLioIfDJ0/giphy.gif)
+![](https://i.giphy.com/media/v1.Y2lkPTc5MGI3NjExOXc5NWpmYnV5eGxtYzRud2tid3poYTZyYXEwdmpqaGF3MjZwdW5leiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/C8nFHwNq0qBpXRF9pP/giphy.gif)
 
 ### vpm update
 Update a package to the latest version.

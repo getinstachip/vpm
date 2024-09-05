@@ -78,6 +78,20 @@ impl VpmToml {
         }
     }
 
+    pub fn remove_dependency(&mut self, git: &str) {
+        if let Some(dependencies) = self.toml_doc["dependencies"].as_table_mut() {
+            dependencies.remove(git);
+        }
+    }
+
+    pub fn remove_top_module(&mut self, repo_link: &str, module_name: &str) {
+        if let Some(dependency) = self.toml_doc["dependencies"].get_mut(repo_link) {
+            if let Some(top_modules) = dependency["top_modules"].as_array_mut() {
+                top_modules.retain(|m| m.as_str().unwrap() != module_name);
+            }
+        }
+    }
+
     pub fn write_to_file(&self, filepath: &str) -> Result<()> {
         let toml_content = self.toml_doc.to_string();
         let mut file = OpenOptions::new()
@@ -88,6 +102,20 @@ impl VpmToml {
             .expect("Failed to open vpm.toml");
         file.write_all(toml_content.as_bytes()).expect("Failed to write to vpm.toml");
         Ok(())
+    }
+
+    pub fn get_repo_links(&self, module_name: &str) -> Vec<String> {
+        let mut repo_links = Vec::new();
+        if let Some(dependencies) = self.toml_doc["dependencies"].as_table() {
+            for (repo_link, dependency) in dependencies.iter() {
+                if let Some(top_modules) = dependency["top_modules"].as_array() {
+                    if top_modules.iter().any(|m| m.as_str().unwrap() == module_name) {
+                        repo_links.push(repo_link.to_string());
+                    }
+                }
+            }
+        }
+        repo_links
     }
 }
 
@@ -100,9 +128,29 @@ pub fn add_dependency(git: &str, commit: Option<&str>) -> Result<()> {
     Ok(())
 }
 
-pub fn add_top_module(repo_link: &str, module_name: &str) -> Result<()> {
+pub fn add_top_module(repo_link: &str, module_path: &str) -> Result<()> {
     let mut vpm_toml = VpmToml::from("vpm.toml");
-    vpm_toml.add_top_module(repo_link, module_name);
+    vpm_toml.add_top_module(repo_link, module_path);
     vpm_toml.write_to_file("vpm.toml")?;
     Ok(())
+}
+
+pub fn remove_dependency(git: &str) -> Result<()> {
+    let mut vpm_toml = VpmToml::from("vpm.toml");
+    vpm_toml.remove_dependency(git);
+    vpm_toml.write_to_file("vpm.toml")?;
+    Ok(())
+}
+
+pub fn remove_top_module(repo_link: &str, module_name: &str) -> Result<()> {
+    println!("Removing: {} (included from {})", module_name, repo_link);
+    let mut vpm_toml = VpmToml::from("vpm.toml");
+    vpm_toml.remove_top_module(repo_link, module_name);
+    vpm_toml.write_to_file("vpm.toml")?;
+    Ok(())
+}
+
+pub fn get_repo_links(module_name: &str) -> Vec<String> {
+    let vpm_toml = VpmToml::from("vpm.toml");
+    vpm_toml.get_repo_links(module_name)
 }
