@@ -15,19 +15,23 @@ VPM is a powerful package manager for Verilog projects, currently being piloted 
 
 VPM is designed for easy installation with no additional dependencies. 
 
+### Linux/MacOS:
 ```bash
 curl -sSfL https://raw.githubusercontent.com/getinstachip/vpm/main/install.sh | sh
 ```
-
-After installation, the vpm command will be available in any terminal.
-
 If installation doesn't work, try the following:
 
-Mac:
+#### MacOS:
 ```bash
 brew tap getinstachip/vpm
 brew install vpm
 ```
+
+### Windows:
+1. Download the `.zip` file matching your Windows architecture from the [latest release page](https://github.com/getinstachip/vpm/releases/latest)
+2. Extract and run the `.exe` file
+
+After installation, the vpm command will be available in any terminal.
 
 ## Commands
 
