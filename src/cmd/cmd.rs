@@ -152,7 +152,7 @@ pub struct Synth {
 #[clap(
     about,
     author,
-    disable_help_subcommand = true,
+    disable_help_subcommand = true
     propagate_version = true,
     version
 )]

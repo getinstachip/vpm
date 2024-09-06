@@ -9,7 +9,7 @@ impl Execute for Build {
         let top_module_path = Path::new(&self.top_module_path);
         let constraints_path = Path::new(&self.constraints_path);
         if self.riscv {
-            build_xilinx(top_module_path, constraints_path)?;
+            load_xilinx(top_module_path, constraints_path)?;
         } else {
             unimplemented!("Non RISC-V loading not yet implemented");
         }
