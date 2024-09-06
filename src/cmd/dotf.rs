@@ -20,6 +20,7 @@ impl Execute for Dotf {
         Ok(())
     }
 }
+
 pub fn append_modules_to_filelist(top_module_path: &str, sub: bool) -> Result<()> {
     let vpm_modules_dir = PathBuf::from("./vpm_modules");
     let mut visited_modules: Vec<String> = Vec::new();

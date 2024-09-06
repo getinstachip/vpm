@@ -2,6 +2,7 @@ use clap::Parser;
 
 #[derive(Debug, Parser)]
 pub enum Cmd {
+    Upgrade(Upgrade),
     Include(Include),
     Update(Update),
     Remove(Remove),
@@ -14,6 +15,17 @@ pub enum Cmd {
     Load(Load),
     Run(Run),
 }
+
+#[derive(Debug, Parser)]
+#[clap(
+    about,
+    author,
+    disable_help_subcommand = true,
+    propagate_version = true,
+    version
+)]
+
+pub struct Upgrade {}
 
 #[derive(Debug, Parser)]
 #[clap(

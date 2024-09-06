@@ -1,4 +1,5 @@
 mod cmd;
+mod upgrade;
 mod include;
 mod update;
 mod remove;
@@ -23,6 +24,7 @@ pub trait Execute {
 impl Execute for Cmd {
     async fn execute(&self) -> Result<()> {
         match self {
+            Cmd::Upgrade(cmd) => cmd.execute().await,
             Cmd::Include(cmd) => cmd.execute().await,
             Cmd::Update(cmd) => cmd.execute().await,
             Cmd::Remove(cmd) => cmd.execute().await,
