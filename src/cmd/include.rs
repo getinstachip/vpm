@@ -285,7 +285,7 @@ fn generate_xdc_content(module_path: &str) -> Result<String> {
     ];
 
     // Generate constraints for each port
-    for (port_type, port_name) in ports {
+    for (_port_type, port_name) in ports {
         if let Some((_, pin)) = pin_mappings.iter().find(|&&(p, _)| p == port_name) {
             let iostandard = if port_name == "clk" { "LVCMOS33" } else { "LVCMOS33" };
             xdc_content.push_str(&format!("set_property -dict {{ PACKAGE_PIN {} IOSTANDARD {} }} [get_ports {{ {} }}]\n", pin, iostandard, port_name));
@@ -295,7 +295,7 @@ fn generate_xdc_content(module_path: &str) -> Result<String> {
     }
 
     // Add clock constraint
-    if let Some((_, clk_pin)) = pin_mappings.iter().find(|&&(p, _)| p == "clk") {
+    if let Some((_, _clk_pin)) = pin_mappings.iter().find(|&&(p, _)| p == "clk") {
         xdc_content.push_str(&format!("\n## Clock signal\n"));
         xdc_content.push_str(&format!("create_clock -period 10.000 -name sys_clk_pin -waveform {{0.000 5.000}} -add [get_ports {{ clk }}]\n"));
     } else {

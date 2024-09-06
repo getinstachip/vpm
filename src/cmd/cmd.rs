@@ -114,6 +114,8 @@ pub struct Install {
 pub struct Sim {
     #[arg(help = "List of Verilog files to simulate")]
     pub verilog_files: Vec<String>,
+    #[arg(long, help = "Generate waveform output")]
+    pub waveform: bool,
 }
 
 #[derive(Debug, Parser)]
