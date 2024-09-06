@@ -19,6 +19,10 @@ VPM is designed for easy installation with no additional dependencies.
 ```bash
 curl -f https://getinstachip.com/install.sh | sh
 ```
+### Windows:
+1. Download the `.zip` file matching your Windows architecture from the [latest release page](https://github.com/getinstachip/vpm/releases/latest)
+2. Extract and run the `.exe` file
+
 If installation doesn't work, try the following:
 
 #### MacOS:
@@ -26,10 +30,6 @@ If installation doesn't work, try the following:
 brew tap getinstachip/vpm
 brew install vpm
 ```
-
-### Windows:
-1. Download the `.zip` file matching your Windows architecture from the [latest release page](https://github.com/getinstachip/vpm/releases/latest)
-2. Extract and run the `.exe` file
 
 After installation, the vpm command will be available in any terminal.
 
