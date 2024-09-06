@@ -86,6 +86,7 @@ pub enum Cmd {
         long_about = "Upgrade VPM to the latest version available."
     )]
     Upgrade(Upgrade),
+    Pnr(Pnr),
 }
 
 #[derive(Debug, Parser)]
@@ -136,6 +137,7 @@ pub struct Install {
     • gtkwave: Waveform viewer for simulation results
     • verible: SystemVerilog parser, style linter, and formatter
     • edalize: One-stop library for interfacing EDA tools
+    • nextpnr: Open-source place and route tool with support for popular FPGA boards
     • riscv-gnu-toolchain: GNU toolchain for RISC-V, including GCC compiler and associated tools")]
     pub tool_name: String,
 }
@@ -184,4 +186,31 @@ pub struct Run {
     pub program_path: String,
     #[arg(long, help = "Use RISC-V toolchain. Set this flag if you're running a program compiled for RISC-V architecture and need to use RISC-V specific tools or emulators.")]
     pub riscv: bool,
+}
+
+#[derive(Debug, Parser)]
+pub struct Pnr {
+    #[arg(short, long, help = "Input JSON file")]
+    pub json: String,
+    
+    #[arg(short, long, help = "Input PCF file")]
+    pub pcf: Option<String>,
+    
+    #[arg(short = 'o', long, help = "Output ASC file")]  // Changed short option to 'o'
+    pub asc: String,
+    
+    #[arg(short, long, help = "FPGA architecture (e.g., ice40, ecp5)")]
+    pub arch: String,
+    
+    #[arg(long, help = "FPGA package")]
+    pub package: Option<String>,
+    
+    #[arg(long, help = "Enable timing-driven placement")]
+    pub timing_driven: bool,
+    
+    #[arg(long, help = "Generate timing report")]
+    pub timing_report: Option<String>,
+    
+    #[arg(long, help = "Generate utilization report")]
+    pub utilization_report: Option<String>,
 }

@@ -32,6 +32,7 @@ indicatif = "0.17.8"
 which = "6.0.3"
 regex = "1.10.6"
 toml_edit = "0.22.20"
+structopt = "0.3"
 
 [build-dependencies]
 cc="*"

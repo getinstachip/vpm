@@ -171,6 +171,68 @@ fn install_icarus_verilog() -> Result<()> {
     Ok(())
 }
 
+fn install_nextpnr() -> Result<()> {
+    println!("Installing NextPNR...");
+
+    #[cfg(target_os = "macos")]
+    {
+        println!("Running on macOS...");
+        // Install NextPNR using Homebrew on macOS
+        let status = Command::new("brew")
+            .arg("install")
+            .arg("nextpnr")
+            .status()
+            .context("Failed to install NextPNR using Homebrew")?;
+
+        if !status.success() {
+            println!("Failed to install NextPNR on macOS.");
+            return Ok(());
+        }
+    }
+
+    #[cfg(target_os = "linux")]
+    {
+        println!("Running on Linux...");
+        // Install NextPNR dependencies
+        let status = Command::new("sudo")
+            .args(&["apt-get", "install", "-y", "cmake", "build-essential", "libeigen3-dev", "libomp-dev", "libboost-all-dev", "libfmt-dev"])
+            .status()
+            .context("Failed to install NextPNR dependencies")?;
+
+        if !status.success() {
+            println!("Failed to install NextPNR dependencies on Linux.");
+            return Ok(());
+        }
+
+        // Clone NextPNR repository
+        let status = Command::new("git")
+            .args(&["clone", "https://github.com/YosysHQ/nextpnr.git"])
+            .status()
+            .context("Failed to clone NextPNR repository")?;
+
+        if !status.success() {
+            println!("Failed to clone NextPNR repository.");
+            return Ok(());
+        }
+
+        // Build and install NextPNR
+        std::env::set_current_dir("nextpnr")?;
+        Command::new("cmake").arg(".").status()?;
+        Command::new("make").status()?;
+        Command::new("sudo").args(&["make", "install"]).status()?;
+        std::env::set_current_dir("..")?;
+    }
+
+    #[cfg(not(any(target_os = "macos", target_os = "linux")))]
+    {
+        println!("Unsupported operating system. Please install NextPNR manually.");
+        return Ok(());
+    }
+
+    println!("NextPNR installed successfully.");
+    Ok(())
+}
+
 fn install_chipyard() -> Result<()> {
     println!("Installing Chipyard...");
 
@@ -419,25 +481,6 @@ fn install_riscv() -> Result<()> {
 
     println!("RISC-V GNU toolchain installed successfully!");
     println!("Please restart your terminal or run 'source ~/.bashrc' to update your PATH.");
-    Ok(())
-}
-
-fn install_nextpnr() -> Result<()> {
-    println!("Installing NextPNR...");
-
-    // Install NextPNR using Homebrew on macOS
-    let status = Command::new("brew")
-        .arg("install")
-        .arg("nextpnr")
-        .status()
-        .context("Failed to install NextPNR using Homebrew")?;
-
-    if !status.success() {
-        println!("Failed to install NextPNR on macOS.");
-        return Ok(());
-    }
-
-    println!("NextPNR installed successfully.");
     Ok(())
 }
 

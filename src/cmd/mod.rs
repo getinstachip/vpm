@@ -11,6 +11,8 @@ mod docs;
 mod synth;
 mod run;
 mod load;
+mod pnr;
+
 
 use anyhow::Result;
 
@@ -36,6 +38,7 @@ impl Execute for Cmd {
             Cmd::Synth(cmd) => cmd.execute().await,
             Cmd::Load(cmd) => cmd.execute().await,
             Cmd::Run(cmd) => cmd.execute().await,
+            Cmd::Pnr(cmd) => cmd.execute().await,
         }
     }
 }
