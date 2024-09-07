@@ -33,6 +33,7 @@ which = "6.0.3"
 regex = "1.10.6"
 toml_edit = "0.22.20"
 structopt = "0.3"
+num_cpus = "1.13"
 
 [build-dependencies]
 cc="*"
