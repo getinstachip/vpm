@@ -125,6 +125,8 @@ pub struct Docs {
     pub module_path: String,
     #[arg(long, help = "URL of the repository to generate documentation for. Use this for remote modules that are not locally available.")]
     pub url: Option<String>,
+    #[arg(long, help = "Generate documentation in offline mode")]
+    pub offline: bool,
 }
 
 #[derive(Debug, Parser)]
