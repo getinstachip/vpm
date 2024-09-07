@@ -124,6 +124,26 @@ async fn generate_docs_offline(module_path: &str, content: &str, full_module_pat
     pb.set_position(33);
     pb.set_message("Generating documentation offline...");
 
+    // Check if Ollama is installed
+    if !Command::new("ollama").arg("--version").output().is_ok() {
+        pb.set_message("Ollama not found. Installing...");
+        
+        // Install Ollama
+        let install_status = if cfg!(target_os = "macos") {
+            Command::new("brew").args(&["install", "ollama"]).status()
+        } else if cfg!(target_os = "linux") {
+            Command::new("curl").args(&["-fsSL", "https://ollama.ai/install.sh", "|", "sh"]).status()
+        } else {
+            return Err(anyhow::anyhow!("Unsupported operating system for Ollama installation"));
+        };
+
+        if let Err(e) = install_status {
+            return Err(anyhow::anyhow!("Failed to install Ollama: {}", e));
+        }
+
+        pb.set_message("Ollama installed successfully");
+    }
+
     // Start Ollama server in the background
     let mut ollama_serve = Command::new("ollama")
         .arg("serve")
