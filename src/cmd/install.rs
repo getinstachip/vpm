@@ -175,43 +175,111 @@ fn install_icarus_verilog() -> Result<()> {
 fn install_nextpnr() -> Result<()> {
     println!("Installing NextPNR...");
 
-    #[cfg(target_os = "macos")]
+    #[cfg(any(target_os = "macos", target_os = "linux"))]
     {
-        println!("Running on macOS...");
-        // Install dependencies
-        Command::new("brew").args(&["install", "cmake", "eigen", "boost", "python3"]).status()?;
-        
-        // Install icestorm
-        Command::new("brew").args(&["install", "yosyshq/tap/icestorm"]).status()?;
-
-        // Clone NextPNR repository
-        Command::new("git")
-            .args(&["clone", "https://github.com/YosysHQ/nextpnr"])
-            .status()?;
-
-        // Build and install NextPNR
-        env::set_current_dir("nextpnr")?;
-        Command::new("cmake")
-            .args(&["-DARCH=ice40", "-DCMAKE_INSTALL_PREFIX=/usr/local", "."])
-            .status()?;
-        Command::new("make")
-            .arg(format!("-j{}", num_cpus::get()))
-            .status()?;
-        Command::new("sudo")
-            .args(&["make", "install"])
-            .status()?;
-
-        env::set_current_dir("..")?;
-        std::fs::remove_dir_all("nextpnr")?;
+        install_nextpnr_from_source()?;
     }
 
-    #[cfg(not(target_os = "macos"))]
+    #[cfg(not(any(target_os = "macos", target_os = "linux")))]
     {
-        println!("NextPNR installation is currently only supported on macOS.");
+        println!("Unsupported operating system. Please install NextPNR manually.");
+    }
+
+    Ok(())
+}
+
+fn install_nextpnr_from_source() -> Result<()> {
+    // Store the current working directory
+    let original_dir = env::current_dir().context("Failed to get current directory")?;
+
+    // Create a temporary directory for the installation
+    let temp_dir = env::temp_dir().join("nextpnr_install");
+    fs::create_dir_all(&temp_dir).context("Failed to create temporary directory")?;
+    env::set_current_dir(&temp_dir).context("Failed to change to temporary directory")?;
+
+    println!("Working in temporary directory: {:?}", temp_dir);
+
+    // Install dependencies
+    install_dependencies()?;
+
+    // Clone NextPNR repository
+    println!("Cloning NextPNR repository...");
+    let status = Command::new("git")
+        .args(&["clone", "https://github.com/YosysHQ/nextpnr.git"])
+        .status()
+        .context("Failed to clone NextPNR repository")?;
+
+    if !status.success() {
+        println!("Failed to clone NextPNR repository.");
         return Ok(());
     }
 
-    println!("NextPNR installed successfully.");
+    // Build and install NextPNR
+    println!("Building and installing NextPNR...");
+    let nextpnr_dir = temp_dir.join("nextpnr");
+    env::set_current_dir(&nextpnr_dir).context("Failed to change to NextPNR directory")?;
+
+    let status = Command::new("sh")
+        .arg("-c")
+        .arg("cmake -DARCH=ice40 . && make -j$(nproc) && sudo make install")
+        .status()
+        .context("Failed to build and install NextPNR")?;
+
+    if !status.success() {
+        println!("Failed to build and install NextPNR.");
+        return Ok(());
+    }
+
+    // Change back to the original directory
+    env::set_current_dir(original_dir).context("Failed to change back to original directory")?;
+
+    // Optionally, clean up the temporary directory
+    println!("Cleaning up temporary files...");
+    fs::remove_dir_all(temp_dir).context("Failed to remove temporary directory")?;
+
+    println!("NextPNR installation completed successfully.");
+    Ok(())
+}
+
+fn install_dependencies() -> Result<()> {
+    println!("Installing dependencies...");
+
+    #[cfg(target_os = "macos")]
+    {
+        let status = Command::new("brew")
+            .args(&["install", "cmake", "boost", "eigen", "python"])
+            .status()
+            .context("Failed to install NextPNR dependencies using Homebrew")?;
+
+        if !status.success() {
+            println!("Failed to install NextPNR dependencies on macOS.");
+            return Ok(());
+        }
+    }
+
+    #[cfg(target_os = "linux")]
+    {
+        let status = Command::new("sudo")
+            .args(&["apt-get", "update"])
+            .status()
+            .context("Failed to update package lists")?;
+
+        if !status.success() {
+            println!("Failed to update package lists on Linux.");
+            return Ok(());
+        }
+
+        let status = Command::new("sudo")
+            .args(&["apt-get", "install", "-y", "cmake", "build-essential", "libboost-all-dev", "python3-dev", "libffi-dev", "libreadline-dev", "git", "libeigen3-dev"])
+            .status()
+            .context("Failed to install NextPNR dependencies")?;
+
+        if !status.success() {
+            println!("Failed to install NextPNR dependencies on Linux.");
+            return Ok(());
+        }
+    }
+
     Ok(())
 }
 
