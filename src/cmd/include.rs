@@ -16,14 +16,14 @@ use std::io::{self, Write};
 
 impl Execute for Include {
     async fn execute(&self) -> Result<()> {
-        fs::create_dir_all("./vpm_modules").context("Failed to create vpm_modules directory. Please check if you have write permissions in the current directory.")?;
+        fs::create_dir_all("./vpm_modules")?;
         println!("Including from: '{}'", self.url);
         let repo_name = name_from_url(&self.url);
         let tmp_path = PathBuf::from("/tmp").join(repo_name);
         if self.repo {
-            include_entire_repo(&self.url, &tmp_path, self.riscv).context("Failed to include entire repository. Please check your internet connection and the repository URL.")?
+            include_entire_repo(&self.url, &tmp_path, self.riscv)?
         } else {
-            include_single_module(&self.url, self.riscv).context("Failed to include single module. Please verify the module URL and ensure it exists in the repository.")?
+            include_single_module(&self.url, self.riscv)?
         }
         Ok(())
     }
@@ -32,29 +32,29 @@ impl Execute for Include {
 fn include_entire_repo(url: &str, tmp_path: &PathBuf, riscv: bool) -> Result<()> {
     let url = format!("https://github.com/{}", url);
     println!("Full GitHub URL: {}", url);
-    include_repo_from_url(&url, "/tmp/").context("Failed to access repository. Please check your internet connection and the repository URL.")?;
-    add_dependency(&url, None).context("Failed to add dependency to vpm.toml. Please ensure you have write permissions for this file.")?;
+    include_repo_from_url(&url, "/tmp/")?;
+    add_dependency(&url, None)?;
 
     let files = get_files(&tmp_path.to_str().unwrap_or_default());
     let items = get_relative_paths(&files, tmp_path);
 
-    let selected_items = select_modules(&items).context("Failed to select modules. Please try again and ensure you make a valid selection.")?;
+    let selected_items = select_modules(&items)?;
 
-    process_selected_modules(&url, tmp_path, &selected_items, riscv).context("Failed to process selected modules. Please check the module files for any syntax errors.")?;
+    process_selected_modules(&url, tmp_path, &selected_items, riscv)?;
 
-    fs::remove_dir_all(tmp_path).context("Failed to remove temporary directory. You may need to manually delete it.")?;
+    fs::remove_dir_all(tmp_path)?;
     print_success_message(&url, &selected_items);
     Ok(())
 }
 
 fn include_single_module(url: &str, riscv: bool) -> Result<()> {
-    let repo_url = get_github_repo_url(url).ok_or_else(|| anyhow::anyhow!("Invalid GitHub URL. Please provide a valid GitHub repository URL."))?;
-    include_repo_from_url(&repo_url, "/tmp/").context("Failed to access repository. Please check your internet connection and the repository URL.")?;
-    add_dependency(&repo_url, None).context("Failed to add dependency to vpm.toml. Please ensure you have write permissions for this file.")?;
+    let repo_url = get_github_repo_url(url).unwrap();
+    include_repo_from_url(&repo_url, "/tmp/")?;
+    add_dependency(&repo_url, None)?;
     println!("Repo URL: {}", repo_url);
-    let module_path = get_component_path_from_github_url(url).ok_or_else(|| anyhow::anyhow!("Failed to extract module path from URL. Please check the URL format."))?;
+    let module_path = get_component_path_from_github_url(url).unwrap_or_default();
     println!("Including module: {}", module_path);
-    include_module_from_url(&module_path, &repo_url, riscv).context("Failed to include module. Please check if the module exists in the repository and has no syntax errors.")?;
+    include_module_from_url(&module_path, &repo_url, riscv)?;
     println!("Successfully installed module: {}", module_path);
     Ok(())
 }
@@ -89,10 +89,10 @@ fn select_modules(items: &[String]) -> Result<HashSet<String>> {
 
     loop {
         print!("Enter module name (or press Enter to finish): ");
-        io::stdout().flush().context("Failed to flush stdout. This may be a system-level issue.")?;
+        io::stdout().flush()?;
 
         let mut query = String::new();
-        io::stdin().read_line(&mut query).context("Failed to read user input. Please try again.")?;
+        io::stdin().read_line(&mut query)?;
         query = query.trim().to_string();
 
         if query.is_empty() {
@@ -105,16 +105,10 @@ fn select_modules(items: &[String]) -> Result<HashSet<String>> {
             .cloned()
             .collect();
 
-        if filtered_items.is_empty() {
-            println!("No matching modules found. Please try a different search term.");
-            continue;
-        }
-
         let selection = MultiSelect::with_theme(&ColorfulTheme::default())
             .with_prompt("Toggle items to include with the space bar. Hit enter to start a new search")
             .items(&filtered_items)
-            .interact()
-            .context("Failed to get user selection. Please try again.")?;
+            .interact()?;
 
         for i in &selected_items {
             println!("- {}", i);
@@ -136,13 +130,13 @@ fn process_selected_modules(url: &str, tmp_path: &PathBuf, selected_items: &Hash
         let module_path = full_path.strip_prefix(tmp_path).unwrap_or(&full_path).to_str().unwrap().trim_start_matches('/');
         println!("Module path: {}", module_path);
 
-        include_module_from_url(module_path, url, riscv).context(format!("Failed to include module: {}. Please check if the module file exists and has no syntax errors.", module_path))?;
+        include_module_from_url(module_path, url, riscv)?;
     }
 
     if selected_items.is_empty() {
         println!("No modules selected. Including entire repository.");
-        include_repo_from_url(url, "./vpm_modules/").context("Failed to include entire repository. Please check your internet connection and the repository URL.")?;
-    }
+        include_repo_from_url(url, "./vpm_modules/")?;
+}
 
     Ok(())
 }
@@ -191,19 +185,19 @@ fn filepath_to_dir_entry(filepath: PathBuf) -> Result<DirEntry> {
         .max_depth(0)
         .into_iter()
         .next()
-        .ok_or_else(|| anyhow::anyhow!("Failed to create DirEntry. The file path may be invalid or inaccessible."))
-        .and_then(|entry| entry.context("Failed to create DirEntry. The file may not exist or you may not have permission to access it."))
+        .ok_or_else(|| anyhow::anyhow!("Failed to create DirEntry"))?
+        .context("Failed to create DirEntry")
 }
 
 fn generate_top_v_content(module_path: &str) -> Result<String> {
     println!("Generating top.v file for RISC-V in {}", module_path);
-    let module_content = fs::read_to_string(module_path).context("Failed to read module file. Please check if the file exists and you have read permissions.")?;
+    let module_content = fs::read_to_string(module_path)?;
 
     let mut top_content = String::new();
     top_content.push_str("// Auto-generated top.v file for RISC-V\n\n");
 
     // Use regex to find module declaration
-    let module_re = regex::Regex::new(r"module\s+(\w+)\s*(?:#\s*\(([\s\S]*?)\))?\s*\(([\s\S]*?)\);").context("Failed to create regex for module declaration. This is likely a bug in VPM.")?;
+    let module_re = regex::Regex::new(r"module\s+(\w+)\s*(?:#\s*\(([\s\S]*?)\))?\s*\(([\s\S]*?)\);").unwrap();
     if let Some(captures) = module_re.captures(&module_content) {
         let module_name = captures.get(1).unwrap().as_str();
         println!("Module name: {}", module_name);
@@ -243,7 +237,7 @@ fn generate_top_v_content(module_path: &str) -> Result<String> {
         top_content.push_str(") cpu (\n");
 
         // Connect ports
-        let port_re = regex::Regex::new(r"(input|output|inout)\s+(?:wire|reg)?\s*(?:\[.*?\])?\s*(\w+)").context("Failed to create regex for port declaration. This is likely a bug in VPM.")?;
+        let port_re = regex::Regex::new(r"(input|output|inout)\s+(?:wire|reg)?\s*(?:\[.*?\])?\s*(\w+)").unwrap();
         for (i, port) in ports.iter().enumerate() {
             if let Some(port_captures) = port_re.captures(port) {
                 let port_name = port_captures.get(2).unwrap().as_str();
@@ -256,18 +250,18 @@ fn generate_top_v_content(module_path: &str) -> Result<String> {
         return Ok(top_content);
     }
 
-    Err(anyhow::anyhow!("No module declaration found in the file. Please check if the Verilog file is correctly formatted."))
+    Err(anyhow::anyhow!("No module declaration found in the file"))
 }
 
 fn generate_xdc_content(module_path: &str) -> Result<String> {
     println!("Generating constraints.xdc file for Xilinx Artix-7 board in {}", module_path);
-    let module_content = fs::read_to_string(module_path).context("Failed to read module file. Please check if the file exists and you have read permissions.")?;
+    let module_content = fs::read_to_string(module_path)?;
 
     let mut xdc_content = String::new();
     xdc_content.push_str("## Auto-generated constraints.xdc file for Xilinx Artix-7 board\n\n");
 
     // Use regex to find all ports
-    let port_re = regex::Regex::new(r"(?m)^\s*(input|output|inout)\s+(?:wire|reg)?\s*(?:\[.*?\])?\s*(\w+)").context("Failed to create regex for port declaration. This is likely a bug in VPM.")?;
+    let port_re = regex::Regex::new(r"(?m)^\s*(input|output|inout)\s+(?:wire|reg)?\s*(?:\[.*?\])?\s*(\w+)").unwrap();
     let mut ports = Vec::new();
 
     for captures in port_re.captures_iter(&module_content) {
@@ -296,7 +290,7 @@ fn generate_xdc_content(module_path: &str) -> Result<String> {
             let iostandard = if port_name == "clk" { "LVCMOS33" } else { "LVCMOS33" };
             xdc_content.push_str(&format!("set_property -dict {{ PACKAGE_PIN {} IOSTANDARD {} }} [get_ports {{ {} }}]\n", pin, iostandard, port_name));
         } else {
-            println!("Warning: No pin mapping found for port: {}. You may need to manually add this to the XDC file.", port_name);
+            println!("Warning: No pin mapping found for port: {}", port_name);
         }
     }
 
@@ -315,44 +309,38 @@ fn generate_xdc_content(module_path: &str) -> Result<String> {
 pub fn include_module_from_url(module_path: &str, url: &str, riscv: bool) -> Result<()> {
     let package_name = name_from_url(url);
 
-    include_repo_from_url(url, "/tmp/").context("Failed to include repository from URL. Please check your internet connection and ensure the URL is correct.")?;
+    include_repo_from_url(url, "/tmp/")?;
     let module_name = Path::new(module_path)
         .file_stem()
         .and_then(|s| s.to_str())
         .unwrap_or(module_path);
     let destination = format!("./vpm_modules/{}", module_name);
-    fs::create_dir_all(&destination).context("Failed to create destination directory. Please check if you have write permissions in the current directory.")?;
-    process_module(package_name, module_path, destination.to_owned(), &mut HashSet::new(), url, true)
-        .context("Failed to process module. This could be due to invalid module content or file structure.")?;
+    fs::create_dir_all(&destination)?;
+    process_module(package_name, module_path, destination.to_owned(), &mut HashSet::new(), url, true)?;
     
     let module_file_name = Path::new(&destination)
         .file_name()
         .and_then(|name| name.to_str())
-        .ok_or_else(|| anyhow::anyhow!("Invalid destination path. Please ensure the path is correctly formatted and accessible."))?;
+        .ok_or_else(|| anyhow::anyhow!("Invalid destination path"))?;
     let module_path = Path::new(&destination).join(format!("{}.v", module_file_name));
 
     if !module_path.exists() {
         let module_path = Path::new(&destination).join(format!("{}.sv", module_file_name));
         if !module_path.exists() {
-            return Err(anyhow::anyhow!("Module file not found in the destination folder. Please check if the module was correctly downloaded and processed."));
+            return Err(anyhow::anyhow!("Module file not found in the destination folder"));
         }
     }
 
     if riscv {
-        let top_v_content = generate_top_v_content(&module_path.to_str().unwrap())
-            .context("Failed to generate top.v content. This could be due to issues with the module file or incorrect RISC-V configuration.")?;
-        fs::write(format!("{}/top.v", destination), top_v_content)
-            .context("Failed to write top.v file. Please check if you have write permissions in the destination directory.")?;
+        let top_v_content = generate_top_v_content(&module_path.to_str().unwrap())?;
+        fs::write(format!("{}/top.v", destination), top_v_content)?;
         println!("Created top.v file for RISC-V in {}", destination);
         // Generate .xdc file for Xilinx Artix-7 board
-        let xdc_content = generate_xdc_content(&format!("{}/top.v", destination))
-            .context("Failed to generate XDC content. This could be due to issues with the top.v file or incorrect board configuration.")?;
-        fs::write(format!("{}/constraints.xdc", destination), xdc_content)
-            .context("Failed to write constraints.xdc file. Please check if you have write permissions in the destination directory.")?;
+        let xdc_content = generate_xdc_content(&format!("{}/top.v", destination))?;
+        fs::write(format!("{}/constraints.xdc", destination), xdc_content)?;
         println!("Created constraints.xdc file for Xilinx Artix-7 board in {}", destination);
     }
-    add_top_module(url, module_path.to_str().unwrap())
-        .context("Failed to add top module. This could be due to issues with the module file or incorrect URL.")?;
+    add_top_module(url, module_path.to_str().unwrap())?;
     
     Ok(())
 }
@@ -379,19 +367,15 @@ pub fn process_module(package_name: &str, module: &str, destination: String, vis
 
     if is_full_filepath(&module_with_ext) {
         println!("Full filepath detected for module '{}'", module_with_ext);
-        let dir_entry = filepath_to_dir_entry(file_path)
-            .context("Failed to convert filepath to directory entry. Please ensure the file exists and is accessible.")?;
-        process_file(&dir_entry, &target_path.to_str().unwrap(), module, url, visited, is_top_module)
-            .context("Failed to process file. This could be due to file access issues or invalid file content.")?;
+        let dir_entry = filepath_to_dir_entry(file_path)?;
+        process_file(&dir_entry, &target_path.to_str().unwrap(), module, url, visited, is_top_module)?;
         processed_modules.insert(module_with_ext.clone());
     } else {
         println!("Full filepath not detected for module '{}'", module_with_ext);
-        process_non_full_filepath(module_name, &tmp_path, &target_path, url, visited, is_top_module, &mut processed_modules)
-            .context("Failed to process non-full filepath. This could be due to missing files or incorrect module structure.")?;
+        process_non_full_filepath(module_name, &tmp_path, &target_path, url, visited, is_top_module, &mut processed_modules)?;
     }
 
-    let submodules = download_and_process_submodules(package_name, module, &destination, url, visited, is_top_module)
-        .context("Failed to download and process submodules. This could be due to network issues or invalid submodule references.")?;
+    let submodules = download_and_process_submodules(package_name, module, &destination, url, visited, is_top_module)?;
     processed_modules.extend(submodules);
 
     Ok(processed_modules)
@@ -401,16 +385,13 @@ fn process_non_full_filepath(module_name: &str, tmp_path: &PathBuf, target_path:
     let matching_entries = find_matching_entries(module_name, tmp_path);
     println!("Found {} matching entries for module '{}'", matching_entries.len(), module_name);
     if matching_entries.is_empty() {
-        println!("No matching files found for module '{}'. Skipping... This could mean the module file is missing or named incorrectly.", module_name);
+        println!("No matching files found for module '{}'. Skipping...", module_name);
     } else if matching_entries.len() == 1 {
-        let dir_entry = filepath_to_dir_entry(matching_entries[0].clone())
-            .context("Failed to convert filepath to directory entry. Please ensure the file exists and is accessible.")?;
-        process_file(&dir_entry, target_path.to_str().unwrap(), module_name, url, visited, is_top_module)
-            .context("Failed to process file. This could be due to file access issues or invalid file content.")?;
+        let dir_entry = filepath_to_dir_entry(matching_entries[0].clone())?;
+        process_file(&dir_entry, target_path.to_str().unwrap(), module_name, url, visited, is_top_module)?;
         processed_modules.insert(format!("{}.v", module_name));
     } else {
-        process_multiple_matches(matching_entries, target_path, module_name, url, visited, is_top_module, processed_modules)
-            .context("Failed to process multiple matching files. This could be due to user input errors or file access issues.")?;
+        process_multiple_matches(matching_entries, target_path, module_name, url, visited, is_top_module, processed_modules)?;
     }
 
     Ok(())
@@ -435,19 +416,15 @@ fn process_multiple_matches(matching_entries: Vec<PathBuf>, target_path: &PathBu
     }
 
     let mut choice = String::new();
-    std::io::stdin().read_line(&mut choice)
-        .context("Failed to read user input. Please try again.")?;
-    let index: usize = choice.trim().parse()
-        .context("Invalid input. Please enter a number corresponding to one of the listed options.")?;
+    std::io::stdin().read_line(&mut choice)?;
+    let index: usize = choice.trim().parse()?;
 
     if index > 0 && index <= matching_entries.len() {
-        let dir_entry = filepath_to_dir_entry(matching_entries[index - 1].clone())
-            .context("Failed to convert filepath to directory entry. Please ensure the file exists and is accessible.")?;
-        process_file(&dir_entry, target_path.to_str().unwrap(), module_name, url, visited, is_top_module)
-            .context("Failed to process file. This could be due to file access issues or invalid file content.")?;
+        let dir_entry = filepath_to_dir_entry(matching_entries[index - 1].clone())?;
+        process_file(&dir_entry, target_path.to_str().unwrap(), module_name, url, visited, is_top_module)?;
         processed_modules.insert(format!("{}.v", module_name));
     } else {
-        anyhow::bail!("Invalid choice. Please enter a number between 1 and {}.", matching_entries.len());
+        anyhow::bail!("Invalid choice");
     }
 
     Ok(())
@@ -456,19 +433,14 @@ fn process_multiple_matches(matching_entries: Vec<PathBuf>, target_path: &PathBu
 fn process_file(entry: &DirEntry, destination: &str, module_path: &str, url: &str, visited: &mut HashSet<String>, is_top_module: bool) -> Result<()> {
     let target_path = PathBuf::from(destination);
     let extension = entry.path().extension().and_then(|s| s.to_str()).unwrap_or("v");
-    fs::copy(entry.path(), &target_path.join(entry.file_name()))
-        .context("Failed to copy file. Please check if you have read permissions for the source file and write permissions for the destination.")?;
+    fs::copy(entry.path(), &target_path.join(entry.file_name()))?;
 
-    let contents = fs::read_to_string(entry.path())
-        .context("Failed to read file contents. Please check if the file exists and you have read permissions.")?;
+    let contents = fs::read_to_string(entry.path())?;
     let mut parser = Parser::new();
-    parser.set_language(tree_sitter_verilog::language())
-        .context("Failed to set parser language. This is likely a bug in VPM.")?;
-    let tree = parser.parse(&contents, None)
-        .context("Failed to parse file. The file may contain syntax errors or be in an unsupported format.")?;
+    parser.set_language(tree_sitter_verilog::language())?;
+    let tree = parser.parse(&contents, None).context("Failed to parse file")?;
 
-    let header_content = generate_headers(tree.root_node(), &contents)
-        .context("Failed to generate headers. This could be due to unexpected file structure or content.")?;
+    let header_content = generate_headers(tree.root_node(), &contents)?;
     let module_name = Path::new(module_path)
         .file_stem()
         .and_then(|s| s.to_str())
@@ -479,13 +451,11 @@ fn process_file(entry: &DirEntry, destination: &str, module_path: &str, url: &st
         module_name.to_string()
     };
     let header_filename = format!("{}.{}", module_name.strip_suffix(".v").unwrap_or(module_name), if extension == "sv" { "svh" } else { "vh" });
-    fs::write(target_path.join(&header_filename), header_content)
-        .context("Failed to write header file. Please check if you have write permissions in the target directory.")?;
+    fs::write(target_path.join(&header_filename), header_content)?;
     println!("Generating header file: {}", target_path.join(&header_filename).to_str().unwrap());
 
     let full_module_path = target_path.join(&module_name_with_ext);
-    update_lockfile(&full_module_path, url, &contents, visited, is_top_module)
-        .context("Failed to update lockfile. This could be due to file access issues or concurrent modifications.")?;
+    update_lockfile(&full_module_path, url, &contents, visited, is_top_module)?;
 
     Ok(())
 }
@@ -508,21 +478,21 @@ fn download_and_process_submodules(package_name: &str, module_path: &str, destin
     let contents = match fs::read_to_string(&full_module_path) {
         Ok(c) => c,
         Err(e) => {
-            eprintln!("Warning: Failed to read file {}: {}. Skipping this module. Please check if the file exists and you have read permissions.", full_module_path.display(), e);
+            eprintln!("Warning: Failed to read file {}: {}. Skipping this module.", full_module_path.display(), e);
             return Ok(HashSet::new());
         }
     };
     
     let mut parser = Parser::new();
     if let Err(e) = parser.set_language(tree_sitter_verilog::language()) {
-        eprintln!("Warning: Failed to set parser language: {}. Skipping submodule processing. This is likely a bug in VPM.", e);
+        eprintln!("Warning: Failed to set parser language: {}. Skipping submodule processing.", e);
         return Ok(HashSet::new());
     }
 
     let submodules = match get_submodules(&contents) {
         Ok(s) => s,
         Err(e) => {
-            eprintln!("Warning: Failed to get submodules from {}: {}. Continuing without submodules. This could be due to unexpected file content or structure.", full_module_path.display(), e);
+            eprintln!("Warning: Failed to get submodules from {}: {}. Continuing without submodules.", full_module_path.display(), e);
             HashSet::new()
         }
     };
@@ -538,13 +508,13 @@ fn download_and_process_submodules(package_name: &str, module_path: &str, destin
         if !visited.contains(&submodule_with_ext) {
             let submodule_destination = PathBuf::from(destination);
             if let Err(e) = fs::create_dir_all(&submodule_destination) {
-                eprintln!("Warning: Failed to create directory {}: {}. Skipping this submodule. Please check if you have write permissions in the parent directory.", submodule_destination.display(), e);
+                eprintln!("Warning: Failed to create directory {}: {}. Skipping this submodule.", submodule_destination.display(), e);
                 continue;
             }
             
             let submodule_url = format!("{}/{}", url, submodule_with_ext);
             if let Err(e) = include_repo_from_url(&submodule_url, submodule_destination.to_str().unwrap()) {
-                eprintln!("Warning: Failed to include repo from URL {}: {}. Skipping this submodule. Please check your internet connection and ensure the URL is correct.", submodule_url, e);
+                eprintln!("Warning: Failed to include repo from URL {}: {}. Skipping this submodule.", submodule_url, e);
                 continue;
             }
             
@@ -561,7 +531,7 @@ fn download_and_process_submodules(package_name: &str, module_path: &str, destin
                     all_submodules.extend(processed_submodules);
                 },
                 Err(e) => {
-                    eprintln!("Warning: Failed to process submodule {}: {}. Skipping this submodule. This could be due to issues with the submodule file or structure.", submodule_with_ext, e);
+                    eprintln!("Warning: Failed to process submodule {}: {}. Skipping this submodule.", submodule_with_ext, e);
                     continue;
                 }
             }
@@ -586,14 +556,8 @@ fn update_lockfile(full_path: &PathBuf, url: &str, contents: &str, visited: &Has
     };
 
     let mut parser = Parser::new();
-    if let Err(e) = parser.set_language(tree_sitter_verilog::language()) {
-        return Err(anyhow::anyhow!("Failed to set Verilog language for parser: {}. This might be due to an incompatible tree-sitter-verilog version. Try updating your dependencies.", e));
-    }
-
-    let submodules = match get_submodules(contents) {
-        Ok(s) => s,
-        Err(e) => return Err(anyhow::anyhow!("Failed to get submodules: {}. This could be due to malformed Verilog code. Please check your module for syntax errors.", e)),
-    };
+    parser.set_language(tree_sitter_verilog::language())?;
+    let submodules = get_submodules(contents)?;
     let submodules_vec: Vec<String> = submodules.into_iter().collect();
 
     if !lockfile.contains(&format!("full_path = \"{}\"", full_path.display())) {
@@ -628,9 +592,7 @@ fn update_lockfile(full_path: &PathBuf, url: &str, contents: &str, visited: &Has
         }
     }
 
-    if let Err(e) = fs::write("vpm.lock", &lockfile) {
-        return Err(anyhow::anyhow!("Failed to write to vpm.lock: {}. This could be due to insufficient permissions or disk space. Please check your file system and try again.", e));
-    }
+    fs::write("vpm.lock", lockfile)?;
     Ok(())
 }
 
@@ -639,8 +601,6 @@ fn update_submodules(lockfile: &mut String, module_entry: &str, submodules: &[St
         let end = lockfile[start..].find(']').map(|pos| start + pos + 1).unwrap_or(lockfile.len());
         let new_modules = format!("submodules = [\n{}\n]", submodules.iter().map(|m| format!("  \"{}\",", m)).collect::<Vec<_>>().join("\n"));
         lockfile.replace_range(start..end, &new_modules);
-    } else {
-        eprintln!("Warning: Could not find submodules entry for module {}. The lockfile may be corrupted or in an unexpected format.", module_entry);
     }
 }
 
@@ -715,10 +675,6 @@ pub fn generate_headers(root_node: Node, contents: &str) -> Result<String> {
         ));
     }
 
-    if header_content.is_empty() {
-        return Err(anyhow::anyhow!("No module declarations found in the content. Please ensure your Verilog file contains valid module declarations."));
-    }
-
     Ok(header_content)
 }
 
@@ -729,41 +685,29 @@ pub fn get_submodules(contents: &str) -> Result<HashSet<String>> {
     ).unwrap());
     let submodules: HashSet<String> = REGEX
         .captures_iter(contents) // Iterate over captures
-        .filter_map(|caps| caps.ok()) // Filter out any failed captures
-        .filter_map(|caps| caps.get(0)) // Get the first capture group
-        .map(|m| m.as_str().split_whitespace().next().unwrap_or("").to_string()) // Split and get submodule name
-        .filter(|s| !s.is_empty()) // Filter out any empty strings
+        .map(|caps| caps.unwrap().get(0).unwrap().as_str()) // Extract the matched string
+        .map(|s| s.split_whitespace().next().unwrap().to_string()) // Split and get submodule name
         .collect(); // Collect into a HashSet
-    
-    if submodules.is_empty() {
-        eprintln!("Warning: No submodules found in the content. This might be expected if the module doesn't use any submodules, or it could indicate an issue with the regex pattern or the content format.");
-    } else {
-        for submodule in &submodules {
-            println!("Found submodule: {}", submodule);
-        }
+    for submodule in &submodules {
+        println!("Found submodule: {}", submodule);
     }
-    
     Ok(submodules)
 }
 
 pub fn include_repo_from_url(url: &str, location: &str) -> Result<()> {
     let repo_path = Path::new(location).join(name_from_url(url));
-    clone_repo(url, &repo_path).context("Failed to clone repository. Please check your internet connection and ensure you have git installed and properly configured.")?;
+    clone_repo(url, &repo_path)?;
     Ok(())
 }
 
 pub fn clone_repo(url: &str, repo_path: &Path) -> Result<()> {
-    let output = Command::new("git")
+    Command::new("git")
         .args([ "clone", "--depth", "1", "--single-branch", "--jobs", "4",
             url, repo_path.to_str().unwrap_or_default(),
         ])
-        .output()
-        .with_context(|| format!("Failed to execute git command. Please ensure git is installed and accessible in your PATH."))?;
-
-    if !output.status.success() {
-        let stderr = String::from_utf8_lossy(&output.stderr);
-        return Err(anyhow::anyhow!("Git clone failed: {}. This could be due to network issues, invalid URL, or insufficient permissions. Please check your internet connection and the repository URL.", stderr));
-    }
-
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null())
+        .status()
+        .with_context(|| format!("Failed to clone repository from URL: '{}'", url))?;
     Ok(())
 }
