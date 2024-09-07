@@ -11,14 +11,19 @@ use crate::cmd::{Execute, Docs};
 
 impl Execute for Docs {
     async fn execute(&self) -> Result<()> {
-        if let Some(url) = &self.url {
-            let content = fetch_module_content(&self.module_path, url).await
+        if self.from_repo {
+            let content = fetch_module_content(&self.module_path).await
                 .context("Failed to fetch module content. Please check your internet connection and ensure the provided URL is correct.")?;
+            let file_name = self.module_path.split('/').last().unwrap_or(&self.module_path);
+            let folder_name = file_name.split('.').next().unwrap_or(file_name);
+            let destination = PathBuf::from("./vpm_modules").join(folder_name);
+            fs::create_dir_all(&destination)
+                .context("Failed to create destination directory. Please check if you have write permissions in the current directory.")?;
             if self.offline {
-                generate_docs_offline(&self.module_path, &content, None).await
+                generate_docs_offline(&self.module_path, &content, Some(destination.join(format!("{}_README.md", folder_name)))).await
                     .context("Failed to generate documentation offline. Please check the module content and try again.")?;
             } else {
-                generate_docs(&self.module_path, &content, None).await
+                generate_docs(&self.module_path, &content, Some(destination.join(format!("{}_README.md", folder_name)))).await
                     .context("Failed to generate documentation. Please check the module content and try again.")?;
             }
         } else {
@@ -28,11 +33,12 @@ impl Execute for Docs {
                 let content = fs::read_to_string(&full_module_path)
                     .with_context(|| format!("Failed to read module file: {}. Please ensure you have read permissions for this file.", full_module_path.display()))?;
                 println!("Generating documentation for local module '{}'", self.module_path);
+                let readme_path = full_module_path.with_file_name(format!("{}_README.md", full_module_path.file_stem().unwrap().to_str().unwrap()));
                 if self.offline {
-                    generate_docs_offline(&self.module_path, &content, Some(full_module_path)).await
+                    generate_docs_offline(&self.module_path, &content, Some(readme_path)).await
                         .context("Failed to generate documentation offline for the local module. Please check the module content and try again.")?;
                 } else {
-                    generate_docs(&self.module_path, &content, Some(full_module_path)).await
+                    generate_docs(&self.module_path, &content, Some(readme_path)).await
                         .context("Failed to generate documentation for the local module. Please check the module content and try again.")?;
                 }
             } else {
@@ -43,26 +49,25 @@ impl Execute for Docs {
     }
 }
 
-async fn fetch_module_content(module_path: &str, url: &str) -> Result<String> {
-    let tmp_dir = tempfile::tempdir()
-        .context("Failed to create temporary directory. Please ensure you have write permissions in the system's temp directory.")?;
-    let repo_path = tmp_dir.path();
+async fn fetch_module_content(url: &str) -> Result<String> {
+    let client = reqwest::Client::new();
 
-    // Clone the repository using the public clone_repo function
-    clone_repo(url, repo_path)
-        .with_context(|| format!("Failed to clone repository from URL: {}. Please check your internet connection and ensure the URL is correct.", url))?;
+    // Extract the raw content URL
+    let raw_url = url.replace("github.com", "raw.githubusercontent.com")
+                     .replace("/blob/", "/");
 
-    println!("Fetching content for module: {}", module_path);
-    
-    let module_file = repo_path.join(module_path);
+    println!("Fetching content from URL: {}", raw_url);
 
-    if !module_file.exists() {
-        return Err(anyhow!("Module file not found in repository: {}. Please check if the module path is correct and exists in the repository.", module_path));
+    // Fetch the content
+    let response = client.get(&raw_url).send().await?;
+
+    if !response.status().is_success() {
+        return Err(anyhow::anyhow!("Failed to fetch module content: HTTP {}", response.status()));
     }
 
-    // Read the module content
-    fs::read_to_string(&module_file)
-        .with_context(|| format!("Failed to read module file: {}. Please ensure the file is not corrupted or empty.", module_file.display()))
+    let content = response.text().await?;
+
+    Ok(content)
 }
 
 fn format_text(text: &str) -> String {
@@ -96,11 +101,11 @@ async fn generate_docs(module_path: &str, content: &str, full_module_path: Optio
     pb.set_position(66);
     pb.set_message("Writing documentation to file...");
 
-    let module_name = module_path.rsplit('/').next().unwrap_or(module_path);
     let readme_path = if let Some(path) = full_module_path {
-        path.with_file_name(format!("{}_README.md", module_name))
+        path
     } else {
-        let dir = PathBuf::from("./vpm_modules").join(module_path).parent().unwrap().to_path_buf();
+        let module_name = module_path.rsplit('/').next().unwrap_or(module_path);
+        let dir = PathBuf::from("./vpm_modules").join(module_name).parent().unwrap().to_path_buf();
         fs::create_dir_all(&dir)
             .with_context(|| format!("Failed to create directory: {}. Please ensure you have write permissions in this location.", dir.display()))?;
         dir.join(format!("{}_README.md", module_name))
@@ -177,11 +182,11 @@ async fn generate_docs_offline(module_path: &str, content: &str, full_module_pat
     pb.set_position(66);
     pb.set_message("Writing documentation to file...");
 
-    let module_name = module_path.rsplit('/').next().unwrap_or(module_path);
     let readme_path = if let Some(path) = full_module_path {
-        path.with_file_name(format!("{}_README.md", module_name))
+        path
     } else {
-        let dir = PathBuf::from("./vpm_modules").join(module_path).parent().unwrap().to_path_buf();
+        let module_name = module_path.rsplit('/').next().unwrap_or(module_path);
+        let dir = PathBuf::from("./vpm_modules").join(module_name).parent().unwrap().to_path_buf();
         fs::create_dir_all(&dir)
             .with_context(|| format!("Failed to create directory: {}. Please ensure you have write permissions in this location.", dir.display()))?;
         dir.join(format!("{}_README.md", module_name))

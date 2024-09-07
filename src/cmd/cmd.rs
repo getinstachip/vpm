@@ -121,11 +121,11 @@ pub struct Dotf {
 
 #[derive(Debug, Parser)]
 pub struct Docs {
-    #[arg(help = "Path of the module to generate documentation for. This should be the complete path to the module file within your project structure.")]
+    #[arg(help = "Path of the module to generate documentation for. This should be the path to the module file within your project structure, starting with 'vpm_modules/'.")]
     pub module_path: String,
-    #[arg(long, help = "URL of the repository to generate documentation for. Use this for remote modules that are not locally available.")]
-    pub url: Option<String>,
-    #[arg(long, help = "Generate documentation in offline mode")]
+    #[arg(long, help = "If this flag is set, the module path will be treated as a link to a .v or .sv file in a GitHub repository. If not set, the path will be treated as a local file path.")]
+    pub from_repo: bool,
+    #[arg(long, help = "Generate documentation in offline mode for code security.")]
     pub offline: bool,
 }
 
