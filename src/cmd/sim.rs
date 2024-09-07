@@ -53,18 +53,42 @@ fn generate_and_add_testbench(verilog_files: &mut Vec<String>) -> Result<()> {
 }
 
 fn run_simulation_with_waveform(output_path: &Path) -> Result<()> {
+    println!("Running simulation with waveform...");
+    println!("Output path: {:?}", output_path);
     let testbench_dir = output_path.parent().unwrap();
     let vcd_path = testbench_dir.join("waveform.vcd");
+    let current_dir = std::env::current_dir()
+        .context("Failed to get current directory. Please check your file system permissions.")?;
+    std::env::set_current_dir(testbench_dir)
+        .context("Failed to change directory to testbench location. Please ensure the directory exists and you have necessary permissions.")?;
+    
     let mut cmd = Command::new("vvp");
-    cmd.arg(output_path);
-    cmd.arg(format!("-vcd={}", vcd_path.display()));
+    cmd.arg(output_path.file_name().unwrap());
+    cmd.arg(format!("-vcd={}", vcd_path.file_name().unwrap().to_str().unwrap()));
+    
     let output = cmd.output()
-        .context("Failed to run simulation with VCD output. Please check if 'vvp' is installed and accessible.")?;
+        .context("Failed to run simulation with VCD output. Debug steps:\n1. Ensure 'vvp' is installed: Run 'vvp --version' in terminal.\n2. Check if 'vvp' is in your PATH: Run 'which vvp' (Unix) or 'where vvp' (Windows).\n3. If not found, install Icarus Verilog or add its bin directory to your PATH.")?;
+    
+    // Call gtkwave on the generated waveform file
+    println!("Opening waveform in GTKWave...");
+    let gtkwave_status = Command::new("gtkwave")
+        .arg("waveform.vcd")
+        .spawn()
+        .context("Failed to open GTKWave. Debug steps:\n1. Ensure GTKWave is installed: Run 'gtkwave --version' in terminal.\n2. Check if 'gtkwave' is in your PATH: Run 'which gtkwave' (Unix) or 'where gtkwave' (Windows).\n3. If not found, install GTKWave or add its installation directory to your PATH.")?;
+
+    // We don't wait for GTKWave to exit, as it's a GUI application
+    println!("GTKWave opened successfully. You can now view the waveform.");
+    
+    std::env::set_current_dir(current_dir)
+        .context("Failed to change back to the original directory. This is unexpected, please check your file system.")?;
+    
     if !output.status.success() {
-        return Err(anyhow::anyhow!("Simulation failed: {}. Please check your Verilog code for errors.", 
-            String::from_utf8_lossy(&output.stderr)));
+        let error_message = String::from_utf8_lossy(&output.stderr);
+        return Err(anyhow::anyhow!("Simulation failed. Error details:\n{}\n\nDebugging steps:\n1. Check your Verilog code for syntax errors.\n2. Ensure all module dependencies are correctly included.\n3. Verify testbench inputs and timing.\n4. Run the simulation without waveform generation to isolate the issue.", error_message));
     }
+    
     println!("Generated waveform file: {}", vcd_path.display());
+    println!("If GTKWave didn't open automatically, you can manually open the waveform file using GTKWave.");
     Ok(())
 }
 
@@ -293,7 +317,7 @@ pub fn compile_verilog(verilog_files: &Vec<String>) -> Result<PathBuf> {
     if !output_path.exists() {
         return Err(anyhow::anyhow!("Output binary not found: {:?}. Compilation may have failed silently.", output_path));
     }
-
+    println!("Compiled output: {:?}", output_path);
     Ok(output_path)
 }
 
