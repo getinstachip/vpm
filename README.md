@@ -256,7 +256,7 @@ We'd like to thank our early adopters for their valuable feedback and support in
 - [Yash](https://www.linkedin.com/in/yash-verilog/)
 - [Max Korbel](https://www.linkedin.com/in/maxkorbel/)
 - [Samuel](https://www.linkedin.com/in/samuel-verilog/)
-- [Biplab Das](https://www.linkedin.com/in/biplab-das-7b9870165/?originalSubdomain=in)
+- [Biplab Das](https://www.linkedin.com/in/biplab-das-7b9870165/)
 - [Nikhil Raju](https://www.linkedin.com/in/nikhil-raju-verilog/)
 
 And many more contributors who have helped shape VPM.
