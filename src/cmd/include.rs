@@ -346,11 +346,12 @@ pub fn include_module_from_url(module_path: &str, url: &str, riscv: bool) -> Res
 }
 
 pub fn process_module(package_name: &str, module: &str, destination: String, visited: &mut HashSet<String>, url: &str, is_top_module: bool) -> Result<HashSet<String>> {
+    // println!("Processing module: {}", module);
     let module_name = module.strip_suffix(".v").or_else(|| module.strip_suffix(".sv")).unwrap_or(module);
     let module_with_ext = if module.ends_with(".v") || module.ends_with(".sv") {
         module.to_string()
     } else {
-        format!("{}.v", module)
+        format!("{}.v", module_name)
     };
     if !visited.insert(module_with_ext.clone()) {
         return Ok(HashSet::new());
@@ -366,12 +367,12 @@ pub fn process_module(package_name: &str, module: &str, destination: String, vis
     let mut processed_modules = HashSet::new();
 
     if is_full_filepath(&module_with_ext) {
-        println!("Full filepath detected for module '{}'", module_with_ext);
+        // println!("Full filepath detected for module '{}'", module_with_ext);
         let dir_entry = filepath_to_dir_entry(file_path)?;
         process_file(&dir_entry, &target_path.to_str().unwrap(), module, url, visited, is_top_module)?;
         processed_modules.insert(module_with_ext.clone());
     } else {
-        println!("Full filepath not detected for module '{}'", module_with_ext);
+        // println!("Full filepath not detected for module '{}'", module_with_ext);
         process_non_full_filepath(module_name, &tmp_path, &target_path, url, visited, is_top_module, &mut processed_modules)?;
     }
 
@@ -465,7 +466,7 @@ fn download_and_process_submodules(package_name: &str, module_path: &str, destin
         .file_stem()
         .and_then(|s| s.to_str())
         .unwrap_or(module_path);
-
+    // println!("Processing submodule: {}", module_path);
     let module_name_with_ext = if module_path.ends_with(".sv") {
         format!("{}.sv", module_name)
     } else if module_path.ends_with(".v") {
@@ -478,7 +479,7 @@ fn download_and_process_submodules(package_name: &str, module_path: &str, destin
     let contents = match fs::read_to_string(&full_module_path) {
         Ok(c) => c,
         Err(e) => {
-            eprintln!("Warning: Failed to read file {}: {}. Skipping this module.", full_module_path.display(), e);
+            // eprintln!("Warning: Failed to read file {}: {}. Skipping this module.", full_module_path.display(), e);
             return Ok(HashSet::new());
         }
     };
@@ -688,9 +689,9 @@ pub fn get_submodules(contents: &str) -> Result<HashSet<String>> {
         .map(|caps| caps.unwrap().get(0).unwrap().as_str()) // Extract the matched string
         .map(|s| s.split_whitespace().next().unwrap().to_string()) // Split and get submodule name
         .collect(); // Collect into a HashSet
-    for submodule in &submodules {
-        println!("Found submodule: {}", submodule);
-    }
+    // for submodule in &submodules {
+        // println!("Found submodule: {}", submodule);
+    // }
     Ok(submodules)
 }
 
