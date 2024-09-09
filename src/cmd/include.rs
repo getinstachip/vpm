@@ -702,6 +702,9 @@ pub fn include_repo_from_url(url: &str, location: &str) -> Result<()> {
 }
 
 pub fn clone_repo(url: &str, repo_path: &Path) -> Result<()> {
+    if repo_path.exists() {
+        fs::remove_dir_all(repo_path)?;
+    }
     Command::new("git")
         .args([ "clone", "--depth", "1", "--single-branch", "--jobs", "4",
             url, repo_path.to_str().unwrap_or_default(),
