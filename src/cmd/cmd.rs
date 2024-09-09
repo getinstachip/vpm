@@ -11,7 +11,7 @@ use clap::Parser;
 )]
 pub enum Cmd {
     #[command(
-        about = "vpm include <MODULE_URL> [--repo] [--riscv] // Add a module or repository to your project",
+        about = "vpm include <MODULE_URL> [--repo] [--riscv] [--commit <HASH>] // Add a module or repository to your project",
         long_about = "Include a module with one command. VPM's internal parser will identify and configure any subdependencies."
     )]
     Include(Include),
@@ -99,6 +99,8 @@ pub struct Include {
     pub url: String,
     #[arg(long, help = "Include RISC-V specific modules. Use this flag when including modules designed specifically for RISC-V architectures.")]
     pub riscv: bool,
+    #[arg(long, help = "Commit hash of the module to include. This should be a valid commit hash from the module's repository.")]
+    pub commit: Option<String>,
 }
 
 #[derive(Debug, Parser)]
