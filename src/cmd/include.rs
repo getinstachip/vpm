@@ -13,6 +13,7 @@ use dialoguer::{theme::ColorfulTheme, MultiSelect};
 use fuzzy_matcher::FuzzyMatcher;
 use fuzzy_matcher::skim::SkimMatcherV2;
 use std::io::{self, Write};
+use indicatif::{ProgressBar, ProgressStyle};
 
 impl Execute for Include {
     async fn execute(&self) -> Result<()> {
@@ -697,7 +698,12 @@ pub fn get_submodules(contents: &str) -> Result<HashSet<String>> {
 
 pub fn include_repo_from_url(url: &str, location: &str) -> Result<()> {
     let repo_path = Path::new(location).join(name_from_url(url));
+    let pb = ProgressBar::new_spinner();
+    pb.set_style(ProgressStyle::default_spinner().template("{spinner} {msg}").unwrap());
+    pb.set_message("Reading repository...");
+    pb.enable_steady_tick(std::time::Duration::from_millis(100));
     clone_repo(url, &repo_path)?;
+    pb.finish_with_message("Reading repository complete");
     Ok(())
 }
 
