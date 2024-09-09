@@ -19,6 +19,13 @@ VPM is designed for easy installation with no additional dependencies.
 ```bash
 curl -f https://getinstachip.com/install.sh | sh
 ```
+### Linux only:
+We support Snap
+
+```bash
+snap download instachip-vpm
+alias vpm='instachip-vpm.vpm'
+```
 ### Windows:
 1. Download the `.zip` file matching your Windows architecture from the [latest release page](https://github.com/getinstachip/vpm/releases/latest)
 2. Extract and run the `.exe` file
