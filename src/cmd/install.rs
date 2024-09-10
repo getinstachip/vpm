@@ -76,30 +76,47 @@ fn install_verilator() -> Result<()> {
 
     #[cfg(target_os = "linux")]
     {
-        println!("Running on Linux...");
-        // Install Verilator using apt-get on Linux
-        let status = Command::new("sudo")
-            .arg("apt-get")
-            .arg("update")
-            .status()
-            .context("Failed to update package lists")?;
+        if !is_arch_distro() {
+            println!("Running on Linux...");
+            // Install Verilator using apt-get on Linux
+            let status = Command::new("sudo")
+                .arg("apt-get")
+                .arg("update")
+                .status()
+                .context("Failed to update package lists")?;
 
-        if !status.success() {
-            println!("Failed to update package lists on Linux.");
-            return Ok(());
-        }
+            if !status.success() {
+                println!("Failed to update package lists on Linux.");
+                return Ok(());
+            }
 
-        let status = Command::new("sudo")
-            .arg("apt-get")
-            .arg("install")
-            .arg("-y")
-            .arg("verilator")
-            .status()
-            .context("Failed to install Verilator using apt-get")?;
+            let status = Command::new("sudo")
+                .arg("apt-get")
+                .arg("install")
+                .arg("-y")
+                .arg("verilator")
+                .status()
+                .context("Failed to install Verilator using apt-get")?;
 
-        if !status.success() {
-            println!("Failed to install Verilator on Linux.");
-            return Ok(());
+            if !status.success() {
+                println!("Failed to install Verilator on Linux.");
+                return Ok(());
+            }
+        } else {
+            println!("Running on Arch Linux...");
+            // Install Verilator using pacman on Arch Linux
+            let status = Command::new("sudo")
+                .arg("pacman")
+                .arg("-S")
+                .arg("--noconfirm")
+                .arg("verilator")
+                .status()
+                .context("Failed to install Verilator using pacman")?;
+
+            if !status.success() {
+                println!("Failed to install Verilator on Arch Linux.");
+                return Ok(());
+            }
         }
     }
 
@@ -134,30 +151,47 @@ fn install_icarus_verilog() -> Result<()> {
 
     #[cfg(target_os = "linux")]
     {
-        println!("Running on Linux...");
-        // Install Icarus Verilog using apt-get on Linux
-        let status = Command::new("sudo")
-            .arg("apt-get")
-            .arg("update")
-            .status()
-            .context("Failed to update package lists")?;
+        if !is_arch_distro() {
+            println!("Running on Linux...");
+            // Install Icarus Verilog using apt-get on Linux
+            let status = Command::new("sudo")
+                .arg("apt-get")
+                .arg("update")
+                .status()
+                .context("Failed to update package lists")?;
 
-        if !status.success() {
-            println!("Failed to update package lists on Linux.");
-            return Ok(());
-        }
+            if !status.success() {
+                println!("Failed to update package lists on Linux.");
+                return Ok(());
+            }
 
-        let status = Command::new("sudo")
-            .arg("apt-get")
-            .arg("install")
-            .arg("-y")
-            .arg("iverilog")
-            .status()
-            .context("Failed to install Icarus Verilog using apt-get")?;
+            let status = Command::new("sudo")
+                .arg("apt-get")
+                .arg("install")
+                .arg("-y")
+                .arg("iverilog")
+                .status()
+                .context("Failed to install Icarus Verilog using apt-get")?;
 
-        if !status.success() {
-            println!("Failed to install Icarus Verilog on Linux.");
-            return Ok(());
+            if !status.success() {
+                println!("Failed to install Icarus Verilog on Linux.");
+                return Ok(());
+            }
+        } else {
+            println!("Running on Arch Linux...");
+            // Install Icarus Verilog using pacman on Arch Linux
+            let status = Command::new("sudo")
+                .arg("pacman")
+                .arg("-S")
+                .arg("--noconfirm")
+                .arg("iverilog")
+                .status()
+                .context("Failed to install Icarus Verilog using pacman")?;
+
+            if !status.success() {
+                println!("Failed to install Icarus Verilog on Arch Linux.");
+                return Ok(());
+            }
         }
     }
 
@@ -458,4 +492,11 @@ fn install_xray() -> Result<()> {
 
     println!("Project XRay installed successfully.");
     Ok(())
+}
+
+fn is_arch_distro() -> bool {
+    Command::new("pacman")
+        .arg("--version")
+        .output()
+        .is_ok()
 }
