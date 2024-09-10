@@ -107,7 +107,7 @@ fn install_verilator() -> Result<()> {
             // Install Verilator using pacman on Arch Linux
             let status = Command::new("sudo")
                 .arg("pacman")
-                .arg("-S")
+                .arg("-Syu")
                 .arg("--noconfirm")
                 .arg("verilator")
                 .status()
@@ -182,7 +182,7 @@ fn install_icarus_verilog() -> Result<()> {
             // Install Icarus Verilog using pacman on Arch Linux
             let status = Command::new("sudo")
                 .arg("pacman")
-                .arg("-S")
+                .arg("-Syu")
                 .arg("--noconfirm")
                 .arg("iverilog")
                 .status()
