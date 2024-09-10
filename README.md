@@ -34,7 +34,7 @@ snap download instachip-vpm
 alias vpm='instachip-vpm.vpm'
 ```
 
-#### MacOS alternative:
+### MacOS alternative:
 ```bash
 brew tap getinstachip/vpm
 brew install vpm
