@@ -64,17 +64,20 @@ impl VpmToml {
         self.toml_doc["dependencies"].as_table()
     }
 
-    pub fn add_dependency(&mut self, git: &str, commit: Option<&str>) {
-        let mut dependency = InlineTable::new();
-        dependency.insert("top_modules", Value::Array(Array::new()));
-        dependency.insert("commit", Value::from(commit.unwrap_or_default().to_string()));
-        self.toml_doc["dependencies"][git] = Item::Value(Value::InlineTable(dependency));
+    pub fn add_dependency(&mut self, git: &str) {
+        self.toml_doc["dependencies"][git] = Item::Value(Value::Array(Array::new()));
     }
 
-    pub fn add_top_module(&mut self, repo_link: &str, module_name: &str) {
-        let array = self.toml_doc["dependencies"][repo_link]["top_modules"].as_array_mut().unwrap();
-        if !array.iter().any(|m| m.as_str().unwrap() == module_name) {
-            array.push(Value::from(module_name));
+    pub fn add_top_module(&mut self, repo_link: &str, module_name: &str, commit: &str) {
+        let array = self.toml_doc["dependencies"][repo_link].as_array_mut().unwrap();
+        if !array.iter().any(|m| m.as_inline_table().unwrap().get("top_module").unwrap().as_str().unwrap() == module_name) {
+            let new_entry = Value::InlineTable({
+                let mut table = InlineTable::new();
+                table.insert("top_module".to_string(), Value::from(module_name));
+                table.insert("commit_hash".to_string(), Value::from(commit.to_string()));
+                table
+            });
+            array.push(new_entry);
         }
     }
 
@@ -86,7 +89,7 @@ impl VpmToml {
 
     pub fn remove_top_module(&mut self, repo_link: &str, module_name: &str) {
         if let Some(dependency) = self.toml_doc["dependencies"].get_mut(repo_link) {
-            if let Some(top_modules) = dependency["top_modules"].as_array_mut() {
+            if let Some(top_modules) = dependency.as_array_mut() {
                 top_modules.retain(|m| m.as_str().unwrap() != module_name);
             }
         }
@@ -119,18 +122,18 @@ impl VpmToml {
     }
 }
 
-pub fn add_dependency(git: &str, commit: Option<&str>) -> Result<()> {
+pub fn add_dependency(git: &str) -> Result<()> {
     let mut vpm_toml = VpmToml::from("vpm.toml");
     if !vpm_toml.get_dependencies().unwrap().contains_key(git) {
-        vpm_toml.add_dependency(git, commit);
+        vpm_toml.add_dependency(git);
         vpm_toml.write_to_file("vpm.toml")?;
     }
     Ok(())
 }
 
-pub fn add_top_module(repo_link: &str, module_path: &str) -> Result<()> {
+pub fn add_top_module(repo_link: &str, module_path: &str, commit: &str) -> Result<()> {
     let mut vpm_toml = VpmToml::from("vpm.toml");
-    vpm_toml.add_top_module(repo_link, module_path);
+    vpm_toml.add_top_module(repo_link, module_path, commit);
     vpm_toml.write_to_file("vpm.toml")?;
     Ok(())
 }

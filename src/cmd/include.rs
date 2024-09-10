@@ -21,21 +21,43 @@ impl Execute for Include {
         println!("Including from: '{}'", self.url);
         let repo_name = name_from_url(&self.url);
         let tmp_path = PathBuf::from("/tmp").join(repo_name);
-        if self.repo {
-            include_entire_repo(&self.url, &tmp_path, self.riscv, self.commit.clone())?
+        let commit = if self.commit.is_none() {
+            Some(get_head_commit_hash(&self.url)?)
         } else {
-            include_single_module(&self.url, self.riscv, self.commit.clone())?
+            self.commit.clone()
+        };
+        if self.repo {
+            include_entire_repo(&self.url, &tmp_path, self.riscv, commit.as_deref())?
+        } else {
+            include_single_module(&self.url, self.riscv, commit.as_deref())?
         }
         Ok(())
     }
 }
 
-fn include_entire_repo(url: &str, tmp_path: &PathBuf, riscv: bool, commit_hash: Option<String>) -> Result<()> {
+fn get_head_commit_hash(url: &str) -> Result<String> {
+    let output = Command::new("git")
+        .args(["ls-remote", &format!("https://github.com/{}", url), "HEAD"])
+        .output()?;
+
+    if output.status.success() {
+        let stdout = String::from_utf8(output.stdout)?;
+        let hash = stdout.split_whitespace().next().unwrap_or("").to_string();
+        if !hash.is_empty() {
+            Ok(hash[..7].to_string())  // Return only the first 7 characters (short hash)
+        } else {
+            Err(anyhow::anyhow!("Failed to get HEAD commit hash"))
+        }
+    } else {
+        Err(anyhow::anyhow!("Failed to get HEAD commit hash"))
+    }
+}
+
+fn include_entire_repo(url: &str, tmp_path: &PathBuf, riscv: bool, commit_hash: Option<&str>) -> Result<()> {
     let url = format!("https://github.com/{}", url);
-    if commit_hash.is_none() { println!("Full GitHub URL: {}", url); }
-    else { println!("Full GitHub URL: {}@{}", url, commit_hash.clone().unwrap()); }
-    include_repo_from_url(&url, "/tmp/", commit_hash.clone())?;
-    add_dependency(&url, commit_hash.as_deref())?;
+    println!("Full GitHub URL: {}@{}", url, commit_hash.unwrap_or("HEAD"));
+    include_repo_from_url(&url, "/tmp/", commit_hash)?;
+    add_dependency(&url)?;
 
     let files = get_files(&tmp_path.to_str().unwrap_or_default());
     let items = get_relative_paths(&files, tmp_path);
@@ -49,12 +71,11 @@ fn include_entire_repo(url: &str, tmp_path: &PathBuf, riscv: bool, commit_hash: 
     Ok(())
 }
 
-fn include_single_module(url: &str, riscv: bool, commit_hash: Option<String>) -> Result<()> {
+fn include_single_module(url: &str, riscv: bool, commit_hash: Option<&str>) -> Result<()> {
     let repo_url = get_github_repo_url(url).unwrap();
-    include_repo_from_url(&repo_url, "/tmp/", commit_hash.clone())?;
-    add_dependency(&repo_url, commit_hash.as_deref())?;
-    if commit_hash.is_none() { println!("Repo URL: {}", repo_url); }
-    else { println!("Repo URL: {}@{}", repo_url, commit_hash.clone().unwrap()); }
+    include_repo_from_url(&repo_url, "/tmp/", commit_hash)?;
+    add_dependency(&repo_url)?;
+    println!("Repo URL: {}@{}", repo_url, commit_hash.unwrap_or("HEAD"));
     let module_path = get_component_path_from_github_url(url).unwrap_or_default();
     println!("Including module: {}", module_path);
     include_module_from_url(&module_path, &repo_url, riscv, commit_hash)?;
@@ -124,7 +145,7 @@ fn select_modules(items: &[String]) -> Result<HashSet<String>> {
     Ok(selected_items)
 }
 
-fn process_selected_modules(url: &str, tmp_path: &PathBuf, selected_items: &HashSet<String>, riscv: bool, commit_hash: Option<String>) -> Result<()> {
+fn process_selected_modules(url: &str, tmp_path: &PathBuf, selected_items: &HashSet<String>, riscv: bool, commit_hash: Option<&str>) -> Result<()> {
     for item in selected_items {
         let displayed_path = item.strip_prefix(tmp_path.to_string_lossy().as_ref()).unwrap_or(item).trim_start_matches('/');
         println!("Including module: {}", displayed_path);
@@ -133,13 +154,13 @@ fn process_selected_modules(url: &str, tmp_path: &PathBuf, selected_items: &Hash
         let module_path = full_path.strip_prefix(tmp_path).unwrap_or(&full_path).to_str().unwrap().trim_start_matches('/');
         println!("Module path: {}", module_path);
 
-        include_module_from_url(module_path, url, riscv, commit_hash.clone())?;
+        include_module_from_url(module_path, url, riscv, commit_hash)?;
     }
 
     if selected_items.is_empty() {
         println!("No modules selected. Including entire repository.");
         include_repo_from_url(url, "./vpm_modules/", commit_hash)?;
-}
+    }
 
     Ok(())
 }
@@ -309,10 +330,10 @@ fn generate_xdc_content(module_path: &str) -> Result<String> {
     Ok(xdc_content)
 }
 
-pub fn include_module_from_url(module_path: &str, url: &str, riscv: bool, commit_hash: Option<String>) -> Result<()> {
+pub fn include_module_from_url(module_path: &str, url: &str, riscv: bool, commit_hash: Option<&str>) -> Result<()> {
     let package_name = name_from_url(url);
 
-    include_repo_from_url(url, "/tmp/", commit_hash.clone())?;
+    include_repo_from_url(url, "/tmp/", commit_hash)?;
     let module_name = Path::new(module_path)
         .file_stem()
         .and_then(|s| s.to_str())
@@ -343,12 +364,12 @@ pub fn include_module_from_url(module_path: &str, url: &str, riscv: bool, commit
         fs::write(format!("{}/constraints.xdc", destination), xdc_content)?;
         println!("Created constraints.xdc file for Xilinx Artix-7 board in {}", destination);
     }
-    add_top_module(url, module_path.to_str().unwrap())?;
+    add_top_module(url, module_path.to_str().unwrap(), commit_hash.unwrap())?;
     
     Ok(())
 }
 
-pub fn process_module(package_name: &str, module: &str, destination: String, visited: &mut HashSet<String>, url: &str, is_top_module: bool, commit_hash: Option<String>) -> Result<HashSet<String>> {
+pub fn process_module(package_name: &str, module: &str, destination: String, visited: &mut HashSet<String>, url: &str, is_top_module: bool, commit_hash: Option<&str>) -> Result<HashSet<String>> {
     // println!("Processing module: {}", module);
     let module_name = module.strip_suffix(".v").or_else(|| module.strip_suffix(".sv")).unwrap_or(module);
     let module_with_ext = if module.ends_with(".v") || module.ends_with(".sv") {
@@ -464,7 +485,7 @@ fn process_file(entry: &DirEntry, destination: &str, module_path: &str, url: &st
     Ok(())
 }
 
-fn download_and_process_submodules(package_name: &str, module_path: &str, destination: &str, url: &str, visited: &mut HashSet<String>, _is_top_module: bool, commit_hash: Option<String>) -> Result<HashSet<String>> {
+fn download_and_process_submodules(package_name: &str, module_path: &str, destination: &str, url: &str, visited: &mut HashSet<String>, _is_top_module: bool, commit_hash: Option<&str>) -> Result<HashSet<String>> {
     let module_name = Path::new(module_path)
         .file_stem()
         .and_then(|s| s.to_str())
@@ -699,7 +720,7 @@ pub fn get_submodules(contents: &str) -> Result<HashSet<String>> {
     Ok(submodules)
 }
 
-pub fn include_repo_from_url(url: &str, location: &str, commit_hash: Option<String>) -> Result<()> {
+pub fn include_repo_from_url(url: &str, location: &str, commit_hash: Option<&str>) -> Result<()> {
     let repo_path = Path::new(location).join(name_from_url(url));
     let pb = ProgressBar::new_spinner();
     pb.set_style(ProgressStyle::default_spinner().template("{spinner} {msg}").unwrap());
@@ -710,7 +731,7 @@ pub fn include_repo_from_url(url: &str, location: &str, commit_hash: Option<Stri
     Ok(())
 }
 
-pub fn clone_repo(url: &str, repo_path: &Path, commit_hash: Option<String>) -> Result<()> {
+pub fn clone_repo(url: &str, repo_path: &Path, commit_hash: Option<&str>) -> Result<()> {
     if repo_path.exists() {
         fs::remove_dir_all(repo_path)?;
     }
@@ -724,7 +745,7 @@ pub fn clone_repo(url: &str, repo_path: &Path, commit_hash: Option<String>) -> R
         .with_context(|| format!("Failed to clone repository from URL: '{}'", url))?;
     if let Some(hash) = commit_hash {
         Command::new("git")
-            .args([ "-C", repo_path.to_str().unwrap_or_default(), "checkout", hash.as_str() ])
+            .args([ "-C", repo_path.to_str().unwrap_or_default(), "checkout", hash ])
             .stdout(std::process::Stdio::null())
             .stderr(std::process::Stdio::null())
             .status()
