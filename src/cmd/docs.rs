@@ -4,7 +4,6 @@ use std::path::PathBuf;
 use serde_json::json;
 use std::fs;
 use indicatif::{ProgressBar, ProgressStyle};
-use crate::cmd::include::clone_repo;
 use std::process::{Command, Stdio};
 
 use crate::cmd::{Execute, Docs};

@@ -6,7 +6,7 @@ use std::fs;
 use fastrand;
 use crate::cmd::{Execute, Sim};
 use std::fs::File;
-use std::io::{BufRead, BufReader, Write};
+use std::io::{BufRead, BufReader};
 use fancy_regex::Regex;
 
 impl Execute for Sim {
@@ -71,7 +71,7 @@ fn run_simulation_with_waveform(output_path: &Path) -> Result<()> {
     
     // Call gtkwave on the generated waveform file
     println!("Opening waveform in GTKWave...");
-    let gtkwave_status = Command::new("gtkwave")
+    let _gtkwave_status = Command::new("gtkwave")
         .arg("waveform.vcd")
         .spawn()
         .context("Failed to open GTKWave. Debug steps:\n1. Ensure GTKWave is installed: Run 'gtkwave --version' in terminal.\n2. Check if 'gtkwave' is in your PATH: Run 'which gtkwave' (Unix) or 'where gtkwave' (Windows).\n3. If not found, install GTKWave or add its installation directory to your PATH.")?;

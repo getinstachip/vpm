@@ -151,7 +151,7 @@ pub fn add_top_module(repo_link: &str, module_path: &str, commit: &str) -> Resul
     Ok(())
 }
 
-pub fn remove_dependency(git: &str) -> Result<()> {
+fn remove_dependency(git: &str) -> Result<()> {
     let mut vpm_toml = VpmToml::from("vpm.toml");
     vpm_toml.remove_dependency(git);
     vpm_toml.write_to_file("vpm.toml")?;
@@ -161,6 +161,13 @@ pub fn remove_dependency(git: &str) -> Result<()> {
 pub fn remove_top_module(repo_link: &str, module_name: &str) -> Result<()> {
     let mut vpm_toml = VpmToml::from("vpm.toml");
     vpm_toml.remove_top_module(repo_link, module_name);
+    if let Some(dependencies) = vpm_toml.toml_doc["dependencies"].as_table() {
+        if let Some(modules) = dependencies.get(repo_link).and_then(|v| v.as_array()) {
+            if modules.is_empty() {
+                remove_dependency(repo_link)?;
+            }
+        }
+    }
     vpm_toml.write_to_file("vpm.toml")?;
     Ok(())
 }
