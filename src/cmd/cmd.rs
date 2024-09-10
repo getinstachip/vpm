@@ -107,6 +107,8 @@ pub struct Include {
 pub struct Update {
     #[arg(help = "Full module path of the module to update. This should be the complete path to the module file within your project structure.")]
     pub module_path: String,
+    #[arg(long, help = "Update to the given commit hash. If not set, the latest commit hash will be used.")]
+    pub commit: Option<String>,
 }
 
 #[derive(Debug, Parser)]

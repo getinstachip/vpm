@@ -35,7 +35,7 @@ fn remove_module(module_path: &str) -> Result<()> {
 
     let repo_link = match repo_links.len() {
         0 => return Err(anyhow!("No repository links found for module: {}", module_name)),
-        1 => repo_links[0].clone(),
+        1 => repo_links.into_iter().next().unwrap(),
         _ => {
             println!("Multiple repository links found for module: {}. Please choose the correct repository link.", module_name);
             for (i, link) in repo_links.iter().enumerate() {
@@ -51,7 +51,9 @@ fn remove_module(module_path: &str) -> Result<()> {
             if index < 1 || index > repo_links.len() {
                 return Err(anyhow!("Invalid choice"));
             }
-            repo_links[index - 1].clone()
+            repo_links.iter().nth(index - 1)
+                .ok_or_else(|| anyhow!("Invalid choice"))?
+                .to_string()
         }
     };
 

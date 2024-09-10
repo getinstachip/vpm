@@ -35,7 +35,7 @@ impl Execute for Include {
     }
 }
 
-fn get_head_commit_hash(url: &str) -> Result<String> {
+pub fn get_head_commit_hash(url: &str) -> Result<String> {
     let output = Command::new("git")
         .args(["ls-remote", &format!("https://github.com/{}", url), "HEAD"])
         .output()?;
@@ -503,7 +503,7 @@ fn download_and_process_submodules(package_name: &str, module_path: &str, destin
     let contents = match fs::read_to_string(&full_module_path) {
         Ok(c) => c,
         Err(e) => {
-            // eprintln!("Warning: Failed to read file {}: {}. Skipping this module.", full_module_path.display(), e);
+            println!("Warning: Failed to read file {}: {}. Skipping this module.", full_module_path.display(), e);
             return Ok(HashSet::new());
         }
     };
