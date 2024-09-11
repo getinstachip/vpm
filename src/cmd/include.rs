@@ -17,7 +17,6 @@ use indicatif::{ProgressBar, ProgressStyle};
 
 impl Execute for Include {
     async fn execute(&self) -> Result<()> {
-        fs::create_dir_all("./vpm_modules")?;
         println!("Including from: '{}'", self.url);
         let repo_name = name_from_url(&self.url);
         let tmp_path = PathBuf::from("/tmp").join(repo_name);
@@ -168,7 +167,7 @@ fn process_selected_modules(url: &str, tmp_path: &PathBuf, selected_items: &Hash
 
     if selected_items.is_empty() {
         println!("No modules selected. Including entire repository.");
-        include_repo_from_url(url, "./vpm_modules/", commit_hash)?;
+        include_repo_from_url(url, "./", commit_hash)?;
     }
 
     Ok(())
@@ -347,8 +346,7 @@ pub fn include_module_from_url(module_path: &str, url: &str, riscv: bool, commit
         .file_stem()
         .and_then(|s| s.to_str())
         .unwrap_or(module_path);
-    let destination = format!("./vpm_modules/{}", module_name);
-    fs::create_dir_all(&destination)?;
+    let destination = "./";
     process_module(package_name, module_path, destination.to_owned(), &mut HashSet::new(), url, true, commit_hash)?;
     
     let module_file_name = Path::new(&destination)
@@ -485,7 +483,9 @@ fn process_file(entry: &DirEntry, destination: &str, module_path: &str, url: &st
         module_name.to_string()
     };
     let header_filename = format!("{}.{}", module_name.strip_suffix(".v").unwrap_or(module_name), if extension == "sv" { "svh" } else { "vh" });
-    fs::write(target_path.join(&header_filename), header_content)?;
+    let headers_dir = target_path.join("headers");
+    fs::create_dir_all(&headers_dir)?;
+    fs::write(headers_dir.join(&header_filename), header_content)?;
     println!("Generating header file: {}", target_path.join(&header_filename).to_str().unwrap());
 
     let full_module_path = target_path.join(&module_name_with_ext);
