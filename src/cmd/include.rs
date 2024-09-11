@@ -1,4 +1,5 @@
 use std::collections::HashSet;
+use std::env::current_dir;
 use std::path::{Path, PathBuf};
 use std::{fs, process::Command};
 use anyhow::{Context, Result};
@@ -348,19 +349,9 @@ pub fn include_module_from_url(module_path: &str, url: &str, riscv: bool, commit
         .unwrap_or(module_path);
     let destination = "./";
     process_module(package_name, module_path, destination.to_owned(), &mut HashSet::new(), url, true, commit_hash)?;
-    
-    let module_file_name = Path::new(&destination)
-        .file_name()
-        .and_then(|name| name.to_str())
-        .ok_or_else(|| anyhow::anyhow!("Invalid destination path"))?;
-    let module_path = Path::new(&destination).join(format!("{}.v", module_file_name));
 
-    if !module_path.exists() {
-        let module_path = Path::new(&destination).join(format!("{}.sv", module_file_name));
-        if !module_path.exists() {
-            return Err(anyhow::anyhow!("Module file not found in the destination folder"));
-        }
-    }
+    let module_path = Path::new(&destination).join(Path::new(module_path).file_name().unwrap());
+    anyhow::ensure!(module_path.exists(), "Module file not found in the destination folder");
 
     if riscv {
         let top_v_content = generate_top_v_content(&module_path.to_str().unwrap())?;
@@ -371,7 +362,7 @@ pub fn include_module_from_url(module_path: &str, url: &str, riscv: bool, commit
         fs::write(format!("{}/constraints.xdc", destination), xdc_content)?;
         println!("Created constraints.xdc file for Xilinx Artix-7 board in {}", destination);
     }
-    add_top_module(url, module_path.to_str().unwrap(), commit_hash.unwrap())?;
+    add_top_module(url, current_dir()?.join(module_path.file_name().unwrap()).to_str().unwrap(), commit_hash.unwrap_or(""))?;
     
     Ok(())
 }
