@@ -538,18 +538,12 @@ fn download_and_process_submodules(package_name: &str, module_path: &str, destin
                 continue;
             }
             
-            let submodule_url = format!("{}/{}", url, submodule_with_ext);
-            if let Err(e) = include_repo_from_url(&submodule_url, submodule_destination.to_str().unwrap(), commit_hash.clone()) {
-                eprintln!("Warning: Failed to include repo from URL {}: {}. Skipping this submodule.", submodule_url, e);
-                continue;
-            }
-            
             match process_module(
                 package_name,
                 &submodule_with_ext,
                 submodule_destination.to_str().unwrap().to_string(),
                 visited,
-                &submodule_url,
+                &url,
                 false,
                 commit_hash.clone()
             ) {
@@ -564,7 +558,7 @@ fn download_and_process_submodules(package_name: &str, module_path: &str, destin
             }
 
             let full_submodule_path = submodule_destination.join(&submodule_with_ext);
-            if let Err(e) = update_lockfile(&full_submodule_path, &submodule_url, &contents, visited, false) {
+            if let Err(e) = update_lockfile(&full_submodule_path, &url, &contents, visited, false) {
                 eprintln!("Warning: Failed to update lockfile for {}: {}. Continuing without updating lockfile.", full_submodule_path.display(), e);
             }
         }
