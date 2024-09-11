@@ -36,8 +36,16 @@ impl Execute for Include {
 }
 
 pub fn get_head_commit_hash(url: &str) -> Result<String> {
+    let github_url = if url.starts_with("https://github.com/") {
+        url.to_string()
+    } else {
+        format!("https://github.com/{}", url)
+    };
+
+    let (repo_url, _) = github_url.rsplit_once("/blob/").unwrap_or((&github_url, ""));
+
     let output = Command::new("git")
-        .args(["ls-remote", &format!("https://github.com/{}", url), "HEAD"])
+        .args(["ls-remote", repo_url, "HEAD"])
         .output()?;
 
     if output.status.success() {
@@ -46,10 +54,11 @@ pub fn get_head_commit_hash(url: &str) -> Result<String> {
         if !hash.is_empty() {
             Ok(hash[..7].to_string())  // Return only the first 7 characters (short hash)
         } else {
-            Err(anyhow::anyhow!("Failed to get HEAD commit hash"))
+            Err(anyhow::anyhow!("Failed to get HEAD commit hash: Empty hash returned"))
         }
     } else {
-        Err(anyhow::anyhow!("Failed to get HEAD commit hash"))
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        Err(anyhow::anyhow!("Failed to get HEAD commit hash: {}", stderr))
     }
 }
 
@@ -500,6 +509,7 @@ fn download_and_process_submodules(package_name: &str, module_path: &str, destin
     };
 
     let full_module_path = PathBuf::from(destination).join(&module_name_with_ext);
+    // println!("Full module path: {}", full_module_path.display());
     let contents = match fs::read_to_string(&full_module_path) {
         Ok(c) => c,
         Err(e) => {
@@ -526,9 +536,13 @@ fn download_and_process_submodules(package_name: &str, module_path: &str, destin
 
     for submodule in submodules {
         let submodule_with_ext = if submodule.ends_with(".v") || submodule.ends_with(".sv") {
-            submodule
+            submodule.to_string()
         } else {
-            format!("{}.v", &submodule)
+            let parent_extension = Path::new(&module_name_with_ext)
+                .extension()
+                .and_then(|ext| ext.to_str())
+                .unwrap_or("v");
+            format!("{}.{}", &submodule, parent_extension)
         };
         if !visited.contains(&submodule_with_ext) {
             let submodule_destination = PathBuf::from(destination);

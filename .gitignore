@@ -28,3 +28,4 @@ vpm.lock
 .env
 
 .DS_Store
+.vscode/launch.json
