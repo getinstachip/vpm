@@ -343,10 +343,6 @@ pub fn include_module_from_url(module_path: &str, url: &str, riscv: bool, commit
     let package_name = name_from_url(url);
 
     include_repo_from_url(url, "/tmp/", commit_hash)?;
-    let module_name = Path::new(module_path)
-        .file_stem()
-        .and_then(|s| s.to_str())
-        .unwrap_or(module_path);
     let destination = "./";
     process_module(package_name, module_path, destination.to_owned(), &mut HashSet::new(), url, true, commit_hash)?;
 
@@ -579,7 +575,6 @@ fn download_and_process_submodules(package_name: &str, module_path: &str, destin
 
 fn update_lockfile(full_path: &PathBuf, url: &str, contents: &str, visited: &HashSet<String>, is_top_module: bool) -> Result<()> {
     let mut lockfile = fs::read_to_string("vpm.lock").unwrap_or_default();
-    let full_module_path = format!("{}/{}", url, full_path.file_name().unwrap().to_str().unwrap());
     let module_entry = if is_top_module {
         format!("[[package]]\nfull_path = \"{}\"\nsource = \"{}\"\nparents = []\n", full_path.display(), url)
     } else {
