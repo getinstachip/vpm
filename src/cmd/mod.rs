@@ -11,10 +11,13 @@ mod docs;
 mod synth;
 mod run;
 mod load;
+mod config;
 
 use anyhow::Result;
 
 pub use crate::cmd::cmd::*;
+
+use crate::config_man::send_event;
 
 pub trait Execute {
     async fn execute(&self) -> Result<()>;
@@ -24,18 +27,71 @@ pub trait Execute {
 impl Execute for Cmd {
     async fn execute(&self) -> Result<()> {
         match self {
-            Cmd::Upgrade(cmd) => cmd.execute().await,
-            Cmd::Include(cmd) => cmd.execute().await,
-            Cmd::Update(cmd) => cmd.execute().await,
-            Cmd::Remove(cmd) => cmd.execute().await,
-            Cmd::Dotf(cmd) => cmd.execute().await,
-            Cmd::Install(cmd) => cmd.execute().await,
-            Cmd::List(cmd) => cmd.execute().await,
-            Cmd::Sim(cmd) => cmd.execute().await,
-            Cmd::Docs(cmd) => cmd.execute().await,
-            Cmd::Synth(cmd) => cmd.execute().await,
-            Cmd::Load(cmd) => cmd.execute().await,
-            Cmd::Run(cmd) => cmd.execute().await,
+            Cmd::Upgrade(cmd) => {
+                cmd.execute().await?;
+                send_event("upgrade")?;
+                Ok(())
+            },
+            Cmd::Include(cmd) => {
+                cmd.execute().await?;
+                send_event("include")?;
+                Ok(())
+            },
+            Cmd::Update(cmd) => {
+                cmd.execute().await?;
+                send_event("update")?;
+                Ok(())
+            },
+            Cmd::Remove(cmd) => {
+                cmd.execute().await?;
+                send_event("remove")?;
+                Ok(())
+            },
+            Cmd::Dotf(cmd) => {
+                cmd.execute().await?;
+                send_event("dotf")?;
+                Ok(())
+            },
+            Cmd::Install(cmd) => {
+                cmd.execute().await?;
+                send_event("install")?;
+                Ok(())
+            },
+            Cmd::List(cmd) => {
+                cmd.execute().await?;
+                send_event("list")?;
+                Ok(())
+            },
+            Cmd::Sim(cmd) => {
+                cmd.execute().await?;
+                send_event("sim")?;
+                Ok(())
+            },
+            Cmd::Docs(cmd) => {
+                cmd.execute().await?;
+                send_event("docs")?;
+                Ok(())
+            },
+            Cmd::Synth(cmd) => {
+                cmd.execute().await?;
+                send_event("synth")?;
+                Ok(())
+            },
+            Cmd::Load(cmd) => {
+                cmd.execute().await?;
+                send_event("load")?;
+                Ok(())
+            },
+            Cmd::Run(cmd) => {
+                cmd.execute().await?;
+                send_event("run")?;
+                Ok(())
+            },
+            Cmd::Config(cmd) => {
+                cmd.execute().await?;
+                send_event("config")?;
+                Ok(())
+            },
         }
     }
 }
