@@ -11,7 +11,7 @@ pub async fn send_event(command: String) -> Result<()> {
     if get_analytics()? {
         let uuid = get_uuid()?;
         let version = env!("CARGO_PKG_VERSION").to_string();
-        let api_key = std::env::var("POSTHOG_API_KEY").unwrap();
+        let api_key = std::env::var("POSTHOG_API_KEY").expect("POSTHOG_API_KEY environment variable not set");
         
         let client = Client::new();
         let payload = json!({
