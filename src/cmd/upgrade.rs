@@ -7,9 +7,11 @@ use crate::config_man::set_version;
 impl Execute for Upgrade {
     async fn execute(&self) -> Result<()> {
         println!("Upgrading VPM...");
-        
         upgrade_vpm()?;
-        set_version(&get_latest_version()?)?;
+        let version = get_latest_version()?;
+        if !version.is_empty() {
+            set_version(&version)?;
+        }
 
         println!("VPM upgrade completed successfully.");
         Ok(())
@@ -45,8 +47,5 @@ fn get_latest_version() -> Result<String> {
         .arg("--tags")
         .arg("--abbrev=0")
         .output()?;
-    if !output.status.success() {
-        return Err(anyhow::anyhow!("Failed to get latest version"));
-    }
     Ok(String::from_utf8(output.stdout)?)
 }

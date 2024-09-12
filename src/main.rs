@@ -27,7 +27,9 @@ pub async fn main() -> ExitCode {
         println!(" - The version of vpm you are using");
         println!(" - Which commands you run and when (not including arguments, input, or output)");
         println!("No personal information will be collected.");
-        println!("To opt-out, run `vpm config --analytics false`.\n");
+        println!("To opt-out, run `vpm config --analytics false`. You may change this at any time.\n");
+        println!("Rerun your command to accept and continue.");
+        return ExitCode::SUCCESS;
     }
 
     match Cmd::parse().execute().await {

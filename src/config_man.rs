@@ -3,17 +3,20 @@ use directories::ProjectDirs;
 use posthog_rs::{client, Event};
 use std::fs;
 use std::path::PathBuf;
+use tokio::task;
 use toml_edit::{DocumentMut, Item, Value, Table};
 use uuid::Uuid;
 
-pub fn send_event(command: &str) -> Result<()> {
+pub async fn send_event(command: String) -> Result<()> {
     if get_analytics()? {
-        let uuid = get_uuid()?;
-        let client = client(std::env::var("POSTHOG_API_KEY").unwrap().as_str());
-        let mut event = Event::new("user_action", &uuid);
-        event.insert_prop("command", command)?;
-        event.insert_prop("version", env!("CARGO_PKG_VERSION"))?;
-        client.capture(event)?;
+        task::spawn_blocking(move || {
+            let uuid = get_uuid().unwrap();
+            let client = client(std::env::var("POSTHOG_API_KEY").unwrap().as_str());
+            let mut event = Event::new("user_action", &uuid);
+            event.insert_prop("command", command).unwrap();
+            event.insert_prop("version", env!("CARGO_PKG_VERSION")).unwrap();
+            client.capture(event).unwrap();
+        }).await.unwrap();
     }
     Ok(())
 }
@@ -29,6 +32,12 @@ pub fn get_config_path() -> Option<PathBuf> {
 
 pub fn create_config() -> Result<()> {
     let config_path = get_config_path().unwrap();
+    if !config_path.exists() {
+        if let Some(parent) = config_path.parent() {
+            fs::create_dir_all(parent)?;
+        }
+        fs::File::create(&config_path)?;
+    }
     fs::write(config_path.clone(), "").expect("Failed to create config.toml");
     let contents = fs::read_to_string(config_path.clone())?;
     let mut config_doc = contents.parse::<DocumentMut>().expect("Failed to parse config.toml");
@@ -58,11 +67,14 @@ fn get_uuid() -> Result<String> {
     }
     let contents = fs::read_to_string(config_path)?;
     let config = contents.parse::<DocumentMut>().expect("Failed to parse config.toml");
-    Ok(config["uuid"].as_str().unwrap().to_string())
+    Ok(config["user"]["uuid"].as_str().unwrap().to_string())
 }
 
 pub fn set_analytics(value: bool) -> Result<()> {
     let config_path = get_config_path().unwrap();
+    if !config_path.exists() {
+        create_config()?;
+    }
     let config = fs::read_to_string(config_path.clone())?;
     let mut config_doc = config.parse::<DocumentMut>().expect("Failed to parse config.toml");
     config_doc["options"]["analytics"] = Item::Value(Value::from(value));
@@ -72,6 +84,9 @@ pub fn set_analytics(value: bool) -> Result<()> {
 
 fn get_analytics() -> Result<bool> {
     let config_path = get_config_path().unwrap();
+    if !config_path.exists() {
+        create_config()?;
+    }
     let config = fs::read_to_string(config_path.clone())?;
     let config_doc = config.parse::<DocumentMut>().expect("Failed to parse config.toml");
     Ok(config_doc["options"]["analytics"].as_bool().unwrap())
@@ -79,6 +94,9 @@ fn get_analytics() -> Result<bool> {
 
 pub fn set_version(version: &str) -> Result<()> {
     let config_path = get_config_path().unwrap();
+    if !config_path.exists() {
+        create_config()?;
+    }
     let config = fs::read_to_string(config_path.clone())?;
     let mut config_doc = config.parse::<DocumentMut>().expect("Failed to parse config.toml");
     config_doc["tool"]["version"] = Item::Value(Value::from(version));
