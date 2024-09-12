@@ -7,9 +7,16 @@ use indicatif::{ProgressBar, ProgressStyle};
 use std::process::{Command, Stdio};
 
 use crate::cmd::{Execute, Docs};
+use crate::config_man::{decrypt_docs_count, encrypt_docs_count};
 
 impl Execute for Docs {
     async fn execute(&self) -> Result<()> {
+        let docs_count = decrypt_docs_count()?;
+        if docs_count >= 10 {
+            println!("You have used all your documentation generation credits. Consider upgrading to VPM Pro for unlimited and betterdocumentation generation.");
+            return Ok(());
+        }
+
         if self.from_repo {
             let content = fetch_module_content(&self.module_path).await
                 .context("Failed to fetch module content. Please check your internet connection and ensure the provided URL is correct.")?;
@@ -44,6 +51,8 @@ impl Execute for Docs {
                 return Err(anyhow!("Module '{}' not found in vpm_modules. Please provide a URL to a repository containing the module, or ensure the module exists in the correct location.", self.module_path));
             }
         }
+        encrypt_docs_count(docs_count + 1)?;
+        println!("Documentation generated successfully. You have used {} of your 10 credits.", docs_count + 1);
         Ok(())
     }
 }

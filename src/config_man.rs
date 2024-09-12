@@ -1,5 +1,6 @@
 use anyhow::Result;
 use directories::ProjectDirs;
+use rand::RngCore;
 use reqwest::Client;
 use serde_json::json;
 use std::fs;
@@ -7,7 +8,12 @@ use std::path::PathBuf;
 use toml_edit::{DocumentMut, Item, Value, Table};
 use uuid::Uuid;
 
+use ring::aead::{self, Aad, LessSafeKey, Nonce};
+use base64::{Engine as _, engine::general_purpose};
+use ring::aead::UnboundKey;
+
 const POSTHOG_API_KEY: Option<&str> = option_env!("POSTHOG_API_KEY");
+const DOCS_KEY: Option<&str> = option_env!("DOCS_KEY");
 
 pub async fn send_event(command: String) -> Result<()> {
     if get_analytics()? {
@@ -73,6 +79,11 @@ pub fn create_config() -> Result<()> {
     let options_table = config_doc["options"].as_table_mut().unwrap();
     options_table.insert("analytics", Item::Value(Value::from(true)));
 
+    config_doc.insert("metrics", Item::Table(Table::new()));
+    let metrics_table = config_doc["metrics"].as_table_mut().unwrap();
+    metrics_table.insert("docs_count", Item::Value(Value::from(0)));
+    encrypt_docs_count(0)?;
+
     fs::write(config_path, config_doc.to_string()).expect("Failed to write config.toml");
     Ok(())
 }
@@ -120,3 +131,89 @@ pub fn set_version(version: &str) -> Result<()> {
     fs::write(config_path, config_doc.to_string()).expect("Failed to write config.toml");
     Ok(())
 }   
+
+pub fn decrypt_docs_count() -> Result<u8> {
+    let config_path = get_config_path().ok_or(anyhow::anyhow!("Failed to get config path"))?;
+    if !config_path.exists() {
+        create_config()?;
+    }
+
+    let config = fs::read_to_string(config_path)?;
+    let config_doc = config.parse::<DocumentMut>().expect("Failed to parse config.toml");
+    let encrypted_docs_base64 = config_doc["metrics"]["docs_count"]
+        .as_str()
+        .ok_or_else(|| anyhow::anyhow!("docs_count not found in config"))?;
+    let encrypted_docs = general_purpose::STANDARD
+        .decode(encrypted_docs_base64)
+        .map_err(|e| anyhow::anyhow!("Failed to decode docs count: {}", e))?;
+    // Get the key from environment variable
+    let docs_key_str = DOCS_KEY.ok_or_else(|| anyhow::anyhow!("DOCS_KEY is not set"))?;
+    let key_bytes = hex::decode(docs_key_str).map_err(|e| anyhow::anyhow!("Invalid DOCS_KEY format: {}", e))?;
+
+    // Create an AEAD key
+    let unbound_key =
+        UnboundKey::new(&aead::AES_256_GCM, &key_bytes).map_err(|_| anyhow::anyhow!("Invalid key"))?;
+    let key = LessSafeKey::new(unbound_key);
+
+    // Extract nonce and ciphertext
+    if encrypted_docs.len() < 12 {
+        return Err(anyhow::anyhow!("Ciphertext too short"));
+    }
+    let (nonce_bytes, ciphertext_and_tag) = encrypted_docs.split_at(12);
+    let nonce = Nonce::try_assume_unique_for_key(nonce_bytes).map_err(|_| anyhow::anyhow!("Invalid nonce"))?;
+
+    // Prepare mutable buffer for decryption
+    let mut in_out = ciphertext_and_tag.to_vec();
+
+    // Decrypt the data
+    key.open_in_place(nonce, Aad::empty(), &mut in_out)
+        .map_err(|_| anyhow::anyhow!("Decryption failed"))?;
+
+    // Convert decrypted data to string
+    let decrypted_str =
+        std::str::from_utf8(&in_out).map_err(|_| anyhow::anyhow!("Invalid UTF-8 in decrypted data"))?;
+    let docs_count: u8 = decrypted_str.parse().map_err(|_| anyhow::anyhow!("Failed to parse decrypted data"))?;
+
+    Ok(docs_count)
+}
+
+pub fn encrypt_docs_count(docs_count: u8) -> Result<()> {
+    // Convert the docs_count to a string and then to bytes
+    let docs_count_bytes = docs_count.to_string().into_bytes();
+    // Get the key from the environment variable
+    let docs_key_str = DOCS_KEY.ok_or_else(|| anyhow::anyhow!("DOCS_KEY is not set"))?;
+    let key_bytes = hex::decode(docs_key_str).map_err(|e| anyhow::anyhow!("Invalid DOCS_KEY format: {}", e))?;
+
+    // Create an AEAD key
+    let unbound_key =
+        UnboundKey::new(&aead::AES_256_GCM, &key_bytes).map_err(|_| anyhow::anyhow!("Invalid key"))?;
+    let key = LessSafeKey::new(unbound_key);
+
+    // Generate a random nonce
+    let mut nonce_bytes = [0u8; 12];
+    rand::rngs::OsRng.fill_bytes(&mut nonce_bytes);
+    let nonce = Nonce::assume_unique_for_key(nonce_bytes);
+
+    // Prepare buffer for encryption (data + space for the tag)
+    let mut in_out = docs_count_bytes;
+    in_out.extend_from_slice(&[0u8; 16]);
+
+    // Encrypt the data
+    key.seal_in_place_append_tag(nonce, Aad::empty(), &mut in_out)
+        .map_err(|_| anyhow::anyhow!("Encryption failed"))?;
+
+    // Prepend nonce to the ciphertext
+    let mut encrypted_data = nonce_bytes.to_vec();
+    encrypted_data.extend_from_slice(&in_out);
+
+    // Encode the encrypted data to base64
+    let encrypted_base64 = general_purpose::STANDARD.encode(encrypted_data);
+
+    let config_path = get_config_path().unwrap();
+    let config = fs::read_to_string(config_path.clone())?;
+    let mut config_doc = config.parse::<DocumentMut>().expect("Failed to parse config.toml");
+    config_doc["metrics"]["docs_count"] = Item::Value(Value::from(encrypted_base64));
+    fs::write(config_path, config_doc.to_string()).expect("Failed to write config.toml");
+
+    Ok(())
+}
