@@ -35,7 +35,6 @@ toml_edit = "0.22.20"
 imara-diff = "0.1.7"
 uuid = { version = "1.10.0", features = ["v7"] }
 directories = "5.0.1"
-posthog-rs = "0.2.2"
 
 [build-dependencies]
 cc="*"

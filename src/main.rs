@@ -6,6 +6,7 @@ mod config_man;
 use std::env;
 use std::io::{self, Write};
 use std::process::ExitCode;
+use std::fs;
 
 use clap::Parser;
 
@@ -19,8 +20,10 @@ pub async fn main() -> ExitCode {
     env::remove_var("RUST_LIB_BACKTRACE");
     env::remove_var("RUST_BACKTRACE");
 
-    if get_config_path().unwrap().exists() {
+    let flag_file = get_config_path().unwrap().with_file_name(".vpm_welcome_shown");
+    if !flag_file.exists() {
         create_config().unwrap();
+        
         println!("Welcome to vpm!");
         println!("We collect anonymous usage data to improve the tool.");
         println!("The following information will be collected:");
@@ -29,6 +32,8 @@ pub async fn main() -> ExitCode {
         println!("No personal information will be collected.");
         println!("To opt-out, run `vpm config --analytics false`. You may change this at any time.\n");
         println!("Rerun your command to accept and continue.");
+
+        fs::write(flag_file, "").unwrap();
         return ExitCode::SUCCESS;
     }
 

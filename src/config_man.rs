@@ -1,22 +1,37 @@
 use anyhow::Result;
 use directories::ProjectDirs;
-use posthog_rs::{client, Event};
+use reqwest::Client;
+use serde_json::json;
 use std::fs;
 use std::path::PathBuf;
-use tokio::task;
 use toml_edit::{DocumentMut, Item, Value, Table};
 use uuid::Uuid;
 
 pub async fn send_event(command: String) -> Result<()> {
     if get_analytics()? {
-        task::spawn_blocking(move || {
-            let uuid = get_uuid().unwrap();
-            let client = client(std::env::var("POSTHOG_API_KEY").unwrap().as_str());
-            let mut event = Event::new("user_action", &uuid);
-            event.insert_prop("command", command).unwrap();
-            event.insert_prop("version", env!("CARGO_PKG_VERSION")).unwrap();
-            client.capture(event).unwrap();
-        }).await.unwrap();
+        let uuid = get_uuid()?;
+        let version = env!("CARGO_PKG_VERSION").to_string();
+        let api_key = std::env::var("POSTHOG_API_KEY").unwrap();
+        
+        let client = Client::new();
+        let payload = json!({
+            "api_key": api_key,
+            "event": "user_action",
+            "distinct_id": uuid,
+            "properties": {
+                "command": command,
+                "version": version
+            }
+        });
+
+        let _response = client.post("https://us.i.posthog.com/capture/")
+            .json(&payload)
+            .send()
+            .await?;
+
+        // if !response.status().is_success() {
+        //     eprintln!("Failed to send event to PostHog: {}", response.status());
+        // }
     }
     Ok(())
 }
