@@ -14,18 +14,11 @@ use crate::cmd::{Cmd, Execute};
 use crate::error::SilentExit;
 use crate::config_man::{get_config_path, create_config};
 
-const POSTHOG_API_KEY: Option<&str> = option_env!("POSTHOG_API_KEY");
-
 #[tokio::main]
 pub async fn main() -> ExitCode {
     // Forcibly disable backtraces.
     env::remove_var("RUST_LIB_BACKTRACE");
     env::remove_var("RUST_BACKTRACE");
-
-    match POSTHOG_API_KEY {
-        Some(key) => println!("POSTHOG_API_KEY is set"),
-        None => eprintln!("Warning: POSTHOG_API_KEY is not set"),
-    }
 
     let flag_file = get_config_path().unwrap().with_file_name(".vpm_welcome_shown");
     if !flag_file.exists() {

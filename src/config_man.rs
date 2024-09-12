@@ -7,11 +7,13 @@ use std::path::PathBuf;
 use toml_edit::{DocumentMut, Item, Value, Table};
 use uuid::Uuid;
 
+const POSTHOG_API_KEY: Option<&str> = option_env!("POSTHOG_API_KEY");
+
 pub async fn send_event(command: String) -> Result<()> {
     if get_analytics()? {
         let uuid = get_uuid()?;
         let version = env!("CARGO_PKG_VERSION").to_string();
-        let api_key = std::env::var("POSTHOG_API_KEY").expect("POSTHOG_API_KEY environment variable not set");
+        let api_key = POSTHOG_API_KEY.expect("POSTHOG_API_KEY environment variable not set").to_string();
         
         let client = Client::new();
         let payload = json!({
