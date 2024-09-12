@@ -1,4 +1,5 @@
 use std::collections::HashSet;
+use std::env::current_dir;
 use std::path::{Path, PathBuf};
 use std::{fs, process::Command};
 use anyhow::{Context, Result};
@@ -17,7 +18,6 @@ use indicatif::{ProgressBar, ProgressStyle};
 
 impl Execute for Include {
     async fn execute(&self) -> Result<()> {
-        fs::create_dir_all("./vpm_modules")?;
         println!("Including from: '{}'", self.url);
         let repo_name = name_from_url(&self.url);
         let tmp_path = PathBuf::from("/tmp").join(repo_name);
@@ -168,7 +168,7 @@ fn process_selected_modules(url: &str, tmp_path: &PathBuf, selected_items: &Hash
 
     if selected_items.is_empty() {
         println!("No modules selected. Including entire repository.");
-        include_repo_from_url(url, "./vpm_modules/", commit_hash)?;
+        include_repo_from_url(url, "./", commit_hash)?;
     }
 
     Ok(())
@@ -343,26 +343,11 @@ pub fn include_module_from_url(module_path: &str, url: &str, riscv: bool, commit
     let package_name = name_from_url(url);
 
     include_repo_from_url(url, "/tmp/", commit_hash)?;
-    let module_name = Path::new(module_path)
-        .file_stem()
-        .and_then(|s| s.to_str())
-        .unwrap_or(module_path);
-    let destination = format!("./vpm_modules/{}", module_name);
-    fs::create_dir_all(&destination)?;
+    let destination = "./";
     process_module(package_name, module_path, destination.to_owned(), &mut HashSet::new(), url, true, commit_hash)?;
-    
-    let module_file_name = Path::new(&destination)
-        .file_name()
-        .and_then(|name| name.to_str())
-        .ok_or_else(|| anyhow::anyhow!("Invalid destination path"))?;
-    let module_path = Path::new(&destination).join(format!("{}.v", module_file_name));
 
-    if !module_path.exists() {
-        let module_path = Path::new(&destination).join(format!("{}.sv", module_file_name));
-        if !module_path.exists() {
-            return Err(anyhow::anyhow!("Module file not found in the destination folder"));
-        }
-    }
+    let module_path = Path::new(&destination).join(Path::new(module_path).file_name().unwrap());
+    anyhow::ensure!(module_path.exists(), "Module file not found in the destination folder");
 
     if riscv {
         let top_v_content = generate_top_v_content(&module_path.to_str().unwrap())?;
@@ -373,7 +358,7 @@ pub fn include_module_from_url(module_path: &str, url: &str, riscv: bool, commit
         fs::write(format!("{}/constraints.xdc", destination), xdc_content)?;
         println!("Created constraints.xdc file for Xilinx Artix-7 board in {}", destination);
     }
-    add_top_module(url, module_path.to_str().unwrap(), commit_hash.unwrap())?;
+    add_top_module(url, current_dir()?.join(module_path.file_name().unwrap()).to_str().unwrap(), commit_hash.unwrap_or(""))?;
     
     Ok(())
 }
@@ -485,7 +470,9 @@ fn process_file(entry: &DirEntry, destination: &str, module_path: &str, url: &st
         module_name.to_string()
     };
     let header_filename = format!("{}.{}", module_name.strip_suffix(".v").unwrap_or(module_name), if extension == "sv" { "svh" } else { "vh" });
-    fs::write(target_path.join(&header_filename), header_content)?;
+    let headers_dir = target_path.join("headers");
+    fs::create_dir_all(&headers_dir)?;
+    fs::write(headers_dir.join(&header_filename), header_content)?;
     println!("Generating header file: {}", target_path.join(&header_filename).to_str().unwrap());
 
     let full_module_path = target_path.join(&module_name_with_ext);
@@ -551,18 +538,12 @@ fn download_and_process_submodules(package_name: &str, module_path: &str, destin
                 continue;
             }
             
-            let submodule_url = format!("{}/{}", url, submodule_with_ext);
-            if let Err(e) = include_repo_from_url(&submodule_url, submodule_destination.to_str().unwrap(), commit_hash.clone()) {
-                eprintln!("Warning: Failed to include repo from URL {}: {}. Skipping this submodule.", submodule_url, e);
-                continue;
-            }
-            
             match process_module(
                 package_name,
                 &submodule_with_ext,
                 submodule_destination.to_str().unwrap().to_string(),
                 visited,
-                &submodule_url,
+                &url,
                 false,
                 commit_hash.clone()
             ) {
@@ -577,7 +558,7 @@ fn download_and_process_submodules(package_name: &str, module_path: &str, destin
             }
 
             let full_submodule_path = submodule_destination.join(&submodule_with_ext);
-            if let Err(e) = update_lockfile(&full_submodule_path, &submodule_url, &contents, visited, false) {
+            if let Err(e) = update_lockfile(&full_submodule_path, &url, &contents, visited, false) {
                 eprintln!("Warning: Failed to update lockfile for {}: {}. Continuing without updating lockfile.", full_submodule_path.display(), e);
             }
         }
@@ -588,7 +569,6 @@ fn download_and_process_submodules(package_name: &str, module_path: &str, destin
 
 fn update_lockfile(full_path: &PathBuf, url: &str, contents: &str, visited: &HashSet<String>, is_top_module: bool) -> Result<()> {
     let mut lockfile = fs::read_to_string("vpm.lock").unwrap_or_default();
-    let full_module_path = format!("{}/{}", url, full_path.file_name().unwrap().to_str().unwrap());
     let module_entry = if is_top_module {
         format!("[[package]]\nfull_path = \"{}\"\nsource = \"{}\"\nparents = []\n", full_path.display(), url)
     } else {

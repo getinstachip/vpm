@@ -235,6 +235,23 @@ This command displays all available modules in the standard Verilog library, inc
 vpm list
 ```
 
+### vpm config
+Configure VPM settings.
+
+This command allows you to enable or disable anonymous usage data collection.
+
+```bash
+vpm config <OPTION> <VALUE>
+```
+
+OPTIONS:
+- analytics (true/false): Enable or disable anonymous usage data collection.
+
+Example:
+```bash
+vpm config --analytics true
+```
+
 ## Configuration
 
 VPM uses a `vpm.toml` file for project configuration. This file allows you to specify project properties, dependencies, and custom settings.

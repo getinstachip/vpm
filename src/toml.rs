@@ -110,13 +110,24 @@ impl VpmToml {
 
     pub fn write_to_file(&self, filepath: &str) -> Result<()> {
         let toml_content = self.toml_doc.to_string();
+        let mut formatted_content = String::new();
+        for line in toml_content.lines() {
+            if !line.trim().contains("}, ") {
+                formatted_content.push_str(line);
+            } else {
+                let indent_level = line.chars().take_while(|&c| c != '{').count();
+                formatted_content.push_str(&line.replace("}, ", &format!("}},\n{}", " ".repeat(indent_level))));
+            }
+            formatted_content.push('\n');
+        }
+
         let mut file = OpenOptions::new()
             .write(true)
             .create(true)
             .truncate(true)
             .open(filepath)
             .expect("Failed to open vpm.toml");
-        file.write_all(toml_content.as_bytes()).expect("Failed to write to vpm.toml");
+        file.write_all(formatted_content.as_bytes()).expect("Failed to write to vpm.toml");
         Ok(())
     }
 
