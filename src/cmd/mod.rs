@@ -11,12 +11,13 @@ mod docs;
 mod synth;
 mod run;
 mod load;
+mod config;
 
 use anyhow::Result;
 
 pub use crate::cmd::cmd::*;
 
-use crate::config::send_event;
+use crate::config_man::send_event;
 
 pub trait Execute {
     async fn execute(&self) -> Result<()>;
@@ -84,6 +85,11 @@ impl Execute for Cmd {
             Cmd::Run(cmd) => {
                 cmd.execute().await?;
                 send_event("run")?;
+                Ok(())
+            },
+            Cmd::Config(cmd) => {
+                cmd.execute().await?;
+                send_event("config")?;
                 Ok(())
             },
         }

@@ -86,6 +86,12 @@ pub enum Cmd {
         long_about = "Upgrade VPM to the latest version available."
     )]
     Upgrade(Upgrade),
+
+    #[command(
+        about = "vpm config <KEY> <VALUE> // Configure VPM settings",
+        long_about = "Configure VPM settings. This command allows you to set various options and preferences for VPM, such as enabling or disabling analytics."
+    )]
+    Config(Config),
 }
 
 #[derive(Debug, Parser)]
@@ -190,4 +196,10 @@ pub struct Run {
     pub program_path: String,
     #[arg(long, help = "Use RISC-V toolchain. Set this flag if you're running a program compiled for RISC-V architecture and need to use RISC-V specific tools or emulators.")]
     pub riscv: bool,
+}
+
+#[derive(Debug, Parser)]
+pub struct Config {
+    #[arg(long, help = "Enable or disable anonymous usage data collection. Set to false to opt-out of data collection.")]
+    pub analytics: Option<bool>,
 }
