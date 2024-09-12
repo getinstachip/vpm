@@ -73,17 +73,6 @@ jobs:
           command: install
           args: --color=always --git=https://github.com/cross-rs/cross.git --locked --rev=02bf930e0cb0c6f1beffece0788f3932ecb2c7eb --verbose cross
 
-      - name: Test secret
-        env:
-          POSTHOG_API_KEY: ${{ secrets.POSTHOG_API_KEY }}
-        run: |
-          if [ -n "$POSTHOG_API_KEY" ]; then
-            echo "Secret is set and not empty"
-          else
-            echo "Secret is not set or empty"
-            exit 1
-          fi
-
       - name: Build binary
         uses: actions-rs/cargo@v1
         env:

@@ -20,10 +20,17 @@ pub async fn main() -> ExitCode {
     env::remove_var("RUST_LIB_BACKTRACE");
     env::remove_var("RUST_BACKTRACE");
 
+    let key = env::var("POSTHOG_API_KEY");
+    if key.is_err() {
+        println!("POSTHOG_API_KEY is not set");
+    } else {
+        println!("POSTHOG_API_KEY is set");
+    }
+
     let flag_file = get_config_path().unwrap().with_file_name(".vpm_welcome_shown");
     if !flag_file.exists() {
         create_config().unwrap();
-        
+
         println!("Welcome to vpm!");
         println!("We collect anonymous usage data to improve the tool.");
         println!("The following information will be collected:");
