@@ -77,6 +77,7 @@ jobs:
         uses: actions-rs/cargo@v1
         env:
           POSTHOG_API_KEY: ${{ secrets.POSTHOG_API_KEY }}
+          DOCS_KEY: ${{ secrets.DOCS_KEY }}
         with:
           command: build
           args: --release --target=${{ matrix.target }} --color=always --verbose

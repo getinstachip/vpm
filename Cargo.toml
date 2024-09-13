@@ -35,6 +35,12 @@ toml_edit = "0.22.20"
 imara-diff = "0.1.7"
 uuid = { version = "1.10.0", features = ["v7"] }
 directories = "5.0.1"
+ring = "0.17.8"
+base64 = "0.22.1"
+hex = "0.4.3"
+rand = "0.8.5"
+sha2 = "0.10.8"
+sys-info = "0.9.1"
 
 [build-dependencies]
 cc="*"
