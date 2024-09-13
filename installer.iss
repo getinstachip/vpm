@@ -62,10 +62,10 @@ Name: "turkish"; MessagesFile: "compiler:Languages\Turkish.isl"
 Name: "ukrainian"; MessagesFile: "compiler:Languages\Ukrainian.isl"
 
 [Files]
-Source: "target\{#MyTarget}\release\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "target\{#MyTarget}\release\vpm.exe"; DestDir: "{app}"; Flags: ignoreversion
 
 [Tasks]
-Name: addtopath; Description: "Add application directory to PATH"; Flags: unchecked
+Name: addtopath; Description: "Add application directory to PATH"; Flags: checkedonce
 
 [Code]
 const
