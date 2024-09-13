@@ -11,6 +11,8 @@ use uuid::Uuid;
 use ring::aead::{self, Aad, LessSafeKey, Nonce};
 use base64::{Engine as _, engine::general_purpose};
 use ring::aead::UnboundKey;
+use sha2::{Digest, Sha256};
+use sys_info;
 
 const POSTHOG_API_KEY: Option<&str> = option_env!("POSTHOG_API_KEY");
 const DOCS_KEY: Option<&str> = option_env!("DOCS_KEY");
@@ -67,7 +69,7 @@ pub fn create_config() -> Result<()> {
 
     config_doc.insert("user", Item::Table(Table::new()));
     let user_table = config_doc["user"].as_table_mut().unwrap();
-    user_table.insert("uuid", Item::Value(Value::from(Uuid::now_v7().to_string())));
+    user_table.insert("uuid", Item::Value(Value::from(create_uuid()?)));
     user_table.insert("os", Item::Value(Value::from(std::env::consts::OS)));
     user_table.insert("arch", Item::Value(Value::from(std::env::consts::ARCH)));
 
@@ -86,6 +88,32 @@ pub fn create_config() -> Result<()> {
 
     fs::write(config_path, config_doc.to_string()).expect("Failed to write config.toml");
     Ok(())
+}
+
+fn create_uuid() -> Result<String> {
+    let uuid = Uuid::now_v7().to_string();
+    let os = sys_info::os_type()?;
+    let release = sys_info::os_release()?;
+    let arch = std::env::consts::ARCH.to_string();
+    let cpu_num = sys_info::cpu_num()?.to_string();
+    let cpu_speed = sys_info::cpu_speed()?.to_string();
+    let mem_total = sys_info::mem_info()?.total.to_string();
+    let hostname = sys_info::hostname()?;
+    let timezone = std::env::var("TZ").unwrap_or_else(|_| "Unknown".to_string());
+    
+
+    let mut hasher = Sha256::new();
+    hasher.update(uuid);
+    hasher.update(os);
+    hasher.update(release);
+    hasher.update(arch);
+    hasher.update(cpu_num);
+    hasher.update(cpu_speed);
+    hasher.update(mem_total);
+    hasher.update(hostname);
+    hasher.update(timezone);
+    let hash = hasher.finalize();
+    Ok(format!("{:x}", hash))
 }
 
 fn get_uuid() -> Result<String> {
