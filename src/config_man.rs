@@ -92,15 +92,14 @@ pub fn create_config() -> Result<()> {
 
 fn create_uuid() -> Result<String> {
     let uuid = Uuid::now_v7().to_string();
-    let os = sys_info::os_type()?;
-    let release = sys_info::os_release()?;
+    let os = sys_info::os_type().unwrap_or_default();
+    let release = sys_info::os_release().unwrap_or_default();
     let arch = std::env::consts::ARCH.to_string();
-    let cpu_num = sys_info::cpu_num()?.to_string();
-    let cpu_speed = sys_info::cpu_speed()?.to_string();
-    let mem_total = sys_info::mem_info()?.total.to_string();
-    let hostname = sys_info::hostname()?;
+    let cpu_num = sys_info::cpu_num().unwrap_or_default().to_string();
+    let cpu_speed = sys_info::cpu_speed().unwrap_or_default().to_string();
+    let mem_total = sys_info::mem_info().unwrap_or(sys_info::MemInfo { total: 0, free: 0, buffers: 0, cached: 0, swap_total: 0, swap_free: 0, avail: 0 }).total.to_string();
+    let hostname = sys_info::hostname().unwrap_or_default();
     let timezone = std::env::var("TZ").unwrap_or_else(|_| "Unknown".to_string());
-    
 
     let mut hasher = Sha256::new();
     hasher.update(uuid);
