@@ -63,6 +63,7 @@ Name: "ukrainian"; MessagesFile: "compiler:Languages\Ukrainian.isl"
 
 [Files]
 Source: "target\{#MyTarget}\release\vpm.exe"; DestDir: "{app}"; Flags: ignoreversion
+Source: "README.md"; DestDir: "{app}"; Flags: ignoreversion
 
 [Tasks]
 Name: addtopath; Description: "Add application directory to PATH"; Flags: checkedonce
