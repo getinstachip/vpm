@@ -55,6 +55,15 @@ impl Execute for Install {
     }
 }
 
+fn has_sudo_access() -> bool {
+    let output = Command::new("sudo")
+        .arg("-n")
+        .arg("true")
+        .output()
+        .expect("Failed to execute sudo command");
+    output.status.success()
+}
+
 fn install_verilator() -> Result<()> {
     println!("Installing Verilator...");
 
@@ -78,6 +87,12 @@ fn install_verilator() -> Result<()> {
     {
         if !is_arch_distro() {
             println!("Running on Linux...");
+           
+            if !has_sudo_access() {
+                println!("Error: You don't have sudo privileges. Please run this script with sudo or add your user to the sudoers file.");
+                return Ok(());
+            }
+            
             // Install Verilator using apt-get on Linux
             let status = Command::new("sudo")
                 .arg("apt-get")
@@ -104,6 +119,10 @@ fn install_verilator() -> Result<()> {
             }
         } else {
             println!("Running on Arch Linux...");
+            if !has_sudo_access() {
+                println!("Error: You don't have sudo privileges. Please run this script with sudo or add your user to the sudoers file.");
+                return Ok(());
+            }
             // Install Verilator using pacman on Arch Linux
             let status = Command::new("sudo")
                 .arg("pacman")
