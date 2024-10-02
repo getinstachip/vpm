@@ -158,6 +158,7 @@ pub struct Sim {
     pub verilog_files: Vec<String>,
     #[arg(long, help = "Generate waveform output. If set, the simulation will produce waveform data and open it in GTKWave.")]
     pub waveform: bool,
+    pub folder: Option<String>,
 }
 
 #[derive(Debug, Parser)]
