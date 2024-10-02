@@ -8,16 +8,19 @@ use crate::cmd::{Execute, Sim};
 use std::fs::File;
 use std::io::{BufRead, BufReader};
 use fancy_regex::Regex;
+use walkdir::WalkDir;
 
 impl Execute for Sim {
     async fn execute(&self) -> Result<()> {
-        let mut verilog_files = self.verilog_files.clone();
-        
-        if !testbench_exists(&verilog_files) {
-            generate_and_add_testbench(&mut verilog_files)?;
-        }
-
-        let output_path = compile_verilog(&verilog_files)?;
+        let output_path = if let Some(folder) = &self.folder {
+            compile_verilog_from_folder(folder)?
+        } else {
+            let mut verilog_files = self.verilog_files.clone();
+            if !testbench_exists(&verilog_files) {
+                generate_and_add_testbench(&mut verilog_files)?;
+            }
+            compile_verilog(&verilog_files)?
+        };
 
         if self.waveform {
             run_simulation_with_waveform(&output_path)?;
@@ -50,6 +53,41 @@ fn generate_and_add_testbench(verilog_files: &mut Vec<String>) -> Result<()> {
     } else {
         Err(anyhow::anyhow!("No Verilog files provided. Please specify at least one Verilog file."))
     }
+}
+
+pub fn compile_verilog_from_folder(folder: &str) -> Result<PathBuf> {
+    println!("Compiling Verilog files from folder: {}", folder);
+    let verilog_files = collect_verilog_files(folder)?;
+
+    if verilog_files.is_empty() {
+        return Err(anyhow::anyhow!("No Verilog files found in the specified folder."));
+    }
+
+    let output_dir = Path::new(folder);
+    let random_output_name = generate_random_output_name();
+    let output_path = output_dir.join(&random_output_name);
+
+    let command_status = run_iverilog_command(output_path.to_str().unwrap(), &verilog_files)?;
+
+    if !command_status.success() {
+        return Err(anyhow::anyhow!("Compilation failed. Please check the error messages above."));
+    }
+
+    println!("Compilation successful. Output file: {:?}", output_path);
+    Ok(output_path)
+}
+
+fn collect_verilog_files(folder: &str) -> Result<Vec<String>> {
+    let mut verilog_files = Vec::new();
+
+    for entry in WalkDir::new(folder).into_iter().filter_map(|e| e.ok()) {
+        let path = entry.path();
+        if path.is_file() && (path.extension() == Some("v".as_ref()) || path.extension() == Some("sv".as_ref())) {
+            verilog_files.push(path.to_string_lossy().into_owned());
+        }
+    }
+
+    Ok(verilog_files)
 }
 
 fn run_simulation_with_waveform(output_path: &Path) -> Result<()> {
