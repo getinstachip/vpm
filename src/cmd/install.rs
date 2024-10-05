@@ -85,57 +85,46 @@ fn install_verilator() -> Result<()> {
 
     #[cfg(target_os = "linux")]
     {
-        if !is_arch_distro() {
-            println!("Running on Linux...");
-           
-            if !has_sudo_access() {
-                println!("Error: You don't have sudo privileges. Please run this script with sudo or add your user to the sudoers file.");
-                return Ok(());
-            }
-            
-            // Install Verilator using apt-get on Linux
-            let status = Command::new("sudo")
-                .arg("apt-get")
-                .arg("update")
-                .status()
-                .context("Failed to update package lists")?;
+        println!("Running on Linux...");
+        
+        if has_sudo_access() {
+            // Install Verilator using package manager
+            if !is_arch_distro() {
+                // Install Verilator using apt-get on non-Arch Linux
+                let status = Command::new("sudo")
+                    .args(&["apt-get", "update"])
+                    .status()
+                    .context("Failed to update package lists")?;
 
-            if !status.success() {
-                println!("Failed to update package lists on Linux.");
-                return Ok(());
-            }
+                if !status.success() {
+                    println!("Failed to update package lists on Linux.");
+                    return Ok(());
+                }
 
-            let status = Command::new("sudo")
-                .arg("apt-get")
-                .arg("install")
-                .arg("-y")
-                .arg("verilator")
-                .status()
-                .context("Failed to install Verilator using apt-get")?;
+                let status = Command::new("sudo")
+                    .args(&["apt-get", "install", "-y", "verilator"])
+                    .status()
+                    .context("Failed to install Verilator using apt-get")?;
 
-            if !status.success() {
-                println!("Failed to install Verilator on Linux.");
-                return Ok(());
+                if !status.success() {
+                    println!("Failed to install Verilator on Linux.");
+                    return Ok(());
+                }
+            } else {
+                // Install Verilator using pacman on Arch Linux
+                let status = Command::new("sudo")
+                    .args(&["pacman", "-Syu", "--noconfirm", "verilator"])
+                    .status()
+                    .context("Failed to install Verilator using pacman")?;
+
+                if !status.success() {
+                    println!("Failed to install Verilator on Arch Linux.");
+                    return Ok(());
+                }
             }
         } else {
-            println!("Running on Arch Linux...");
-            if !has_sudo_access() {
-                println!("Error: You don't have sudo privileges. Please run this script with sudo or add your user to the sudoers file.");
-                return Ok(());
-            }
-            // Install Verilator using pacman on Arch Linux
-            let status = Command::new("sudo")
-                .arg("pacman")
-                .arg("-Syu")
-                .arg("--noconfirm")
-                .arg("verilator")
-                .status()
-                .context("Failed to install Verilator using pacman")?;
-
-            if !status.success() {
-                println!("Failed to install Verilator on Arch Linux.");
-                return Ok(());
-            }
+            println!("No sudo access. Installing Verilator from source...");
+            install_verilator_from_source()?;
         }
     }
 
@@ -146,6 +135,53 @@ fn install_verilator() -> Result<()> {
     }
 
     println!("Verilator installed successfully.");
+    Ok(())
+}
+
+fn install_verilator_from_source() -> Result<()> {
+    // Create a directory for the installation
+    let install_dir = Path::new(&std::env::var("HOME")?).join("verilator");
+    std::fs::create_dir_all(&install_dir)?;
+
+    // Clone the repository
+    Command::new("git")
+        .args(&["clone", "https://github.com/verilator/verilator"])
+        .current_dir(&install_dir)
+        .status()
+        .context("Failed to clone Verilator repository")?;
+
+    let source_dir = install_dir.join("verilator");
+
+    // Configure with custom prefix
+    Command::new("autoconf")
+        .current_dir(&source_dir)
+        .status()
+        .context("Failed to run autoconf for Verilator")?;
+
+    Command::new("./configure")
+        .arg(format!("--prefix={}", install_dir.display()))
+        .current_dir(&source_dir)
+        .status()
+        .context("Failed to configure Verilator")?;
+
+    // Build
+    Command::new("make")
+        .current_dir(&source_dir)
+        .status()
+        .context("Failed to build Verilator")?;
+
+    // Install
+    Command::new("make")
+        .arg("install")
+        .current_dir(&source_dir)
+        .status()
+        .context("Failed to install Verilator")?;
+
+    // Add installation directory to PATH
+    println!("Verilator installed successfully in {}.", install_dir.display());
+    println!("Please add the following line to your shell configuration file (e.g., .bashrc or .zshrc):");
+    println!("export PATH=$PATH:{}/bin", install_dir.display());
+
     Ok(())
 }
 
@@ -193,9 +229,54 @@ fn install_icarus_verilog() -> Result<()> {
                 .context("Failed to install Icarus Verilog using apt-get")?;
 
             if !status.success() {
-                println!("Failed to install Icarus Verilog on Linux.");
+                println!("Failed to install Icarus Verilog on Linux using Apt-Get.");
+                let install_dir = Path::new(&std::env::var("HOME")?).join("icarus_verilog");
+    std::fs::create_dir_all(&install_dir)?;
+
+
+    Command::new("git")
+        .args(&["clone", "https://github.com/steveicarus/iverilog.git"])
+        .current_dir(&install_dir)
+        .status()
+        .context("Failed to clone Icarus Verilog repository")?;
+
+    let source_dir = install_dir.join("iverilog");
+
+
+    Command::new("sh")
+        .arg("autoconf.sh")
+        .current_dir(&source_dir)
+        .status()
+        .context("Failed to generate configure script")?;
+
+
+    Command::new("./configure")
+        .arg(format!("--prefix={}", install_dir.display()))
+        .current_dir(&source_dir)
+        .status()
+        .context("Failed to configure Icarus Verilog")?;
+
+
+    Command::new("make")
+        .current_dir(&source_dir)
+        .status()
+        .context("Failed to build Icarus Verilog")?;
+
+
+    Command::new("make")
+        .arg("install")
+        .current_dir(&source_dir)
+        .status()
+        .context("Failed to install Icarus Verilog")?;
+
+
+    println!("Icarus Verilog installed successfully.");
+    println!("Please add the following line to your shell configuration file (e.g., .bashrc or .zshrc):");
+    println!("export PATH=$PATH:{}/bin", install_dir.display());
+
                 return Ok(());
-            }
+            } else {
+                
         } else {
             println!("Running on Arch Linux...");
             // Install Icarus Verilog using pacman on Arch Linux
